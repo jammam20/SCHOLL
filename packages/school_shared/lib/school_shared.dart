@@ -26,3 +26,17 @@ export 'src/models/trip.dart';
 export 'src/utils/dates.dart';
 export 'src/utils/emergency_rules.dart';
 export 'src/utils/geo.dart';
+
+// Design system
+export 'src/design/tokens.dart';
+export 'src/design/typography.dart';
+export 'src/design/app_theme.dart';
+export 'src/design/app_settings.dart';
+export 'src/design/components/status_badge.dart';
+export 'src/design/components/empty_error_state.dart';
+export 'src/design/components/app_snackbar.dart';
+export 'src/design/components/section_header.dart';
+export 'src/design/components/metric_stat_card.dart';
+export 'src/design/components/app_skeleton.dart';
+export 'src/design/components/app_confirm_dialog.dart';
+export 'src/design/components/app_button.dart';

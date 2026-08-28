@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../../widgets/async_error_view.dart';
 import '../../schools/data/schools_repository.dart';
 import '../../students/presentation/child_settings_page.dart';

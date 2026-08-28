@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'app/app.dart';
+import 'app/app_settings.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppSettings.load();
   await ParentApp.initializeFirebase();
 
   // Crashlytics has no web implementation — only wire it up on

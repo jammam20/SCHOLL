@@ -5,7 +5,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../../app/notification_routing.dart';
 import '../../analytics/presentation/analytics_tab.dart';
 import '../../buses/data/buses_repository.dart';

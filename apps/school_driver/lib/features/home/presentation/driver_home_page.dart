@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../../app/notification_routing.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../../tracking/data/driver_tracking_repository.dart';

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../data/students_repository.dart';
 
 /// Per-child settings: mark them absent for today (so the driver's pickup

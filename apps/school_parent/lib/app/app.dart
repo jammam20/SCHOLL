@@ -16,7 +16,6 @@ import 'notification_routing.dart';
 import 'theme.dart';
 
 final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
-const _brandSeed = Color(0xFF155EEF);
 
 /// Must be a top-level (or static) function — the plugin runs it on a
 /// separate isolate when a data/notification message arrives while the app
@@ -96,10 +95,15 @@ class ParentApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           themeMode: themeMode,
-          theme: buildAppTheme(seed: _brandSeed, brightness: Brightness.light),
+          theme: buildAppTheme(
+            brand: AppBrand.parent,
+            brightness: Brightness.light,
+            locale: locale,
+          ),
           darkTheme: buildAppTheme(
-            seed: _brandSeed,
+            brand: AppBrand.parent,
             brightness: Brightness.dark,
+            locale: locale,
           ),
           home: OnboardingGate(
             child: BlocListener<AuthCubit, AuthState>(

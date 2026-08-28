@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../common/presentation/location_picker_page.dart';
 import '../../../widgets/async_error_view.dart';
 import '../../legal/presentation/legal_page.dart';

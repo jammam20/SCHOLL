@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../../app/notification_routing.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../students/data/students_repository.dart';

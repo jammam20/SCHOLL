@@ -11,8 +11,6 @@ import '../firebase_options.dart';
 import 'app_settings.dart';
 import 'theme.dart';
 
-const _brandSeed = Color(0xFFC9962C);
-
 class SuperAdminApp extends StatelessWidget {
   const SuperAdminApp({super.key});
 
@@ -37,10 +35,15 @@ class SuperAdminApp extends StatelessWidget {
             GlobalCupertinoLocalizations.delegate,
           ],
           themeMode: themeMode,
-          theme: buildAppTheme(seed: _brandSeed, brightness: Brightness.light),
+          theme: buildAppTheme(
+            brand: AppBrand.superAdmin,
+            brightness: Brightness.light,
+            locale: locale,
+          ),
           darkTheme: buildAppTheme(
-            seed: _brandSeed,
+            brand: AppBrand.superAdmin,
             brightness: Brightness.dark,
+            locale: locale,
           ),
           home: const OnboardingGate(child: LoginPage()),
         ),
