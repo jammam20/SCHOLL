@@ -1,4 +1,4 @@
-package com.example.school_driver
+package com.jammam.schoolbus.parent
 
 import io.flutter.embedding.android.FlutterActivity
 
