@@ -1,0 +1,87 @@
+{
+  "project_info": {
+    "project_number": "685828487805",
+    "firebase_url": "https://sharlok-ef2b4-default-rtdb.firebaseio.com",
+    "project_id": "sharlok-ef2b4",
+    "storage_bucket": "sharlok-ef2b4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685828487805:android:23f1916d85e929fa6d0f14",
+        "android_client_info": {
+          "package_name": "com.example.sharlok"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_S_OLewM8xF-Crn0W7V2cJJhiieagBIc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685828487805:android:227d4e0dd14af66c6d0f14",
+        "android_client_info": {
+          "package_name": "com.jammam.schoolbus.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_S_OLewM8xF-Crn0W7V2cJJhiieagBIc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685828487805:android:cc7f806b531b086a6d0f14",
+        "android_client_info": {
+          "package_name": "com.jammam.schoolbus.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_S_OLewM8xF-Crn0W7V2cJJhiieagBIc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685828487805:android:21ac82671f0f8cf36d0f14",
+        "android_client_info": {
+          "package_name": "com.jammam.schoolbus.parent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_S_OLewM8xF-Crn0W7V2cJJhiieagBIc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

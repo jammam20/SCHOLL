@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Mirrors the same isActiveMember/isSchoolAdmin checks firestore.rules
+    // uses, by reading the exact same Firestore documents — Storage rules
+    // can call `firestore.get()`/`firestore.exists()` directly, so (unlike
+    // Realtime Database) no separate mirrored-data mechanism is needed here.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function membership(schoolId) {
+      return firestore.get(
+        /databases/(default)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+      ).data;
+    }
+
+    function isActiveMember(schoolId) {
+      return isSignedIn() &&
+          firestore.exists(
+            /databases/(default)/documents/schools/$(schoolId)/members/$(request.auth.uid)
+          ) &&
+          membership(schoolId).isActive == true &&
+          membership(schoolId).status == 'approved';
+    }
+
+    function isSchoolAdmin(schoolId) {
+      return isActiveMember(schoolId) && membership(schoolId).role == 'admin';
+    }
+
+    // No feature in any app uploads a file yet (see the audit/implementation
+    // report — every app-level model that could use a photo, e.g.
+    // AppUser.photoUrl, has no UI surface reading or writing one anywhere).
+    // This path convention is reserved for when one is added: a user's own
+    // profile photo, scoped to the school they belong to, visible to that
+    // school (an admin/driver/parent recognizing a photo) and writable only
+    // by its owner, capped at 5MB and image-only so a future upload feature
+    // can't accidentally accept something unbounded or non-image.
+    match /schools/{schoolId}/profilePhotos/{uid} {
+      allow read: if isActiveMember(schoolId);
+      allow write: if isSignedIn() &&
+          request.auth.uid == uid &&
+          isActiveMember(schoolId) &&
+          request.resource.size < 5 * 1024 * 1024 &&
+          request.resource.contentType.matches('image/.*');
+      allow delete: if isSignedIn() &&
+          (request.auth.uid == uid || isSchoolAdmin(schoolId));
+    }
+
+    // Everything else stays closed — no feature needs it, and Storage
+    // should never be made broadly readable/writable just to unblock a
+    // specific upload path.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

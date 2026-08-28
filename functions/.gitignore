@@ -1,0 +1,14 @@
+# Dependencies — reinstalled from package.json/package-lock.json via `npm install`.
+node_modules/
+
+# Compiled output — regenerated from src/ via `npm run build`.
+lib/
+
+# Firebase CLI local state / logs
+.runtimeconfig.json
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+
+npm-debug.log*
+*.tsbuildinfo

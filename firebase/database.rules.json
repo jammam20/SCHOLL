@@ -1,0 +1,85 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    // Mirrors "is this uid an active, approved member of this school" out of
+    // Firestore (see functions/src/index.ts: syncSchoolMembership, kept in
+    // sync on every schools/{schoolId}/members/{uid} write) — RTDB security
+    // rules can't read Firestore directly, so this is the one fact they need
+    // to enforce the same school isolation Firestore already has. Only the
+    // Cloud Function (via the Admin SDK, which bypasses these rules
+    // entirely) ever writes here; no client can read or write this node.
+    "authorizedSchools": {
+      ".read": false,
+      ".write": false
+    },
+
+    "schools": {
+      "$schoolId": {
+        "trips": {
+          "$tripId": {
+            // This is the path DriverTrackingRepository/ParentTrackingRepository
+            // /OpsTrackingRepository actually read and write
+            // (schools/$schoolId/trips/$tripId/location). Read and write both
+            // require the caller to be an authorized (active, approved) member
+            // of *this* school specifically — see authorizedSchools above —
+            // so a member of School A can no longer read or write School B's
+            // live bus location just by knowing/guessing its schoolId/tripId.
+            // Write is additionally restricted, as before, so one driver
+            // can't overwrite or erase another driver's location claim on the
+            // same trip.
+            "location": {
+              ".read": "auth != null && root.child('authorizedSchools').child(auth.uid).child($schoolId).exists()",
+              ".write": "auth != null && root.child('authorizedSchools').child(auth.uid).child($schoolId).exists() && (!data.exists() || data.child('driverId').val() === auth.uid) && (!newData.exists() || newData.child('driverId').val() === auth.uid)",
+              ".validate": "newData.hasChildren(['latitude', 'longitude', 'driverId', 'timestamp'])",
+              "latitude": {
+                ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+              },
+              "longitude": {
+                ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+              },
+              "heading": {
+                ".validate": "newData.isNumber()"
+              },
+              "speed": {
+                ".validate": "newData.isNumber()"
+              },
+              "accuracy": {
+                ".validate": "newData.isNumber()"
+              },
+              "driverId": {
+                ".validate": "newData.isString() && newData.val() === auth.uid"
+              },
+              "timestamp": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "liveTrips": {
+      "$tripId": {
+        ".read": false,
+        ".write": false
+      }
+    },
+    "driverPresence": {
+      "$driverId": {
+        ".read": false,
+        ".write": false
+      }
+    },
+    "busPresence": {
+      "$busId": {
+        ".read": false,
+        ".write": false
+      }
+    }
+  }
+}

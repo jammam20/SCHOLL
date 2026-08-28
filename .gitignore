@@ -1,0 +1,139 @@
+# =============================================================================
+# School Bus System — root .gitignore
+# Applies recursively across the whole monorepo (apps/*, packages/*,
+# functions/, firebase/) via ** patterns, on top of each Flutter app's own
+# generated .gitignore.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Flutter / Dart
+# ---------------------------------------------------------------------------
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/build/
+**/doc/api/
+**/coverage/
+**/.widget_preview/
+**/app.*.symbols
+**/app.*.map.json
+**/migrate_working_dir/
+
+# ---------------------------------------------------------------------------
+# Android
+# ---------------------------------------------------------------------------
+**/android/local.properties
+**/android/key.properties
+**/android/**/*.keystore
+**/android/**/*.jks
+**/android/.gradle/
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/**/gradle-wrapper.jar
+**/android/**/GeneratedPluginRegistrant.java
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/.cxx/
+
+# ---------------------------------------------------------------------------
+# iOS (none exists yet, but keep this ready — see README)
+# ---------------------------------------------------------------------------
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Runner.xcworkspace/xcuserdata/
+**/*.mode1v3
+**/*.mode2v3
+**/*.moved-aside
+**/*.pbxuser
+**/*.perspectivev3
+**/DerivedData/
+**/Icon?
+**/*.xcuserstate
+
+# ---------------------------------------------------------------------------
+# Firebase — CLI local state, emulator data, and any credential a human might
+# accidentally drop at the project root. firebase.json, .firebaserc,
+# firestore.rules/.indexes.json, database.rules.json, and storage.rules are
+# all deliberately NOT ignored — see README.md's "Firebase configuration"
+# section for why those are safe (and necessary) to commit.
+# ---------------------------------------------------------------------------
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+database-debug.log
+pubsub-debug.log
+firestore-debug.log
+*.emulator-data/
+**/*serviceAccountKey*.json
+**/*service-account*.json
+**/*-firebase-adminsdk-*.json
+
+# ---------------------------------------------------------------------------
+# Secrets / credentials — never committed, regardless of where they appear
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.p12
+**/*.key
+**/*_rsa
+**/*_rsa.pub
+**/id_rsa*
+**/*.pfx
+
+# ---------------------------------------------------------------------------
+# Node.js / Cloud Functions
+# ---------------------------------------------------------------------------
+**/node_modules/
+functions/lib/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+**/.npm/
+**/*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# IDE
+# ---------------------------------------------------------------------------
+# IntelliJ / Android Studio
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+
+# VS Code — kept out by default, same as Flutter's own per-app .gitignore;
+# uncomment if the team wants to share launch/task configs.
+# .vscode/
+
+# ---------------------------------------------------------------------------
+# Windows / OS
+# ---------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ---------------------------------------------------------------------------
+# Misc scratch/local artifacts
+# ---------------------------------------------------------------------------
+*.log
+*.bak
+_backup_phase2/
+
+# Claude Code session-local tooling state (dev-server launch config tied to
+# this machine's paths/ports, scheduler lock file) — not part of the app.
+.claude/

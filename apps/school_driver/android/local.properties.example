@@ -1,0 +1,9 @@
+# Copy this file to local.properties (already gitignored) and fill in real
+# values. `sdk.dir` and `flutter.sdk` are usually added automatically the
+# first time you run `flutter pub get` / open the project in an IDE — you
+# only need to add MAPS_API_KEY yourself.
+#
+# sdk.dir=/path/to/Android/sdk
+# flutter.sdk=/path/to/flutter
+
+MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY

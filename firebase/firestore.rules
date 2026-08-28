@@ -1,0 +1,323 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSystemAdmin() {
+      return signedIn() &&
+          exists(/databases/$(database)/documents/systemAdmins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/systemAdmins/$(request.auth.uid)).data.isActive == true;
+    }
+
+    function membership(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid));
+    }
+
+    function isActiveMember(schoolId) {
+      return signedIn() &&
+          exists(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)) &&
+          membership(schoolId).data.isActive == true &&
+          membership(schoolId).data.status == 'approved';
+    }
+
+    function isSchoolAdmin(schoolId) {
+      return isActiveMember(schoolId) &&
+          membership(schoolId).data.role == 'admin';
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // A brand-new parent, driver or admin registers by writing these two
+    // documents directly (see FirebaseAuthRepository.registerParent/
+    // registerDriver/registerAdmin in the parent/driver/admin apps) instead
+    // of through a Cloud Function — this project doesn't require every
+    // deployment to be on the Blaze plan just to let someone sign up.
+    // `create` is scoped tightly to a self-service request: a client can
+    // never grant itself an approved/active status, or write a doc for a
+    // different uid. A self-served 'admin' request is genuinely harmless
+    // even though the role name looks dangerous — every actual admin
+    // capability elsewhere in these rules requires status == 'approved',
+    // and only an *existing* school admin or a system admin can flip that
+    // (see the `members/{uid}` update rule) — a system admin necessarily,
+    // for a brand-new school with no admin yet. The pending/not-approved
+    // state itself is checked per-collection just below (`users` docs carry
+    // `approved`+`membershipStatus`, `members` docs carry only `status` —
+    // there's no shared `approved` field between the two, so that check
+    // can't live in this shared helper).
+    function isSelfServeRole(role) {
+      return role == 'parent' || role == 'driver' || role == 'admin';
+    }
+
+    // Mirrors TRIP_STATUS_TRANSITIONS in functions/src/index.ts (dormant —
+    // Cloud Functions need the Blaze plan) and TripStatus.canTransitionTo in
+    // packages/school_shared/lib/src/enums/trip_status.dart — keep all
+    // three in sync if the state machine changes. Re-implemented here so
+    // the assigned driver can progress a trip's status with a direct write
+    // instead of going through that undeployed callable.
+    function isValidTripTransition(current, next) {
+      return (current == 'scheduled' && (next == 'starting' || next == 'cancelled')) ||
+          (current == 'starting' && (next == 'active' || next == 'cancelled')) ||
+          (current == 'active' && (next == 'paused' || next == 'completed' || next == 'emergency')) ||
+          (current == 'paused' && (next == 'active' || next == 'cancelled' || next == 'emergency')) ||
+          (current == 'emergency' && (next == 'completed' || next == 'cancelled'));
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isSystemAdmin();
+      allow create: if isSelf(uid) &&
+          request.resource.data.uid == uid &&
+          isSelfServeRole(request.resource.data.role) &&
+          request.resource.data.approved == false &&
+          request.resource.data.membershipStatus == 'pending';
+      // A user updates their own notification preferences (see
+      // NotificationPrefsRepository) or display name (ProfileRepository) —
+      // restricted to just those fields so this can't also touch
+      // role/schoolId/approved.
+      allow update: if isSelf(uid) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['notificationPrefs', 'name', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /systemAdmins/{uid} {
+      allow read: if isSelf(uid) || isSystemAdmin();
+      allow write: if false;
+    }
+
+    // A nested rule (see `members/{uid}` under `schools/{schoolId}` below)
+    // only ever covers a query/read scoped to *one* specific school —
+    // Firestore treats a cross-school `collectionGroup('members')` query
+    // (SuperAdminRepository.watchPendingAdmins in the school_super_admin
+    // app) as a *collection group* read, which needs its own separate rule
+    // matched with the `{path=**}` wildcard, or it's silently denied (shows
+    // up client-side as an empty result, not an error). Read-only and
+    // system-admin-only — writes still go through the nested rule below.
+    match /{path=**}/members/{uid} {
+      allow read: if isSystemAdmin();
+    }
+
+    // An emergency lives nested under the trip it was raised on
+    // (schools/{schoolId}/trips/{tripId}/emergencies/{emergencyId} — see
+    // the nested rule under `trips/{tripId}` below, which governs
+    // create/update). The admin app's cross-trip history/monitoring view
+    // (EmergenciesRepository.watchEmergencies) needs every emergency in
+    // its school regardless of which trip it's nested under, which
+    // Firestore only exposes via a `collectionGroup('emergencies')`
+    // query — exactly like the `members` collection-group read above,
+    // that requires its own wildcard-matched rule or it's silently
+    // denied. Read-only: writes still go through the nested rule below.
+    match /{path=**}/emergencies/{emergencyId} {
+      allow read: if isSchoolAdmin(resource.data.schoolId) || isSystemAdmin() ||
+          (isActiveMember(resource.data.schoolId) &&
+              resource.data.driverId == request.auth.uid);
+    }
+
+    // Codes aren't secret-sensitive (worst case of a guessed code is a
+    // pending, unapproved membership request — see isSelfServeRole above),
+    // so any signed-in user can look one up to self-register. Only a system
+    // admin creates them (see the Super Admin panel's "create school" flow
+    // in the admin app).
+    match /schoolJoinCodes/{code} {
+      allow read: if signedIn();
+      allow write: if isSystemAdmin();
+    }
+
+    match /schools/{schoolId} {
+      allow read: if isActiveMember(schoolId) || isSystemAdmin();
+      allow create, delete: if isSystemAdmin();
+      // A school admin sets their own school's location (every trip's
+      // final stop) directly (see SchoolsRepository.updateLocation) —
+      // restricted to just those fields so it can't also touch isActive,
+      // the name, or the code.
+      allow update: if isSystemAdmin() ||
+          (isSchoolAdmin(schoolId) &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['latitude', 'longitude', 'updatedAt']));
+
+      match /members/{uid} {
+        allow read: if isSelf(uid) || isSchoolAdmin(schoolId) || isSystemAdmin();
+        allow create: if isSelf(uid) &&
+            request.resource.data.uid == uid &&
+            request.resource.data.schoolId == schoolId &&
+            isSelfServeRole(request.resource.data.role) &&
+            request.resource.data.status == 'pending' &&
+            get(/databases/$(database)/documents/schools/$(schoolId)).data.isActive == true;
+        // A school admin (or, for a school's very first admin — where
+        // isSchoolAdmin is impossible, since none is approved yet — a
+        // system admin) approves/suspends/rejects a pending member by
+        // flipping `status`/`isActive` directly — restricted to just those
+        // two fields (plus updatedAt) so an update can't also smuggle in a
+        // role change or reassign the doc to a different school.
+        allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'isActive', 'updatedAt']);
+        // A member updates their own denormalized display name (kept in
+        // sync with users/{uid}.name by ProfileRepository) — restricted to
+        // just that field so it can't also touch status/role/schoolId.
+        allow update: if isSelf(uid) &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['displayName', 'updatedAt']);
+        allow delete: if false;
+      }
+
+      match /parents/{uid} {
+        allow read: if isSelf(uid) || isSchoolAdmin(schoolId) || isSystemAdmin();
+        allow create, update, delete: if false;
+      }
+
+      match /students/{studentId} {
+        // A parent needs to read their own child's record (to find its
+        // assigned routeId and follow that route's trips), but nothing
+        // else about students in the school.
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() ||
+            (isActiveMember(schoolId) &&
+                ('parentIds' in resource.data) &&
+                request.auth.uid in resource.data.parentIds);
+        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        // A parent can add their own child directly (see
+        // StudentsRepository.addChild in the parent app) — always pending
+        // admin approval, always listing only themselves as the parent, and
+        // never pre-assigned a route/pickup point (that stays admin-only,
+        // set once the student is approved).
+        allow create: if isActiveMember(schoolId) &&
+            request.resource.data.parentIds == [request.auth.uid] &&
+            request.resource.data.approved == false &&
+            !('routeId' in request.resource.data) &&
+            !('latitude' in request.resource.data);
+        // A parent marks their own (already-approved) child absent/present
+        // for a day — restricted to just that field so they can't also
+        // rename the student, unlink themselves, or touch the pickup point.
+        allow update: if isActiveMember(schoolId) &&
+            resource.data.approved == true &&
+            ('parentIds' in resource.data) &&
+            request.auth.uid in resource.data.parentIds &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['absentOn', 'updatedAt']);
+      }
+
+      // A durable log of "student X was marked absent on date Y", written
+      // alongside the `absentOn` update above (see
+      // StudentsRepository.setAbsent in the parent app) — `absentOn`
+      // itself only ever holds *today's* value, so this is the only
+      // history an admin's attendance report can read. Self-attested and
+      // append-only: low sensitivity (just a name + date), no update/delete
+      // path, and school-admin-only read access.
+      match /absenceLog/{entryId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        allow create: if isActiveMember(schoolId) &&
+            request.resource.data.recordedBy == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /buses/{busId} {
+        allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+      }
+
+      match /routes/{routeId} {
+        allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+
+        match /stops/{stopId} {
+          allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        }
+      }
+
+      match /trips/{tripId} {
+        // Trip metadata (route/bus/driver names, schedule, status) isn't
+        // sensitive, and both the driver assigned to a trip and any parent
+        // whose child rides that route need to read it, so read is open to
+        // every active member of the school. Creating/editing a trip stays
+        // admin-only here; the assigned driver progresses the trip through
+        // TripsRepository.updateStatus in the driver app — a direct write
+        // (inside a transaction, re-validated there against the same
+        // TripStatus.canTransitionTo state machine this mirrors) rather
+        // than the dormant updateTripStatus callable, which needed the
+        // paid Blaze plan just to let a driver start their own trip.
+        allow read: if isActiveMember(schoolId) || isSystemAdmin();
+        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        // The assigned driver sets today's pickup order
+        // (StopOrderRepository), marks each student boarded, and
+        // progresses the trip's own status (start/pause/resume/complete/
+        // emergency/cancel, with their respective timestamps) —
+        // restricted to just those fields (plus updatedAt) so a driver
+        // update can't reassign the trip or edit anything else. A status
+        // change is re-validated against the same state machine the
+        // dormant callable used to enforce; a boardedStudents change is
+        // only allowed while the trip is actually active, so a cancelled
+        // or completed trip can't have boarding events added to it via a
+        // direct write that bypasses the driver app's own eligibility
+        // check (see checkBoardingEligibility in the driver app).
+        allow update: if isActiveMember(schoolId) &&
+            resource.data.driverId == request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly([
+                  'stopOrder', 'boardedStudents', 'status', 'startedAt',
+                  'completedAt', 'pausedAt', 'resumedAt', 'cancelledAt',
+                  'cancelReason', 'updatedAt'
+                ]) &&
+            (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
+                isValidTripTransition(resource.data.status, request.resource.data.status)) &&
+            (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['boardedStudents']) ||
+                resource.data.status == 'active');
+
+        // A minimal, write-only event trail (trip started/paused/resumed/
+        // completed/cancelled/emergency, a student boarded) — see
+        // TripsRepository/StopOrderRepository in the driver app. No admin
+        // UI reads this yet (that's a later phase); it exists so that
+        // history isn't lost even though the trip document itself only
+        // ever keeps the *most recent* pause/resume timestamp.
+        match /events/{eventId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin();
+          // The assigned driver stamps their own uid as `driverId` on every
+          // event they create (trip status changes, boarding, raising an
+          // emergency) — unchanged from before this phase. A school admin
+          // resolving an emergency is a new, second kind of actor this
+          // subcollection now needs to record; they're never the trip's
+          // `driverId`, so that event is keyed by `resolvedBy` instead
+          // (self-attested the same way) rather than lying about who they
+          // are.
+          allow create: if
+              (isActiveMember(schoolId) &&
+                  get(/databases/$(database)/documents/schools/$(schoolId)/trips/$(tripId))
+                      .data.driverId == request.auth.uid &&
+                  request.resource.data.driverId == request.auth.uid) ||
+              (isSchoolAdmin(schoolId) &&
+                  request.resource.data.resolvedBy == request.auth.uid);
+          allow update, delete: if false;
+        }
+
+        // A structured emergency record (type/location/resolution),
+        // separate from the trip's own `status` field (which still just
+        // flips to 'emergency' via the update rule above, using the same
+        // isValidTripTransition state machine) — see EmergenciesRepository
+        // in the driver and admin apps. Only the driver assigned to this
+        // trip can raise one, for their own trip, in their own school;
+        // only that same driver or this school's admin can resolve it, and
+        // only while it's still active. Never deleted, so an emergency's
+        // history is never lost even after the trip itself finishes.
+        match /emergencies/{emergencyId} {
+          allow create: if isActiveMember(schoolId) &&
+              get(/databases/$(database)/documents/schools/$(schoolId)/trips/$(tripId))
+                  .data.driverId == request.auth.uid &&
+              request.resource.data.schoolId == schoolId &&
+              request.resource.data.tripId == tripId &&
+              request.resource.data.driverId == request.auth.uid &&
+              request.resource.data.status == 'active';
+          allow update: if resource.data.status == 'active' &&
+              request.resource.data.status == 'resolved' &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['status', 'resolvedAt', 'resolvedBy', 'resolutionNote']) &&
+              request.resource.data.resolvedBy == request.auth.uid &&
+              (isSchoolAdmin(schoolId) || isSystemAdmin() ||
+                  (isActiveMember(schoolId) &&
+                      resource.data.driverId == request.auth.uid));
+          allow delete: if false;
+        }
+      }
+    }
+  }
+}
