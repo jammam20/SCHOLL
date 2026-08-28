@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
+// `hide TextDirection`: intl exports its own bidi `TextDirection` enum,
+// which would otherwise collide with the `dart:ui`/Flutter one used below
+// to force timestamps to render LTR inside an Arabic layout (RTL rule in
+// design-system/MASTER.md §13).
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/notification_routing.dart';
@@ -94,56 +98,64 @@ class _TripsTab extends StatelessWidget {
         body: BlocConsumer<TripsBloc, TripsState>(
           listener: (context, state) {
             if (state is TripsLoaded && state.actionError != null) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(state.actionError!)));
+              AppSnackbar.error(context, state.actionError!);
             }
           },
           builder: (context, state) {
+            final reduceMotion = MediaQuery.of(context).disableAnimations;
+
+            Widget child;
             if (state is TripsLoading || state is TripsInitial) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is TripsFailure) {
-              return Center(child: Text(state.message));
-            }
+              child = const Center(child: CircularProgressIndicator());
+            } else if (state is TripsFailure) {
+              child = ErrorStateView(message: state.message);
+            } else {
+              final snapshot = state is TripsLoaded ? state.snapshot : null;
+              final docs = snapshot?.docs ?? const [];
 
-            final snapshot = state is TripsLoaded ? state.snapshot : null;
-            final docs = snapshot?.docs ?? const [];
-
-            if (docs.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.event_busy,
-                        size: 56,
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        const S(
-                          'No trips assigned yet',
-                          'مفيش رحلات متعينة لسه',
-                        ).of(context),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
+              if (docs.isEmpty) {
+                child = EmptyStateView(
+                  icon: Icons.event_busy,
+                  title: const S(
+                    'No trips assigned yet',
+                    'مفيش رحلات متعينة لسه',
+                  ).of(context),
+                  message: const S(
+                    'Your school administrator will assign a route before '
+                        'your next trip.',
+                    'أدمن مدرستك هيعيّنلك خط سير قبل رحلتك الجاية.',
+                  ).of(context),
+                );
+              } else {
+                child = ListView.builder(
+                  key: const PageStorageKey('trips-list'),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.xl2,
                   ),
-                ),
-              );
+                  itemCount: docs.length,
+                  itemBuilder: (_, index) {
+                    final doc = docs[index];
+                    final trip = SchoolTrip.fromMap(doc.id, doc.data());
+                    return _TripCard(schoolId: user.schoolId, trip: trip);
+                  },
+                );
+              }
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-              itemCount: docs.length,
-              itemBuilder: (_, index) {
-                final doc = docs[index];
-                final trip = SchoolTrip.fromMap(doc.id, doc.data());
-                return _TripCard(schoolId: user.schoolId, trip: trip);
-              },
+            // A single, restrained crossfade between loading/content/error/
+            // empty — never re-triggered by unrelated rebuilds since the key
+            // only changes when the state's shape actually changes. See
+            // design-system/MASTER.md §10; skipped entirely under reduced
+            // motion per §10/§12.
+            return AnimatedSwitcher(
+              duration: reduceMotion ? Duration.zero : AppDurations.stateSwitch,
+              child: KeyedSubtree(
+                key: ValueKey(state.runtimeType),
+                child: child,
+              ),
             );
           },
         ),
@@ -152,14 +164,30 @@ class _TripsTab extends StatelessWidget {
   }
 }
 
-const _statusColors = {
-  TripStatus.scheduled: Color(0xFF6C737F),
-  TripStatus.starting: Color(0xFFF79009),
-  TripStatus.active: Color(0xFF17B26A),
-  TripStatus.paused: Color(0xFFF79009),
-  TripStatus.completed: Color(0xFF155EEF),
-  TripStatus.cancelled: Color(0xFF98A2B3),
-  TripStatus.emergency: Color(0xFFF04438),
+/// The one dot+label pattern (`StatusBadge`) is reused for every trip status,
+/// so the tone here is the single source of truth for what each status
+/// means at a glance. `info` covers both "starting" and "active" (en route)
+/// per design-system/MASTER.md §2; `error` is deliberately never used here —
+/// it's reserved for genuine failures, not normal trip states, even
+/// terminal ones like `cancelled`.
+StatusTone _statusTone(TripStatus status) => switch (status) {
+  TripStatus.scheduled => StatusTone.neutral,
+  TripStatus.starting => StatusTone.info,
+  TripStatus.active => StatusTone.info,
+  TripStatus.paused => StatusTone.warning,
+  TripStatus.completed => StatusTone.success,
+  TripStatus.cancelled => StatusTone.neutral,
+  TripStatus.emergency => StatusTone.emergency,
+};
+
+String _statusLabel(TripStatus status, BuildContext context) => switch (status) {
+  TripStatus.scheduled => const S('Scheduled', 'مجدولة').of(context),
+  TripStatus.starting => const S('Starting', 'جاري البدء').of(context),
+  TripStatus.active => const S('En route', 'في الطريق').of(context),
+  TripStatus.paused => const S('Paused', 'متوقفة مؤقتاً').of(context),
+  TripStatus.completed => const S('Completed', 'مكتملة').of(context),
+  TripStatus.cancelled => const S('Cancelled', 'ملغاة').of(context),
+  TripStatus.emergency => const S('Emergency', 'حالة طوارئ').of(context),
 };
 
 class _TripCard extends StatelessWidget {
@@ -170,69 +198,89 @@ class _TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final statusColor = _statusColors[trip.status] ?? colors.outline;
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final isEmergency = trip.status == TripStatus.emergency;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      // A trip mid-emergency gets a solid emergency-colored outline — a
+      // steady, unambiguous signal (never a pulse/flash — see
+      // design-system/MASTER.md §10) so it can't be missed at a glance
+      // while the driver is also watching the road.
+      shape: isEmergency
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              side: BorderSide(color: colors.emergency, width: 2),
+            )
+          : null,
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
-                    trip.routeName.isEmpty ? 'Route ${trip.routeId}' : trip.routeName,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    trip.routeName.isEmpty
+                        ? S(
+                            'Route ${trip.routeId}',
+                            'خط سير ${trip.routeId}',
+                          ).of(context)
+                        : trip.routeName,
+                    style: theme.textTheme.titleLarge,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                const SizedBox(width: AppSpacing.sm),
+                StatusBadge(
+                  label: _statusLabel(trip.status, context),
+                  tone: _statusTone(trip.status),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Icon(
+                  Icons.directions_bus_outlined,
+                  size: 16,
+                  color: colors.textSecondary,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
                   child: Text(
-                    trip.status.name,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
+                    '${trip.busName} (${trip.busPlateNumber})',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.textSecondary,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: AppSpacing.xs),
             Row(
               children: [
-                Icon(Icons.directions_bus, size: 15, color: colors.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(
-                  '${trip.busName} (${trip.busPlateNumber})',
-                  style: TextStyle(color: colors.onSurfaceVariant),
+                Icon(Icons.schedule, size: 16, color: colors.textSecondary),
+                const SizedBox(width: AppSpacing.xs),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    DateFormat.yMMMd().add_jm().format(trip.scheduledAt),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Icon(Icons.schedule, size: 15, color: colors.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(
-                  DateFormat.yMMMd().add_jm().format(trip.scheduledAt),
-                  style: TextStyle(color: colors.onSurfaceVariant),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: _actions(context)),
-            if (trip.status == TripStatus.emergency)
+            const SizedBox(height: AppSpacing.lg),
+            ..._actions(context),
+            if (isEmergency) ...[
+              const SizedBox(height: AppSpacing.md),
               _ActiveEmergencyBanner(schoolId: schoolId, tripId: trip.id),
+            ],
             if (trip.status == TripStatus.active ||
                 trip.status == TripStatus.starting ||
                 trip.status == TripStatus.paused ||
@@ -248,14 +296,34 @@ class _TripCard extends StatelessWidget {
     );
   }
 
+  /// One full-width button per row — large touch targets, one obvious next
+  /// step per card. The state-appropriate forward action (start/continue/
+  /// resume/complete) is always the prominent `AppButton.primary` and comes
+  /// first; a secondary action (pause/cancel) follows as `AppButton.
+  /// secondary`; emergency reporting is kept visually separate from this
+  /// hierarchy entirely — see `_emergencyButton` — so it never competes
+  /// with, or gets mistaken for, the routine trip actions above it.
   List<Widget> _actions(BuildContext context) {
     final bloc = context.read<TripsBloc>();
+
+    Widget primary(String label, IconData icon, VoidCallback onPressed) =>
+        SizedBox(
+          width: double.infinity,
+          child: AppButton.primary(label: label, icon: icon, onPressed: onPressed),
+        );
+    Widget secondary(String label, IconData icon, VoidCallback onPressed) =>
+        SizedBox(
+          width: double.infinity,
+          child: AppButton.secondary(label: label, icon: icon, onPressed: onPressed),
+        );
 
     switch (trip.status) {
       case TripStatus.scheduled:
         return [
-          FilledButton.icon(
-            onPressed: () => bloc.add(
+          primary(
+            const S('Start trip', 'ابدأ الرحلة').of(context),
+            Icons.play_arrow,
+            () => bloc.add(
               TripStartRequested(
                 schoolId: schoolId,
                 tripId: trip.id,
@@ -263,14 +331,14 @@ class _TripCard extends StatelessWidget {
                 alreadyStarting: false,
               ),
             ),
-            icon: const Icon(Icons.play_arrow),
-            label: Text(const S('Start trip', 'ابدأ الرحلة').of(context)),
           ),
         ];
       case TripStatus.starting:
         return [
-          FilledButton.icon(
-            onPressed: () => bloc.add(
+          primary(
+            const S('Continue starting', 'كمّل البدء').of(context),
+            Icons.play_arrow,
+            () => bloc.add(
               TripStartRequested(
                 schoolId: schoolId,
                 tripId: trip.id,
@@ -278,83 +346,97 @@ class _TripCard extends StatelessWidget {
                 alreadyStarting: true,
               ),
             ),
-            icon: const Icon(Icons.play_arrow),
-            label: Text(
-              const S('Continue starting', 'كمّل البدء').of(context),
-            ),
           ),
         ];
       case TripStatus.active:
         return [
-          OutlinedButton.icon(
-            onPressed: () => bloc.add(
-              TripPauseRequested(schoolId: schoolId, tripId: trip.id),
-            ),
-            icon: const Icon(Icons.pause),
-            label: Text(const S('Pause', 'وقف مؤقت').of(context)),
-          ),
-          FilledButton.icon(
-            onPressed: () => bloc.add(
+          primary(
+            const S('Complete', 'إنهاء').of(context),
+            Icons.check,
+            () => bloc.add(
               TripCompleteRequested(schoolId: schoolId, tripId: trip.id),
             ),
-            icon: const Icon(Icons.check),
-            label: Text(const S('Complete', 'إنهاء').of(context)),
           ),
-          FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+          const SizedBox(height: AppSpacing.sm),
+          secondary(
+            const S('Pause', 'وقف مؤقت').of(context),
+            Icons.pause,
+            () => bloc.add(
+              TripPauseRequested(schoolId: schoolId, tripId: trip.id),
             ),
-            onPressed: () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
-            icon: const Icon(Icons.warning_amber_rounded),
-            label: Text(const S('Emergency', 'طوارئ').of(context)),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _emergencyButton(
+            context,
+            () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
           ),
         ];
       case TripStatus.paused:
         return [
-          FilledButton.icon(
-            onPressed: () => bloc.add(
+          primary(
+            const S('Resume', 'استكمال').of(context),
+            Icons.play_arrow,
+            () => bloc.add(
               TripResumeRequested(schoolId: schoolId, tripId: trip.id),
             ),
-            icon: const Icon(Icons.play_arrow),
-            label: Text(const S('Resume', 'استكمال').of(context)),
           ),
-          OutlinedButton.icon(
-            onPressed: () => bloc.add(
+          const SizedBox(height: AppSpacing.sm),
+          secondary(
+            const S('Cancel', 'إلغاء').of(context),
+            Icons.close,
+            () => bloc.add(
               TripCancelRequested(schoolId: schoolId, tripId: trip.id),
             ),
-            icon: const Icon(Icons.close),
-            label: Text(const S('Cancel', 'إلغاء').of(context)),
           ),
-          FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.errorContainer,
-            ),
-            onPressed: () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
-            icon: const Icon(Icons.warning_amber_rounded),
-            label: Text(const S('Emergency', 'طوارئ').of(context)),
+          const SizedBox(height: AppSpacing.md),
+          _emergencyButton(
+            context,
+            () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
           ),
         ];
       case TripStatus.emergency:
         return [
-          FilledButton.icon(
-            onPressed: () => bloc.add(
+          primary(
+            const S('Complete', 'إنهاء').of(context),
+            Icons.check,
+            () => bloc.add(
               TripCompleteRequested(schoolId: schoolId, tripId: trip.id),
             ),
-            icon: const Icon(Icons.check),
-            label: Text(const S('Complete', 'إنهاء').of(context)),
           ),
-          OutlinedButton.icon(
-            onPressed: () => bloc.add(
+          const SizedBox(height: AppSpacing.sm),
+          secondary(
+            const S('Cancel', 'إلغاء').of(context),
+            Icons.close,
+            () => bloc.add(
               TripCancelRequested(schoolId: schoolId, tripId: trip.id),
             ),
-            icon: const Icon(Icons.close),
-            label: Text(const S('Cancel', 'إلغاء').of(context)),
           ),
         ];
       case TripStatus.completed:
       case TripStatus.cancelled:
         return const [];
     }
+  }
+
+  /// Deliberately not an `AppButton` variant: reporting an emergency is not
+  /// a routine trip action, so it's styled on its own — outlined in the
+  /// `emergency` semantic token, full width, with the same generous
+  /// (theme-default) padding as every other button here. Distinct, not
+  /// decorative: a steady color, no motion, no siren iconography.
+  Widget _emergencyButton(BuildContext context, VoidCallback onPressed) {
+    final colors = context.appColors;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colors.emergency,
+          side: BorderSide(color: colors.emergency, width: 1.6),
+        ),
+        onPressed: onPressed,
+        icon: const Icon(Icons.warning_amber_rounded),
+        label: Text(const S('Emergency', 'طوارئ').of(context)),
+      ),
+    );
   }
 
   Future<void> _reportEmergency(
@@ -393,8 +475,9 @@ String _emergencyTypeLabel(EmergencyType type, BuildContext context) {
 
 /// Asks for the minimum the emergency record needs (type is required by the
 /// model; a note is optional) before the driver's tap actually creates
-/// anything — the only new UI this phase adds, since without it there's no
-/// way to supply a valid `EmergencyType`.
+/// anything. Pre-existing from before this redesign pass — only its visual
+/// styling changed here (emergency-toned icon/dialog button), not its
+/// fields or flow.
 class _EmergencyDialog extends StatefulWidget {
   const _EmergencyDialog();
 
@@ -414,8 +497,19 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return AlertDialog(
-      title: Text(const S('Report emergency', 'الإبلاغ عن حالة طوارئ').of(context)),
+      title: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: colors.emergency),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              const S('Report emergency', 'الإبلاغ عن حالة طوارئ').of(context),
+            ),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -437,12 +531,15 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
                   .toList(),
               onChanged: (value) => setState(() => _type = value ?? _type),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _note,
               maxLines: 3,
               decoration: InputDecoration(
-                labelText: const S('Notes (optional)', 'ملاحظات (اختياري)').of(context),
+                labelText: const S(
+                  'Notes (optional)',
+                  'ملاحظات (اختياري)',
+                ).of(context),
               ),
             ),
           ],
@@ -454,9 +551,7 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
           child: Text(const S('Cancel', 'إلغاء').of(context)),
         ),
         FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.errorContainer,
-          ),
+          style: FilledButton.styleFrom(backgroundColor: colors.emergency),
           onPressed: () => Navigator.pop(context, (
             type: _type,
             note: _note.text.trim().isEmpty ? null : _note.text.trim(),
@@ -481,6 +576,7 @@ class _ActiveEmergencyBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: EmergenciesRepository().watchActiveEmergency(
         schoolId: schoolId,
@@ -492,18 +588,47 @@ class _ActiveEmergencyBanner extends StatelessWidget {
 
         final emergency = SchoolEmergency.fromMap(docs.first.id, docs.first.data());
 
-        return Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: Card(
-            color: Theme.of(context).colorScheme.errorContainer,
-            margin: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(Icons.warning_amber_rounded),
-              title: Text(_emergencyTypeLabel(emergency.type, context)),
-              subtitle: emergency.driverNote == null
-                  ? null
-                  : Text(emergency.driverNote!),
-              trailing: OutlinedButton(
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: colors.emergency.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: colors.emergency.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.warning_amber_rounded, color: colors.emergency),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _emergencyTypeLabel(emergency.type, context),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    if (emergency.driverNote != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        emergency.driverNote!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.success,
+                  side: BorderSide(color: colors.success),
+                ),
                 onPressed: () => context.read<TripsBloc>().add(
                   TripEmergencyResolveRequested(
                     schoolId: schoolId,
@@ -513,7 +638,7 @@ class _ActiveEmergencyBanner extends StatelessWidget {
                 ),
                 child: Text(const S('Mark resolved', 'تم الحل').of(context)),
               ),
-            ),
+            ],
           ),
         );
       },

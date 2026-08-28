@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../../widgets/async_error_view.dart';
 import '../data/super_admin_repository.dart';
@@ -88,6 +88,9 @@ class _DashboardTab extends StatelessWidget {
                 return const AsyncErrorView();
               }
 
+              final isLoading =
+                  !schoolsSnapshot.hasData && !pendingSnapshot.hasData;
+
               final schools = schoolsSnapshot.data?.docs ?? const [];
               final activeSchools = schools
                   .where((doc) => doc.data()['isActive'] == true)
@@ -95,44 +98,69 @@ class _DashboardTab extends StatelessWidget {
               final pendingCount = pendingSnapshot.data?.docs.length ?? 0;
 
               return ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.xl2),
                 children: [
                   Text(
                     S('Welcome, $name', 'أهلاً بيك، $name').of(context),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: context.appColors.textPrimary,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    const S(
+                      "Here's your platform at a glance.",
+                      'دي نظرة عامة على المنصة.',
+                    ).of(context),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.appColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.school,
-                          label: const S('Total schools', 'إجمالي المدارس').of(context),
-                          value: '${schools.length}',
+                  const SizedBox(height: AppSpacing.xl2),
+                  if (isLoading)
+                    const _MetricsSkeletonRow()
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: MetricStatCard(
+                            icon: Icons.school_outlined,
+                            label: const S(
+                              'Total schools',
+                              'إجمالي المدارس',
+                            ).of(context),
+                            value: '${schools.length}',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          icon: Icons.check_circle_outline,
-                          label: const S('Active schools', 'مدارس نشطة').of(context),
-                          value: '$activeSchools',
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: MetricStatCard(
+                            icon: Icons.check_circle_outline,
+                            label: const S(
+                              'Active schools',
+                              'مدارس نشطة',
+                            ).of(context),
+                            value: '$activeSchools',
+                            tone: context.appColors.success,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _StatCard(
-                    icon: Icons.pending_actions,
-                    label: const S(
-                      'Pending admin requests',
-                      'طلبات أدمن معلّقة',
-                    ).of(context),
-                    value: '$pendingCount',
-                    fullWidth: true,
-                  ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: MetricStatCard(
+                            icon: Icons.pending_actions_outlined,
+                            label: const S(
+                              'Pending requests',
+                              'طلبات معلّقة',
+                            ).of(context),
+                            value: '$pendingCount',
+                            tone: context.appColors.warning,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               );
             },
@@ -143,49 +171,41 @@ class _DashboardTab extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.fullWidth = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool fullWidth;
+/// A loading placeholder shaped like the metrics row above, shown while
+/// both dashboard streams are producing their first snapshot.
+class _MetricsSkeletonRow extends StatelessWidget {
+  const _MetricsSkeletonRow();
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
+    final colors = context.appColors;
+    Widget card() => Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: colors.border),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              backgroundColor: colors.primaryContainer,
-              foregroundColor: colors.onPrimaryContainer,
-              child: Icon(icon, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                Text(label, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
+            AppSkeleton(width: 70, height: 12),
+            SizedBox(height: 12),
+            AppSkeleton(width: 40, height: 22),
           ],
         ),
       ),
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        card(),
+        const SizedBox(width: AppSpacing.md),
+        card(),
+        const SizedBox(width: AppSpacing.md),
+        card(),
+      ],
     );
   }
 }
@@ -207,36 +227,121 @@ class _SchoolsTab extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) return const AsyncErrorView();
 
-          final docs = snapshot.data?.docs ?? const [];
-          if (docs.isEmpty) {
-            return Center(
-              child: Text(const S('No schools yet.', 'مفيش مدارس لسه.').of(context)),
+          if (!snapshot.hasData) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (_, _) => const AppSkeletonListTile(),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
+          final docs = snapshot.data?.docs ?? const [];
+          if (docs.isEmpty) {
+            return EmptyStateView(
+              icon: Icons.school_outlined,
+              title: const S('No schools yet.', 'مفيش مدارس لسه.').of(
+                context,
+              ),
+              message: const S(
+                'Add your first school to give it a join code.',
+                'ضيف أول مدرسة عشان تاخد كود انضمام.',
+              ).of(context),
+              actionLabel: const S('Add school', 'إضافة مدرسة').of(context),
+              onAction: () => _createSchool(context),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: docs.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: AppSpacing.sm),
             itemBuilder: (_, index) {
               final doc = docs[index];
               final data = doc.data();
               final isActive = data['isActive'] == true;
+              final colors = context.appColors;
 
-              return Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: isActive
-                        ? Colors.green.withValues(alpha: 0.15)
-                        : Colors.grey.withValues(alpha: 0.15),
-                    child: const Icon(Icons.school),
-                  ),
-                  title: Text(data['name']?.toString() ?? ''),
-                  subtitle: Text('Code: ${data['code'] ?? '-'}'),
-                  trailing: Switch(
-                    value: isActive,
-                    onChanged: (value) => SuperAdminRepository()
-                        .setSchoolActive(schoolId: doc.id, active: value),
-                  ),
+              return Container(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: colors.border),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: (isActive ? colors.success : colors.textMuted)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Icon(
+                        Icons.school,
+                        color: isActive ? colors.success : colors.textMuted,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            data['name']?.toString() ?? '',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(color: colors.textPrimary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.qr_code_2_outlined,
+                                size: 14,
+                                color: colors.textMuted,
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${data['code'] ?? '-'}',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: colors.textMuted),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        StatusBadge(
+                          label: isActive
+                              ? const S('Active', 'نشطة').of(context)
+                              : const S('Inactive', 'غير نشطة').of(context),
+                          tone: isActive
+                              ? StatusTone.success
+                              : StatusTone.neutral,
+                        ),
+                        Switch(
+                          value: isActive,
+                          onChanged: (value) => SuperAdminRepository()
+                              .setSchoolActive(
+                                schoolId: doc.id,
+                                active: value,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               );
             },
@@ -266,11 +371,15 @@ class _SchoolsTab extends StatelessWidget {
                 ).of(dialogContext),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: code,
               textCapitalization: TextCapitalization.characters,
               decoration: InputDecoration(
-                labelText: const S('Join code', 'كود الانضمام').of(dialogContext),
+                labelText: const S(
+                  'Join code',
+                  'كود الانضمام',
+                ).of(dialogContext),
                 helperText: const S(
                   "The school's owner uses this to self-register.",
                   'صاحب المدرسة هيستخدم الكود ده عشان يسجل نفسه.',
@@ -320,55 +429,143 @@ class _PendingAdminsTab extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.hasError) return const AsyncErrorView();
 
-          final docs = snapshot.data?.docs ?? const [];
-          if (docs.isEmpty) {
-            return Center(
-              child: Text(
-                const S(
-                  'No pending admin requests.',
-                  'مفيش طلبات أدمن معلّقة.',
-                ).of(context),
-              ),
+          if (!snapshot.hasData) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (_, _) => const AppSkeletonListTile(),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
+          final docs = snapshot.data?.docs ?? const [];
+          if (docs.isEmpty) {
+            return EmptyStateView(
+              icon: Icons.pending_actions_outlined,
+              title: const S(
+                'No pending admin requests.',
+                'مفيش طلبات أدمن معلّقة.',
+              ).of(context),
+              message: const S(
+                "New requests from a school's first admin will show up here.",
+                'الطلبات الجديدة من أول أدمن للمدرسة هتظهر هنا.',
+              ).of(context),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: docs.length,
+            separatorBuilder: (_, _) =>
+                const SizedBox(height: AppSpacing.sm),
             itemBuilder: (_, index) {
               final doc = docs[index];
               final data = doc.data();
               // Collection-group docs: reference.parent.parent is the school.
               final schoolId = doc.reference.parent.parent!.id;
+              final colors = context.appColors;
 
-              return Card(
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.hourglass_top)),
-                  title: Text(data['displayName']?.toString() ?? doc.id),
-                  subtitle: Text(
-                    '${data['email'] ?? ''} · school: $schoolId',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: const S('Approve', 'موافقة').of(context),
-                        icon: const Icon(Icons.check_circle, color: Colors.green),
-                        onPressed: () => SuperAdminRepository().approveAdmin(
-                          schoolId: schoolId,
-                          uid: doc.id,
-                        ),
+              return Container(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: colors.border),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: colors.warning.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      IconButton(
-                        tooltip: const S('Reject', 'رفض').of(context),
-                        icon: const Icon(Icons.cancel, color: Colors.red),
-                        onPressed: () => SuperAdminRepository().rejectAdmin(
-                          schoolId: schoolId,
-                          uid: doc.id,
-                        ),
+                      child: Icon(
+                        Icons.hourglass_top_rounded,
+                        color: colors.warning,
+                        size: 20,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  data['displayName']?.toString() ?? doc.id,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(color: colors.textPrimary),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              StatusBadge(
+                                label: const S('Pending', 'معلّق').of(
+                                  context,
+                                ),
+                                tone: StatusTone.warning,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${data['email'] ?? ''}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.textSecondary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            S(
+                              'School: $schoolId',
+                              'المدرسة: $schoolId',
+                            ).of(context),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.textMuted),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton.filled(
+                          tooltip: const S('Approve', 'موافقة').of(context),
+                          style: IconButton.styleFrom(
+                            backgroundColor: colors.success.withValues(
+                              alpha: 0.12,
+                            ),
+                            foregroundColor: colors.success,
+                          ),
+                          icon: const Icon(Icons.check_rounded),
+                          onPressed: () => SuperAdminRepository().approveAdmin(
+                            schoolId: schoolId,
+                            uid: doc.id,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        IconButton.filled(
+                          tooltip: const S('Reject', 'رفض').of(context),
+                          style: IconButton.styleFrom(
+                            backgroundColor: colors.error.withValues(
+                              alpha: 0.12,
+                            ),
+                            foregroundColor: colors.error,
+                          ),
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => SuperAdminRepository().rejectAdmin(
+                            schoolId: schoolId,
+                            uid: doc.id,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               );
             },

@@ -96,58 +96,40 @@ class _ChildrenTab extends StatelessWidget {
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: const [
+                AppSkeletonListTile(),
+                AppSkeletonListTile(),
+                AppSkeletonListTile(),
+              ],
+            );
           }
           if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  const S(
-                    "Couldn't load your children — check your connection "
-                        'and try again.',
-                    'معرفناش نحمّل بيانات أبنائك — اتأكد من الاتصال وجرب '
-                        'تاني.',
-                  ).of(context),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            return ErrorStateView(
+              message: const S(
+                "Couldn't load your children — check your connection "
+                    'and try again.',
+                'معرفناش نحمّل بيانات أبنائك — اتأكد من الاتصال وجرب '
+                    'تاني.',
+              ).of(context),
             );
           }
 
           final docs = snapshot.data?.docs ?? const [];
           if (docs.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.family_restroom,
-                      size: 56,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      const S('No children linked yet', 'مفيش أبناء مرتبطين لسه').of(
-                        context,
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      const S(
-                        'Tap "Add child" below to add one — your school will '
-                            'review and approve it.',
-                        'دوس على "إضافة طفل" تحت عشان تضيف واحد — مدرستك '
-                            'هتراجعه وتوافق عليه.',
-                      ).of(context),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+            return EmptyStateView(
+              icon: Icons.family_restroom,
+              title: const S(
+                'No children linked yet',
+                'مفيش أبناء مرتبطين لسه',
+              ).of(context),
+              message: const S(
+                'Tap "Add child" below to add one — your school will '
+                    'review and approve it.',
+                'دوس على "إضافة طفل" تحت عشان تضيف واحد — مدرستك '
+                    'هتراجعه وتوافق عليه.',
+              ).of(context),
             );
           }
 
@@ -156,12 +138,29 @@ class _ChildrenTab extends StatelessWidget {
               .toList();
 
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
-            itemCount: students.length,
-            itemBuilder: (_, index) => ChildJourneyCard(
-              schoolId: user.schoolId,
-              student: students[index],
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              88,
             ),
+            itemCount: students.length + 1,
+            itemBuilder: (_, index) {
+              if (index == 0) {
+                return SectionHeader(
+                  title: const S('Your children', 'أبناؤك').of(context),
+                  subtitle: S(
+                    '${students.length} '
+                        '${students.length == 1 ? 'child' : 'children'} linked',
+                    '${students.length} من الأبناء مرتبطين',
+                  ).of(context),
+                );
+              }
+              return ChildJourneyCard(
+                schoolId: user.schoolId,
+                student: students[index - 1],
+              );
+            },
           );
         },
       ),

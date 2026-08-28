@@ -31,6 +31,12 @@ const _avatarColors = [
 /// card; every fact shown here already existed somewhere in the app, this
 /// just puts it in one place instead of behind a settings tap or a status
 /// string like "active" that meant nothing to a parent.
+///
+/// Visual priority, top to bottom: the *current situation* (is the bus
+/// coming, has my child boarded, are they at school) is the first and
+/// biggest thing on the card — everything else (route/bus/driver details,
+/// the step-by-step timeline, the live map) is supporting detail underneath
+/// it, per the product brief's "understand extremely quickly" requirement.
 class ChildJourneyCard extends StatelessWidget {
   const ChildJourneyCard({super.key, required this.schoolId, required this.student});
 
@@ -39,15 +45,15 @@ class ChildJourneyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.appColors;
     final avatarColor =
         _avatarColors[student.id.hashCode.abs() % _avatarColors.length];
     final initial = student.name.isEmpty ? '?' : student.name[0].toUpperCase();
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -64,12 +70,13 @@ class ChildJourneyCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
                     student.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
+                      color: colors.textPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -89,11 +96,11 @@ class ChildJourneyCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             if (!student.approved)
               _InfoBanner(
                 icon: Icons.hourglass_top,
-                color: Colors.amber,
+                tone: StatusTone.warning,
                 title: const S('Pending approval', 'في انتظار الموافقة').of(context),
                 subtitle: const S(
                   "Your school hasn't approved this child yet.",
@@ -103,7 +110,7 @@ class ChildJourneyCard extends StatelessWidget {
             else if (student.isAbsentToday)
               _InfoBanner(
                 icon: Icons.event_busy,
-                color: colors.error,
+                tone: StatusTone.warning,
                 title: const S('Absent today', 'غايب النهاردة').of(context),
                 subtitle: const S(
                   "The bus will skip this child's stop today.",
@@ -113,7 +120,7 @@ class ChildJourneyCard extends StatelessWidget {
             else if (student.routeId == null || student.routeId!.isEmpty)
               _InfoBanner(
                 icon: Icons.route_outlined,
-                color: colors.outline,
+                tone: StatusTone.neutral,
                 title: const S('No route assigned yet', 'لسه من غير خط سير').of(
                   context,
                 ),
@@ -138,41 +145,42 @@ class ChildJourneyCard extends StatelessWidget {
 class _InfoBanner extends StatelessWidget {
   const _InfoBanner({
     required this.icon,
-    required this.color,
+    required this.tone,
     required this.title,
     required this.subtitle,
   });
 
   final IconData icon;
-  final Color color;
+  final StatusTone tone;
   final String title;
   final String subtitle;
 
   @override
   Widget build(BuildContext context) {
+    final color = _toneColor(context.appColors, tone);
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 22),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(fontWeight: FontWeight.w700, color: color),
-                ),
-                const SizedBox(height: 2),
+                StatusBadge(label: title, tone: tone),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   subtitle,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.appColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -209,10 +217,7 @@ class _TripSection extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          );
+          return const _TripSkeleton();
         }
         if (snapshot.hasError) return const AsyncErrorView(compact: true);
 
@@ -241,23 +246,54 @@ class _TripSection extends StatelessWidget {
   }
 }
 
+/// Placeholder shaped like the eventual [_Body] — a status icon and two
+/// lines of text — so the card doesn't jump/reflow once the trip document
+/// arrives. See `design-system/MASTER.md` §9.
+class _TripSkeleton extends StatelessWidget {
+  const _TripSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppSkeleton(width: 44, height: 44, borderRadius: 22),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                AppSkeleton(width: 160, height: 16),
+                SizedBox(height: AppSpacing.sm),
+                AppSkeleton(width: 220, height: 12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NoActiveTrip extends StatelessWidget {
   const _NoActiveTrip();
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.appColors;
     return Row(
       children: [
-        Icon(Icons.directions_bus_outlined, color: colors.outline, size: 22),
-        const SizedBox(width: 10),
+        Icon(Icons.directions_bus_outlined, color: colors.textMuted, size: 22),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             const S(
               'No active trip right now',
               'مفيش رحلة شغالة دلوقتي',
             ).of(context),
-            style: TextStyle(color: colors.onSurfaceVariant),
+            style: TextStyle(color: colors.textSecondary),
           ),
         ),
       ],
@@ -370,6 +406,76 @@ class _ActiveJourney extends StatelessWidget {
   }
 }
 
+/// Maps a [JourneyStage] to the one semantic tone it should always render
+/// with, per `design-system/MASTER.md` §2: success = arrived/completed,
+/// info = active/en-route, warning = paused/delayed, emergency reserved for
+/// [JourneyStage.emergency], error reserved for an actual failure
+/// ([JourneyStage.cancelled]).
+StatusTone _stageTone(JourneyStage stage) => switch (stage) {
+  JourneyStage.noActiveTrip => StatusTone.neutral,
+  JourneyStage.scheduled => StatusTone.info,
+  JourneyStage.delayed => StatusTone.warning,
+  JourneyStage.started => StatusTone.info,
+  JourneyStage.onTheWay => StatusTone.info,
+  JourneyStage.approachingPickup => StatusTone.info,
+  JourneyStage.arrivedAtPickup => StatusTone.success,
+  JourneyStage.boarded => StatusTone.success,
+  JourneyStage.continuingToSchool => StatusTone.info,
+  JourneyStage.arrivedAtSchool => StatusTone.success,
+  JourneyStage.completed => StatusTone.success,
+  JourneyStage.paused => StatusTone.warning,
+  JourneyStage.emergency => StatusTone.emergency,
+  JourneyStage.cancelled => StatusTone.error,
+};
+
+/// The large glanceable icon for the current stage — paired with
+/// [_stageTone] so color and symbol always agree.
+IconData _stageIcon(JourneyStage stage) => switch (stage) {
+  JourneyStage.noActiveTrip => Icons.directions_bus_outlined,
+  JourneyStage.scheduled => Icons.schedule,
+  JourneyStage.delayed => Icons.watch_later_outlined,
+  JourneyStage.started => Icons.directions_bus,
+  JourneyStage.onTheWay => Icons.directions_bus,
+  JourneyStage.approachingPickup => Icons.near_me,
+  JourneyStage.arrivedAtPickup => Icons.location_on,
+  JourneyStage.boarded => Icons.check_circle,
+  JourneyStage.continuingToSchool => Icons.directions_bus,
+  JourneyStage.arrivedAtSchool => Icons.school,
+  JourneyStage.completed => Icons.check_circle,
+  JourneyStage.paused => Icons.pause_circle,
+  JourneyStage.emergency => Icons.warning_amber_rounded,
+  JourneyStage.cancelled => Icons.cancel,
+};
+
+/// The short dot+label tag shown via [StatusBadge] — a compact system-wide
+/// status word, distinct from the fuller reassuring sentence in
+/// [_stageHeadline].
+S _stageBadgeLabel(JourneyStage stage) => switch (stage) {
+  JourneyStage.noActiveTrip => const S('Idle', 'مفيش رحلة'),
+  JourneyStage.scheduled => const S('Scheduled', 'مجدولة'),
+  JourneyStage.delayed => const S('Delayed', 'متأخرة'),
+  JourneyStage.started => const S('Starting', 'بدأت'),
+  JourneyStage.onTheWay => const S('En route', 'في الطريق'),
+  JourneyStage.approachingPickup => const S('Approaching', 'قريب من محطتك'),
+  JourneyStage.arrivedAtPickup => const S('Arrived at stop', 'وصل المحطة'),
+  JourneyStage.boarded => const S('Boarded', 'ركب الأتوبيس'),
+  JourneyStage.continuingToSchool => const S('En route to school', 'متجه للمدرسة'),
+  JourneyStage.arrivedAtSchool => const S('At school', 'في المدرسة'),
+  JourneyStage.completed => const S('Completed', 'اكتملت'),
+  JourneyStage.paused => const S('Paused', 'متوقفة مؤقتًا'),
+  JourneyStage.emergency => const S('Emergency', 'طوارئ'),
+  JourneyStage.cancelled => const S('Cancelled', 'ملغاة'),
+};
+
+Color _toneColor(AppColorTokens colors, StatusTone tone) => switch (tone) {
+  StatusTone.success => colors.success,
+  StatusTone.warning => colors.warning,
+  StatusTone.error => colors.error,
+  StatusTone.info => colors.info,
+  StatusTone.emergency => colors.emergency,
+  StatusTone.neutral => colors.textMuted,
+};
+
 class _Body extends StatelessWidget {
   const _Body({
     required this.trip,
@@ -389,7 +495,8 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
     final stage = computeJourneyStage(
       JourneyInputs(
         tripStatus: trip.status,
@@ -401,6 +508,9 @@ class _Body extends StatelessWidget {
       ),
     );
 
+    final tone = _stageTone(stage);
+    final toneColor = _toneColor(colors, tone);
+
     final showMap =
         trip.status == TripStatus.active ||
         trip.status == TripStatus.starting ||
@@ -410,23 +520,52 @@ class _Body extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // The current situation — the single most important fact on this
+        // card — leads with a large tone-colored icon, then the reassuring
+        // sentence, then a compact system-wide status tag, so a parent gets
+        // the answer before they've had to read anything.
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: toneColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(_stageIcon(stage), color: toneColor, size: 24),
+            ),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Text(
-                _stageHeadline(stage).of(context),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _stageHeadline(stage).of(context),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (stage == JourneyStage.onTheWay ||
+                          stage == JourneyStage.approachingPickup)
+                        _EtaChip(eta: etaToPickup),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  StatusBadge(label: _stageBadgeLabel(stage).of(context), tone: tone),
+                ],
               ),
             ),
-            if (stage == JourneyStage.onTheWay ||
-                stage == JourneyStage.approachingPickup)
-              _EtaChip(eta: etaToPickup),
           ],
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           S(
             '${trip.routeName.isEmpty ? 'Route' : trip.routeName} · '
@@ -434,20 +573,16 @@ class _Body extends StatelessWidget {
             '${trip.routeName.isEmpty ? 'الخط' : trip.routeName} · '
                 '${trip.busName} (${trip.busPlateNumber}) · ${trip.driverName}',
           ).of(context),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
         ),
         Text(
           DateFormat.jm().format(trip.scheduledAt),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.lg),
         JourneyTimeline(stage: stage, hasBoarded: hasBoarded),
         if (showMap) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           LiveTripMap(
             schoolId: student.schoolId,
             tripId: trip.id,
@@ -504,7 +639,7 @@ class _EtaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.appColors;
     final label = eta == null
         ? const S('ETA unavailable', 'الوقت المتوقع مش متاح').of(context)
         : eta!.inMinutes < 1
@@ -514,18 +649,21 @@ class _EtaChip extends StatelessWidget {
             'هيوصل خلال ${eta!.inMinutes} د',
           ).of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: colors.onPrimaryContainer,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: colors.info.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: colors.info,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
         ),
       ),
     );

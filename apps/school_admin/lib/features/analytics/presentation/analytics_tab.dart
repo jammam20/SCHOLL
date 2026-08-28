@@ -126,102 +126,89 @@ class _AnalyticsBody extends StatelessWidget {
         )
         .length;
     final approvedDrivers = driverStatuses.where((s) => s == 'approved').length;
+    final appColors = context.appColors;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.people,
-                label: 'Active students',
-                value: '$activeStudentCount',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.directions_bus,
-                label: 'Active buses',
-                value: '$activeBusCount',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                icon: Icons.badge,
-                label: 'Approved drivers',
-                value: '$approvedDrivers',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.today,
-                label: "Trips today",
-                value: '$tripsToday',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Text('Trip status mix', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        _TripStatusChart(trips: trips),
-        const SizedBox(height: 24),
-        Text('Trip volume, last 7 days', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        _WeeklyVolumeChart(trips: trips),
-        const SizedBox(height: 24),
-        Text('Students per route', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        _StudentsPerRouteChart(routeIds: studentRouteIds, routeNames: routeNames),
-        const SizedBox(height: 24),
-        Text('Driver approval status', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        _DriverStatusChart(statuses: driverStatuses),
-      ],
-    );
-  }
-}
+    final statCards = [
+      MetricStatCard(
+        label: const S('Active students', 'الطلاب النشطين').of(context),
+        value: '$activeStudentCount',
+        icon: Icons.people,
+        tone: appColors.info,
+      ),
+      MetricStatCard(
+        label: const S('Active buses', 'الأتوبيسات النشطة').of(context),
+        value: '$activeBusCount',
+        icon: Icons.directions_bus,
+        tone: appColors.success,
+      ),
+      MetricStatCard(
+        label: const S('Approved drivers', 'السائقين المعتمدين').of(context),
+        value: '$approvedDrivers',
+        icon: Icons.badge,
+        tone: appColors.success,
+      ),
+      MetricStatCard(
+        label: const S('Trips today', 'رحلات النهارده').of(context),
+        value: '$tripsToday',
+        icon: Icons.today,
+      ),
+    ];
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.icon, required this.label, required this.value});
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: colorScheme.primaryContainer,
-              foregroundColor: colorScheme.onPrimaryContainer,
-              child: Icon(icon, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // This tab is embedded directly in the dashboard's own scroll view (see
+    // admin_home_page.dart's _DashboardTab), so it lays out as a plain
+    // Column rather than owning a second, nested scrollable.
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // A responsive stat-card grid: 4-across on a wide desktop/web
+              // viewport, wrapping down to 2-across on narrower ones,
+              // instead of a fixed 2x2 that just stretches — see
+              // design-system/MASTER.md §11.
+              const spacing = AppSpacing.md;
+              final columns = constraints.maxWidth >= 720 ? 4 : 2;
+              final cardWidth =
+                  (constraints.maxWidth - spacing * (columns - 1)) / columns;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
                 children: [
-                  Text(value, style: Theme.of(context).textTheme.headlineSmall),
-                  Text(label, style: Theme.of(context).textTheme.bodySmall),
+                  for (final card in statCards)
+                    SizedBox(width: cardWidth, child: card),
                 ],
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.xl2),
+          SectionHeader(
+            title: const S('Trip status mix', 'توزيع حالات الرحلات').of(context),
+          ),
+          _TripStatusChart(trips: trips),
+          const SizedBox(height: AppSpacing.xl2),
+          SectionHeader(
+            title: const S(
+              'Trip volume, last 7 days',
+              'حجم الرحلات آخر 7 أيام',
+            ).of(context),
+          ),
+          _WeeklyVolumeChart(trips: trips),
+          const SizedBox(height: AppSpacing.xl2),
+          SectionHeader(
+            title: const S('Students per route', 'الطلاب في كل خط').of(context),
+          ),
+          _StudentsPerRouteChart(routeIds: studentRouteIds, routeNames: routeNames),
+          const SizedBox(height: AppSpacing.xl2),
+          SectionHeader(
+            title: const S(
+              'Driver approval status',
+              'حالة اعتماد السائقين',
+            ).of(context),
+          ),
+          _DriverStatusChart(statuses: driverStatuses),
+        ],
       ),
     );
   }
@@ -245,7 +232,11 @@ class _TripStatusChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (trips.isEmpty) {
-      return const _EmptyChartPlaceholder(message: 'No trips scheduled yet.');
+      return EmptyStateView(
+        compact: true,
+        icon: Icons.pie_chart_outline,
+        title: const S('No trips scheduled yet.', 'مفيش رحلات متجدولة لسه.').of(context),
+      );
     }
 
     final counts = <TripStatus, int>{};
@@ -412,8 +403,13 @@ class _StudentsPerRouteChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (routeIds.isEmpty) {
-      return const _EmptyChartPlaceholder(
-        message: 'No students are assigned to a route yet.',
+      return EmptyStateView(
+        compact: true,
+        icon: Icons.route_outlined,
+        title: const S(
+          'No students are assigned to a route yet.',
+          'مفيش طلاب متحدد لهم خط لسه.',
+        ).of(context),
       );
     }
 
@@ -475,7 +471,11 @@ class _DriverStatusChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (statuses.isEmpty) {
-      return const _EmptyChartPlaceholder(message: 'No drivers registered yet.');
+      return EmptyStateView(
+        compact: true,
+        icon: Icons.badge_outlined,
+        title: const S('No drivers registered yet.', 'مفيش سائقين متسجلين لسه.').of(context),
+      );
     }
 
     final counts = <String, int>{};
@@ -495,25 +495,6 @@ class _DriverStatusChart extends StatelessWidget {
             label: Text('${entry.key} (${entry.value})'),
           ),
       ],
-    );
-  }
-}
-
-class _EmptyChartPlaceholder extends StatelessWidget {
-  const _EmptyChartPlaceholder({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Text(
-        message,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-      ),
     );
   }
 }

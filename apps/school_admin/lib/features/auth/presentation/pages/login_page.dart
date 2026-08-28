@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_shared/school_shared.dart';
 
-import '../../../../app/app_settings.dart';
 import '../../../admin/presentation/admin_home_page.dart';
 import '../../data/firebase_auth_repository.dart';
 import '../cubit/auth_cubit.dart';
@@ -57,8 +57,10 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       final colors = Theme.of(context).colorScheme;
+      final appColors = context.appColors;
 
       return Scaffold(
+        backgroundColor: appColors.background,
         body: Stack(
           children: [
             Positioned.fill(
@@ -69,7 +71,7 @@ class _LoginPageState extends State<LoginPage> {
                     end: Alignment.bottomRight,
                     colors: [
                       colors.primary.withValues(alpha: 0.10),
-                      Theme.of(context).scaffoldBackgroundColor,
+                      appColors.background,
                     ],
                   ),
                 ),
@@ -78,15 +80,20 @@ class _LoginPageState extends State<LoginPage> {
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(AppSpacing.xl2),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 460),
                     child: Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(AppSpacing.xl3),
                         child: switch (state) {
                           AuthPendingApproval() => _StatusCard(
                             icon: Icons.hourglass_top,
+                            tone: StatusTone.warning,
+                            statusLabel: const S(
+                              'Pending approval',
+                              'في انتظار الموافقة',
+                            ).of(context),
                             title: S(
                               'Waiting for approval',
                               'في انتظار الموافقة',
@@ -106,6 +113,11 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           AuthRejected() => _StatusCard(
                             icon: Icons.block,
+                            tone: StatusTone.error,
+                            statusLabel: const S(
+                              'Rejected',
+                              'مرفوض',
+                            ).of(context),
                             title: S(
                               'Registration rejected',
                               'تم رفض التسجيل',
@@ -118,6 +130,11 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           AuthDisabled() => _StatusCard(
                             icon: Icons.pause_circle_outline,
+                            tone: StatusTone.neutral,
+                            statusLabel: const S(
+                              'Disabled',
+                              'متوقف',
+                            ).of(context),
                             title: S(
                               'Account disabled',
                               'الحساب متوقف',
@@ -147,10 +164,10 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-            Positioned(
-              top: 12,
-              right: 12,
-              child: _TopControls(),
+            PositionedDirectional(
+              top: AppSpacing.md,
+              end: AppSpacing.md,
+              child: const _TopControls(),
             ),
           ],
         ),
@@ -171,7 +188,7 @@ class _TopControls extends StatelessWidget {
           onPressed: AppSettings.toggleLocale,
           icon: const Icon(Icons.translate),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         ValueListenableBuilder<ThemeMode>(
           valueListenable: AppSettings.themeMode,
           builder: (context, mode, _) => IconButton.filledTonal(
@@ -212,7 +229,9 @@ class _SignInForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final appColors = context.appColors;
 
     return Form(
       key: formKey,
@@ -229,7 +248,7 @@ class _SignInForm extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: const Icon(
               Icons.directions_bus_filled,
@@ -237,17 +256,15 @@ class _SignInForm extends StatelessWidget {
               size: 28,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           Text(
             const S(
               'Jammam School Operations',
               'إدارة المدرسة',
             ).of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.headlineSmall,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             registering
                 ? const S(
@@ -255,9 +272,11 @@ class _SignInForm extends StatelessWidget {
                     'سجّل حساب مدرستك',
                   ).of(context)
                 : const S('Welcome back', 'أهلاً بيك تاني').of(context),
-            style: TextStyle(color: colors.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: appColors.textSecondary,
+            ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppSpacing.xl2 + AppSpacing.xs),
           if (registering)
             TextFormField(
               controller: name,
@@ -271,7 +290,7 @@ class _SignInForm extends StatelessWidget {
                     ).of(context)
                   : null,
             ),
-          if (registering) const SizedBox(height: 16),
+          if (registering) const SizedBox(height: AppSpacing.lg),
           if (registering)
             TextFormField(
               controller: schoolCode,
@@ -285,7 +304,7 @@ class _SignInForm extends StatelessWidget {
                     ).of(context)
                   : null,
             ),
-          if (registering) const SizedBox(height: 16),
+          if (registering) const SizedBox(height: AppSpacing.lg),
           TextFormField(
             controller: email,
             decoration: InputDecoration(
@@ -298,7 +317,7 @@ class _SignInForm extends StatelessWidget {
                     'اكتب إيميل صحيح',
                   ).of(context),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           TextFormField(
             controller: password,
             obscureText: true,
@@ -319,20 +338,17 @@ class _SignInForm extends StatelessWidget {
                         ).of(context)
                       : null),
           ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: state is AuthLoading ? null : onSubmit,
-            child: Text(
-              state is AuthLoading
-                  ? const S('Please wait…', 'لحظة من فضلك…').of(context)
-                  : (registering
-                        ? const S('Create account', 'إنشاء الحساب').of(context)
-                        : const S('Sign in', 'تسجيل الدخول').of(context)),
-            ),
+          const SizedBox(height: AppSpacing.xl2),
+          AppButton.primary(
+            label: registering
+                ? const S('Create account', 'إنشاء الحساب').of(context)
+                : const S('Sign in', 'تسجيل الدخول').of(context),
+            onPressed: onSubmit,
+            loading: state is AuthLoading,
           ),
           if (!registering)
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 onPressed: state is AuthLoading
                     ? null
@@ -342,7 +358,7 @@ class _SignInForm extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           TextButton(
             onPressed: state is AuthLoading ? null : onToggleRegistering,
             child: Text(
@@ -359,11 +375,33 @@ class _SignInForm extends StatelessWidget {
           ),
           if (state is AuthSignedOut && (state as AuthSignedOut).message != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                (state as AuthSignedOut).message!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: colors.error),
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: appColors.error.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 18,
+                      color: appColors.error,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        (state as AuthSignedOut).message!,
+                        style: TextStyle(color: appColors.error),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -375,29 +413,69 @@ class _SignInForm extends StatelessWidget {
 class _StatusCard extends StatelessWidget {
   const _StatusCard({
     required this.icon,
+    required this.tone,
+    required this.statusLabel,
     required this.title,
     required this.message,
     required this.onSignOut,
   });
 
   final IconData icon;
+  final StatusTone tone;
+  final String statusLabel;
   final String title;
   final String message;
   final VoidCallback onSignOut;
 
   @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-      const SizedBox(height: 12),
-      Text(title, style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 8),
-      Text(message, textAlign: TextAlign.center),
-      const SizedBox(height: 16),
-      OutlinedButton(onPressed: onSignOut, child: const Text('Sign out')),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final appColors = context.appColors;
+    final accent = switch (tone) {
+      StatusTone.success => appColors.success,
+      StatusTone.warning => appColors.warning,
+      StatusTone.error => appColors.error,
+      StatusTone.info => appColors.info,
+      StatusTone.emergency => appColors.emergency,
+      StatusTone.neutral => appColors.textMuted,
+    };
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 32, color: accent),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        StatusBadge(label: statusLabel, tone: tone),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: appColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        AppButton.secondary(
+          label: const S('Sign out', 'تسجيل الخروج').of(context),
+          onPressed: onSignOut,
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> _showForgotPasswordDialog(
@@ -445,28 +523,23 @@ Future<void> _showForgotPasswordDialog(
   controller.dispose();
   if (email == null || !email.contains('@') || !context.mounted) return;
 
-  final messenger = ScaffoldMessenger.of(context);
   final isArabic = Localizations.localeOf(context).languageCode == 'ar';
   try {
     await FirebaseAuthRepository().sendPasswordResetEmail(email);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          isArabic
-              ? 'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.'
-              : "If $email has an account, we've sent a reset link.",
-        ),
-      ),
+    if (!context.mounted) return;
+    AppSnackbar.success(
+      context,
+      isArabic
+          ? 'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.'
+          : "If $email has an account, we've sent a reset link.",
     );
   } catch (_) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          isArabic
-              ? 'معرفناش نبعت إيميل الاستعادة — جرب تاني.'
-              : "Couldn't send the reset email — try again.",
-        ),
-      ),
+    if (!context.mounted) return;
+    AppSnackbar.error(
+      context,
+      isArabic
+          ? 'معرفناش نبعت إيميل الاستعادة — جرب تاني.'
+          : "Couldn't send the reset email — try again.",
     );
   }
 }

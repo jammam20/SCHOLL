@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_shared/school_shared.dart';
 
-import '../../../../app/app_settings.dart';
 import '../../../home/presentation/parent_home_page.dart';
 import '../../data/firebase_auth_repository.dart';
 import '../cubit/auth_cubit.dart';
@@ -56,37 +56,25 @@ class _AuthPageState extends State<AuthPage> {
         );
       }
 
-      final colors = Theme.of(context).colorScheme;
+      final colors = context.appColors;
 
       return Scaffold(
+        backgroundColor: colors.background,
         body: Stack(
           children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colors.primary.withValues(alpha: 0.10),
-                      Theme.of(context).scaffoldBackgroundColor,
-                    ],
-                  ),
-                ),
-              ),
-            ),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(AppSpacing.xl2),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 460),
                     child: Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(AppSpacing.xl3),
                         child: switch (state) {
                           AuthPendingApproval() => _StatusCard(
                             icon: Icons.hourglass_top,
+                            tone: StatusTone.warning,
                             title: const S(
                               'Waiting for approval',
                               'في انتظار الموافقة',
@@ -102,6 +90,7 @@ class _AuthPageState extends State<AuthPage> {
                           ),
                           AuthRejected() => _StatusCard(
                             icon: Icons.block,
+                            tone: StatusTone.error,
                             title: const S(
                               'Registration rejected',
                               'تم رفض التسجيل',
@@ -117,6 +106,7 @@ class _AuthPageState extends State<AuthPage> {
                           ),
                           AuthDisabled() => _StatusCard(
                             icon: Icons.pause_circle_outline,
+                            tone: StatusTone.neutral,
                             title: const S(
                               'Account disabled',
                               'الحساب متوقف',
@@ -147,7 +137,7 @@ class _AuthPageState extends State<AuthPage> {
                 ),
               ),
             ),
-            const Positioned(top: 12, right: 12, child: _TopControls()),
+            const PositionedDirectional(top: 12, end: 12, child: _TopControls()),
           ],
         ),
       );
@@ -167,11 +157,11 @@ class _TopControls extends StatelessWidget {
           onPressed: AppSettings.toggleLocale,
           icon: const Icon(Icons.translate),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppSpacing.sm),
         ValueListenableBuilder<ThemeMode>(
           valueListenable: AppSettings.themeMode,
           builder: (context, mode, _) => IconButton.filledTonal(
-            tooltip: 'Theme',
+            tooltip: const S('Theme', 'المظهر').of(context),
             onPressed: AppSettings.toggleTheme,
             icon: Icon(
               mode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
@@ -208,7 +198,9 @@ class _SignInForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final isLoading = state is AuthLoading;
 
     return Form(
       key: formKey,
@@ -220,27 +212,24 @@ class _SignInForm extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colors.primary, colors.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.family_restroom,
-              color: Colors.white,
+              color: theme.colorScheme.primary,
               size: 28,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           Text(
             const S('Jammam School Bus', 'تطبيق ولي الأمر').of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: colors.textPrimary,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             registering
                 ? const S(
@@ -248,9 +237,11 @@ class _SignInForm extends StatelessWidget {
                     'اعمل حسابك كولي أمر',
                   ).of(context)
                 : const S('Welcome back', 'أهلاً بيك تاني').of(context),
-            style: TextStyle(color: colors.onSurfaceVariant),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.textSecondary,
+            ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppSpacing.xl2),
           if (registering)
             TextFormField(
               controller: name,
@@ -261,7 +252,7 @@ class _SignInForm extends StatelessWidget {
                   ? const S('Enter your name', 'اكتب اسمك').of(context)
                   : null,
             ),
-          if (registering) const SizedBox(height: 16),
+          if (registering) const SizedBox(height: AppSpacing.lg),
           if (registering)
             TextFormField(
               controller: schoolCode,
@@ -275,7 +266,7 @@ class _SignInForm extends StatelessWidget {
                     ).of(context)
                   : null,
             ),
-          if (registering) const SizedBox(height: 16),
+          if (registering) const SizedBox(height: AppSpacing.lg),
           TextFormField(
             controller: email,
             keyboardType: TextInputType.emailAddress,
@@ -286,7 +277,7 @@ class _SignInForm extends StatelessWidget {
                 ? null
                 : const S('Enter a valid email', 'اكتب إيميل صحيح').of(context),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           TextFormField(
             controller: password,
             obscureText: true,
@@ -306,22 +297,19 @@ class _SignInForm extends StatelessWidget {
                         )
                       : null),
           ),
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: state is AuthLoading ? null : onSubmit,
-            child: Text(
-              state is AuthLoading
-                  ? const S('Please wait…', 'لحظة من فضلك…').of(context)
-                  : (registering
-                        ? const S('Create account', 'إنشاء الحساب').of(context)
-                        : const S('Sign in', 'تسجيل الدخول').of(context)),
-            ),
+          const SizedBox(height: AppSpacing.xl2),
+          AppButton.primary(
+            label: registering
+                ? const S('Create account', 'إنشاء الحساب').of(context)
+                : const S('Sign in', 'تسجيل الدخول').of(context),
+            onPressed: onSubmit,
+            loading: isLoading,
           ),
           if (!registering)
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
-                onPressed: state is AuthLoading
+                onPressed: isLoading
                     ? null
                     : () => _showForgotPasswordDialog(context, email.text),
                 child: Text(
@@ -329,9 +317,9 @@ class _SignInForm extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           TextButton(
-            onPressed: state is AuthLoading ? null : onToggleRegistering,
+            onPressed: isLoading ? null : onToggleRegistering,
             child: Text(
               registering
                   ? const S(
@@ -346,11 +334,10 @@ class _SignInForm extends StatelessWidget {
           ),
           if (state is AuthSignedOut && (state as AuthSignedOut).message != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                (state as AuthSignedOut).message!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: colors.error),
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: ErrorStateView(
+                compact: true,
+                message: (state as AuthSignedOut).message!,
               ),
             ),
         ],
@@ -362,29 +349,63 @@ class _SignInForm extends StatelessWidget {
 class _StatusCard extends StatelessWidget {
   const _StatusCard({
     required this.icon,
+    required this.tone,
     required this.title,
     required this.message,
     required this.onSignOut,
   });
 
   final IconData icon;
+  final StatusTone tone;
   final String title;
   final String message;
   final VoidCallback onSignOut;
 
+  Color _toneColor(AppColorTokens colors) => switch (tone) {
+    StatusTone.success => colors.success,
+    StatusTone.warning => colors.warning,
+    StatusTone.error => colors.error,
+    StatusTone.info => colors.info,
+    StatusTone.emergency => colors.emergency,
+    StatusTone.neutral => colors.textMuted,
+  };
+
   @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-      const SizedBox(height: 12),
-      Text(title, style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 8),
-      Text(message, textAlign: TextAlign.center),
-      const SizedBox(height: 16),
-      OutlinedButton(onPressed: onSignOut, child: const Text('Sign out')),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final toneColor = _toneColor(colors);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: toneColor.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 32, color: toneColor),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        StatusBadge(label: title, tone: tone),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        AppButton.secondary(
+          label: const S('Sign out', 'تسجيل الخروج').of(context),
+          onPressed: onSignOut,
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> _showForgotPasswordDialog(
@@ -406,7 +427,7 @@ Future<void> _showForgotPasswordDialog(
               'هنبعتلك لينك على إيميلك عشان تغيّر كلمة السر.',
             ).of(dialogContext),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: controller,
             autofocus: true,
@@ -432,28 +453,23 @@ Future<void> _showForgotPasswordDialog(
   controller.dispose();
   if (email == null || !email.contains('@') || !context.mounted) return;
 
-  final messenger = ScaffoldMessenger.of(context);
   final isArabic = Localizations.localeOf(context).languageCode == 'ar';
   try {
     await FirebaseAuthRepository().sendPasswordResetEmail(email);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          isArabic
-              ? 'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.'
-              : "If $email has an account, we've sent a reset link.",
-        ),
-      ),
+    if (!context.mounted) return;
+    AppSnackbar.success(
+      context,
+      isArabic
+          ? 'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.'
+          : "If $email has an account, we've sent a reset link.",
     );
   } catch (_) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          isArabic
-              ? 'معرفناش نبعت إيميل الاستعادة — جرب تاني.'
-              : "Couldn't send the reset email — try again.",
-        ),
-      ),
+    if (!context.mounted) return;
+    AppSnackbar.error(
+      context,
+      isArabic
+          ? 'معرفناش نبعت إيميل الاستعادة — جرب تاني.'
+          : "Couldn't send the reset email — try again.",
     );
   }
 }

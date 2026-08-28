@@ -71,38 +71,50 @@ class _AdminHomePageState extends State<AdminHomePage> {
       ProfilePage(user: widget.user, onSignOut: widget.onSignOut),
     ];
 
+    final appColors = context.appColors;
+
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: const Icon(Icons.dashboard),
-            label: const S('Dashboard', 'الرئيسية').of(context),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.groups_outlined),
-            selectedIcon: const Icon(Icons.groups),
-            label: const S('People', 'الأشخاص').of(context),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.alt_route_outlined),
-            selectedIcon: const Icon(Icons.alt_route),
-            label: const S('Operations', 'العمليات').of(context),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.bar_chart_outlined),
-            selectedIcon: const Icon(Icons.bar_chart),
-            label: const S('Reports', 'التقارير').of(context),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: const S('Profile', 'حسابي').of(context),
-          ),
-        ],
+      bottomNavigationBar: DecoratedBox(
+        // A hairline top border reads as a crisper, more deliberate seam
+        // between content and navigation than elevation/shadow alone —
+        // consistent with the design system's flat, border-forward surfaces
+        // (see design-system/MASTER.md §6). The NavigationBar itself keeps
+        // its existing selection/callback wiring untouched.
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: appColors.border)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (value) => setState(() => _index = value),
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.dashboard_outlined),
+              selectedIcon: const Icon(Icons.dashboard),
+              label: const S('Dashboard', 'الرئيسية').of(context),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.groups_outlined),
+              selectedIcon: const Icon(Icons.groups),
+              label: const S('People', 'الأشخاص').of(context),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.alt_route_outlined),
+              selectedIcon: const Icon(Icons.alt_route),
+              label: const S('Operations', 'العمليات').of(context),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.bar_chart_outlined),
+              selectedIcon: const Icon(Icons.bar_chart),
+              label: const S('Reports', 'التقارير').of(context),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.person_outline),
+              selectedIcon: const Icon(Icons.person),
+              label: const S('Profile', 'حسابي').of(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -127,21 +139,40 @@ class _DashboardTab extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                S(
-                  'Welcome back, ${user.name}',
-                  'أهلاً بيك تاني، ${user.name}',
-                ).of(context),
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            child: Center(
+              child: ConstrainedBox(
+                // Keeps the dashboard from stretching edge-to-edge on a wide
+                // desktop/web viewport — content stays a readable width and
+                // centers instead, per design-system/MASTER.md §11.
+                constraints: const BoxConstraints(maxWidth: 1400),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                    0,
+                  ),
+                  child: SectionHeader(
+                    title: S(
+                      'Welcome back, ${user.name}',
+                      'أهلاً بيك تاني، ${user.name}',
+                    ).of(context),
+                    subtitle: const S(
+                      "Here's a snapshot of your school today.",
+                      'لمحة سريعة عن مدرستك النهارده.',
+                    ).of(context),
+                  ),
+                ),
               ),
             ),
           ),
           SliverToBoxAdapter(
-            child: AnalyticsTab(schoolId: user.schoolId),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1400),
+                child: AnalyticsTab(schoolId: user.schoolId),
+              ),
+            ),
           ),
         ],
       ),
