@@ -92,3 +92,23 @@ bool isValidStopReorder({
   final newSet = newOrder.toSet();
   return currentSet.length == newSet.length && currentSet.containsAll(newSet);
 }
+
+/// The trip (if any) that should currently have live GPS tracking running,
+/// given a driver's full trip list — exactly a trip in [TripStatus.active]
+/// or [TripStatus.emergency]. Used by TripsBloc to make the GPS stream
+/// match what the trip list actually says is happening any time a new
+/// snapshot arrives (including the very first one after an app launch or
+/// process restart), rather than only reacting to the button tap that
+/// originally started it — so a trip that was already active when the app
+/// (re)opened is never silently left untracked. A driver is expected to
+/// have at most one active/emergency trip at a time per the trip-status
+/// transition rules; if more than one is somehow found, the first one
+/// found wins rather than tracking none.
+SchoolTrip? tripNeedingTracking(List<SchoolTrip> trips) {
+  for (final trip in trips) {
+    if (trip.status == TripStatus.active || trip.status == TripStatus.emergency) {
+      return trip;
+    }
+  }
+  return null;
+}

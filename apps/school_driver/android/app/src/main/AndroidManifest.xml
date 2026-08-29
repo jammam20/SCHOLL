@@ -1,4 +1,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Live trip tracking (DriverTrackingRepository / geolocator). Fine +
+         coarse are required for any GPS fix at all — previously missing
+         from this manifest entirely, meaning Geolocator.requestPermission()
+         could never actually be granted on a real device, since Android
+         will not grant a runtime permission that isn't declared here.
+         FOREGROUND_SERVICE(+_LOCATION) are required to run geolocator's own
+         bundled GeolocatorLocationService (declared in the geolocator_android
+         plugin's manifest, auto-merged into this app) as a real foreground
+         service — see AndroidSettings.foregroundNotificationConfig in
+         driver_tracking_repository.dart. ACCESS_BACKGROUND_LOCATION is
+         deliberately NOT requested: Android treats an app running a
+         genuine foreground service as active foreground usage for location
+         purposes, so it isn't required for this pattern, and requesting it
+         would only add an unnecessary permission prompt. POST_NOTIFICATIONS
+         (needed to show the foreground service's persistent notification on
+         Android 13+) is already declared by firebase_messaging's own
+         manifest, which this app already depends on. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <application
         android:label="Jammam Driver"
         android:name="${applicationName}"

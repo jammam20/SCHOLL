@@ -176,4 +176,49 @@ void main() {
       );
     });
   });
+
+  group('tripNeedingTracking', () {
+    SchoolTrip trip(String id, TripStatus status) => SchoolTrip(
+      id: id,
+      schoolId: 'school-1',
+      routeId: 'route-1',
+      busId: 'bus-1',
+      driverId: 'driver-1',
+      status: status,
+      scheduledAt: DateTime(2026, 1, 1),
+    );
+
+    test('returns the active trip when one exists', () {
+      final trips = [
+        trip('t1', TripStatus.scheduled),
+        trip('t2', TripStatus.active),
+        trip('t3', TripStatus.completed),
+      ];
+      expect(tripNeedingTracking(trips)?.id, 't2');
+    });
+
+    test('returns the emergency trip when one exists', () {
+      final trips = [trip('t1', TripStatus.emergency)];
+      expect(tripNeedingTracking(trips)?.id, 't1');
+    });
+
+    test('returns null when no trip is active or in emergency', () {
+      final trips = [
+        trip('t1', TripStatus.scheduled),
+        trip('t2', TripStatus.paused),
+        trip('t3', TripStatus.completed),
+        trip('t4', TripStatus.cancelled),
+      ];
+      expect(tripNeedingTracking(trips), isNull);
+    });
+
+    test('returns null for an empty trip list', () {
+      expect(tripNeedingTracking(const []), isNull);
+    });
+
+    test('a paused trip is not returned, matching stopTracking on pause', () {
+      final trips = [trip('t1', TripStatus.paused)];
+      expect(tripNeedingTracking(trips), isNull);
+    });
+  });
 }

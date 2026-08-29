@@ -173,6 +173,12 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
 
+  /// The trip id [_reconcileTracking] last started tracking for, so a
+  /// still-active trip's GPS stream isn't torn down and rebuilt on every
+  /// unrelated snapshot update (e.g. a boarding change). `null` means
+  /// nothing should currently be tracked.
+  String? _trackedTripId;
+
   Future<void> _onStarted(TripsStarted event, Emitter<TripsState> emit) async {
     emit(TripsLoading());
 
@@ -189,6 +195,46 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
 
   void _onSnapshot(_TripsSnapshotReceived event, Emitter<TripsState> emit) {
     emit(TripsLoaded(event.snapshot));
+    _reconcileTracking(event.snapshot);
+  }
+
+  /// Makes the GPS stream match what the trip list actually says is
+  /// happening, not just what the last button tap said. Without this, a
+  /// driver's app process being recreated (Android killing and restoring
+  /// it, or simply relaunching the app) mid-trip would redraw an
+  /// `active`/`emergency` trip's UI correctly from Firestore but never
+  /// restart the location stream that only ever starts in response to an
+  /// explicit start/resume/emergency button press — silently leaving the
+  /// trip looking tracked when it isn't. Also stops tracking if the
+  /// tracked trip is no longer `active`/`emergency` (paused, completed, or
+  /// cancelled by another client, e.g. an admin).
+  ///
+  /// Safe to call on every snapshot: only calls startTracking/stopTracking
+  /// when which trip needs tracking has actually changed, and
+  /// DriverTrackingRepository.startTracking already cancels any existing
+  /// stream before starting a new one regardless.
+  void _reconcileTracking(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    final trips = snapshot.docs
+        .map((doc) => SchoolTrip.fromMap(doc.id, doc.data()))
+        .toList();
+    final needsTracking = tripNeedingTracking(trips);
+
+    if (needsTracking == null) {
+      if (_trackedTripId != null) {
+        _trackedTripId = null;
+        unawaited(_tracking.stopTracking());
+      }
+      return;
+    }
+
+    if (_trackedTripId == needsTracking.id) return;
+    _trackedTripId = needsTracking.id;
+    unawaited(
+      _tracking.startTracking(
+        schoolId: needsTracking.schoolId,
+        tripId: needsTracking.id,
+      ),
+    );
   }
 
   void _onFailure(_TripsSnapshotFailed event, Emitter<TripsState> emit) {
@@ -407,6 +453,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
   @override
   Future<void> close() async {
     await _subscription?.cancel();
+    _trackedTripId = null;
     await _tracking.stopTracking();
     return super.close();
   }

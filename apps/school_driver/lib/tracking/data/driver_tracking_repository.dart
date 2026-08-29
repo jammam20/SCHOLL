@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:geolocator/geolocator.dart';
 
 class DriverTrackingRepository {
@@ -52,32 +53,77 @@ class DriverTrackingRepository {
 
     await _positionSubscription?.cancel();
 
-    _positionSubscription =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 10,
-          ),
-        ).listen((position) async {
-          try {
-            await reference.set({
-              'latitude': position.latitude,
-              'longitude': position.longitude,
-              'heading': position.heading,
-              'speed': position.speed,
-              'accuracy': position.accuracy,
-              'driverId': driverId,
-              'timestamp':
-              ServerValue.timestamp,
-            });
-          } catch (_) {
-            // Best-effort: a single dropped location update (a momentary
-            // RTDB disconnect, or database.rules.json's authorizedSchools
-            // check not having caught up yet for a brand-new membership)
-            // isn't worth surfacing to the driver — the next position
-            // update retries on its own.
-          }
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: _trackingSettings(),
+    ).listen((position) async {
+      try {
+        await reference.set({
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'heading': position.heading,
+          'speed': position.speed,
+          'accuracy': position.accuracy,
+          'driverId': driverId,
+          'timestamp': ServerValue.timestamp,
         });
+      } catch (_) {
+        // Best-effort: a single dropped location update (a momentary
+        // RTDB disconnect, or database.rules.json's authorizedSchools
+        // check not having caught up yet for a brand-new membership)
+        // isn't worth surfacing to the driver — the next position
+        // update retries on its own.
+      }
+    });
+  }
+
+  /// On Android, wraps the same accuracy/distance settings this app already
+  /// used in a real foreground service via [AndroidSettings.
+  /// foregroundNotificationConfig] — this is what keeps GPS updates flowing
+  /// once the app is backgrounded or the screen locks. Without it, Android
+  /// treats this like any other backgrounded app and can suspend its
+  /// location callbacks; a foreground service (with the persistent
+  /// notification Android requires to disclose it) is treated as active
+  /// foreground usage instead. `GeolocatorLocationService`, which this
+  /// starts, ships inside the `geolocator_android` plugin itself — no new
+  /// package was added for this.
+  ///
+  /// `intervalDuration` is set explicitly to 8s: previously unset, which
+  /// geolocator silently defaults to 5s internally — 8s keeps the map
+  /// clearly "live" for a bus route while trimming a real cost identified
+  /// in the prior system audit (this GPS stream is what triggers the
+  /// highest-cost Cloud Function in the system on every update). The
+  /// existing 10m `distanceFilter` is unchanged and still applies on top of
+  /// this — a position only emits once both conditions are met.
+  /// `enableWakeLock` is deliberately turned on (default is off): with the
+  /// screen locked, the CPU can otherwise sleep and deliver GPS fixes only
+  /// in a batch whenever something else wakes the device, which would
+  /// silently reintroduce exactly the gap this fix exists to close. The
+  /// cost is scoped to the lifetime of an active trip only — `stopTracking`
+  /// cancels the stream (and the underlying service) immediately.
+  ///
+  /// `ACCESS_BACKGROUND_LOCATION` is deliberately not requested anywhere in
+  /// this app — see AndroidManifest.xml for why it isn't needed here.
+  ///
+  /// Web has no foreground-service concept, so it keeps plain
+  /// [LocationSettings] with the same accuracy/distance values as before.
+  LocationSettings _trackingSettings() {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      );
+    }
+    return AndroidSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+      intervalDuration: const Duration(seconds: 8),
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationTitle: 'Jammam School Bus',
+        notificationText: 'Trip tracking active — تتبع الرحلة نشط',
+        setOngoing: true,
+        enableWakeLock: true,
+      ),
+    );
   }
 
   Future<void> stopTracking() async {
