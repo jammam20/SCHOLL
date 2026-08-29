@@ -2,27 +2,35 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:ui' as ui show TextDirection;
+
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/notification_routing.dart';
-import '../../analytics/presentation/analytics_tab.dart';
+import '../../audit/presentation/audit_trail_page.dart';
 import '../../buses/data/buses_repository.dart';
-import '../../buses/presentation/bloc/buses_bloc.dart';
 import '../../common/presentation/location_picker_page.dart';
+import '../../dashboard/presentation/control_center_tab.dart';
+import '../../driver_management/presentation/driver_management_page.dart';
 import '../../drivers/data/drivers_repository.dart';
 import '../../drivers/presentation/bloc/drivers_bloc.dart';
+import '../../incidents/presentation/incidents_page.dart';
 import '../../ops/presentation/live_ops_tab.dart';
+import '../../pickup_points/presentation/pickup_points_page.dart';
 import '../../parents/data/parents_repository.dart';
 import '../../parents/presentation/bloc/parents_bloc.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../reports/presentation/reports_tab.dart';
 import '../../routes/data/routes_repository.dart';
 import '../../routes/presentation/bloc/routes_bloc.dart';
+import '../../routes/presentation/route_deviations_page.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/bloc/students_bloc.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
+import '../../trips/presentation/trip_reassignment_dialog.dart';
+import '../../vehicles/presentation/vehicle_management_page.dart';
 import '../../../widgets/async_error_view.dart';
 
 class AdminHomePage extends StatefulWidget {
@@ -38,6 +46,11 @@ class AdminHomePage extends StatefulWidget {
 class _AdminHomePageState extends State<AdminHomePage> {
   int _index = 0;
 
+  /// Which tab inside the Operations section to open when the dashboard's
+  /// alert feed jumps here. Read (and cleared) by [_OperationsSection] so a
+  /// jump lands on the right sub-tab, not just the section's first one.
+  final ValueNotifier<int?> _operationsTabRequest = ValueNotifier(null);
+
   @override
   void initState() {
     super.initState();
@@ -51,6 +64,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   @override
   void dispose() {
     NotificationRouting.pendingTarget.removeListener(_onNotificationTapped);
+    _operationsTabRequest.dispose();
     super.dispose();
   }
 
@@ -58,15 +72,41 @@ class _AdminHomePageState extends State<AdminHomePage> {
     if (NotificationRouting.pendingTarget.value == null) return;
     NotificationRouting.pendingTarget.value = null;
     setState(() => _index = 2);
+    _operationsTabRequest.value = _OperationsSection.liveMapTab;
+  }
+
+  /// Routes a dashboard alert to the surface that owns it, reusing the same
+  /// index-based tab switching the notification handler above already uses
+  /// rather than introducing a second navigation concept.
+  void _onDashboardJump(DashboardJumpTarget target) {
+    switch (target) {
+      case DashboardJumpTarget.liveOps:
+        setState(() => _index = 2);
+        _operationsTabRequest.value = _OperationsSection.liveMapTab;
+      case DashboardJumpTarget.incidents:
+        setState(() => _index = 2);
+        _operationsTabRequest.value = _OperationsSection.incidentsTab;
+      case DashboardJumpTarget.deviations:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) =>
+                RouteDeviationsPage(schoolId: widget.user.schoolId),
+          ),
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final schoolId = widget.user.schoolId;
     final pages = [
-      _DashboardTab(user: widget.user),
+      ControlCenterTab(user: widget.user, onJump: _onDashboardJump),
       _PeopleSection(schoolId: schoolId),
-      _OperationsSection(schoolId: schoolId),
+      _OperationsSection(
+        schoolId: schoolId,
+        tabRequest: _operationsTabRequest,
+      ),
       ReportsTab(schoolId: schoolId),
       ProfilePage(user: widget.user, onSignOut: widget.onSignOut),
     ];
@@ -120,66 +160,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
   }
 }
 
-/// The landing tab: a compact "hi, here's your school" header above the
-/// same live stat cards and charts every other admin tab is built from
-/// (see AnalyticsTab) — the header scrolls with the charts below it rather
-/// than living in its own AppBar, so this reads as one dashboard, not two
-/// stacked screens.
-class _DashboardTab extends StatelessWidget {
-  const _DashboardTab({required this.user});
-
-  final AppUser user;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(const S('Dashboard', 'الرئيسية').of(context)),
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Center(
-              child: ConstrainedBox(
-                // Keeps the dashboard from stretching edge-to-edge on a wide
-                // desktop/web viewport — content stays a readable width and
-                // centers instead, per design-system/MASTER.md §11.
-                constraints: const BoxConstraints(maxWidth: 1400),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.xl,
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                    0,
-                  ),
-                  child: SectionHeader(
-                    title: S(
-                      'Welcome back, ${user.name}',
-                      'أهلاً بيك تاني، ${user.name}',
-                    ).of(context),
-                    subtitle: const S(
-                      "Here's a snapshot of your school today.",
-                      'لمحة سريعة عن مدرستك النهارده.',
-                    ).of(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1400),
-                child: AnalyticsTab(schoolId: user.schoolId),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Students, drivers and parents grouped behind one bottom-nav destination,
 /// switched with an ordinary top TabBar — three related directories don't
 /// each need their own place in the bottom nav.
@@ -215,39 +195,131 @@ class _PeopleSection extends StatelessWidget {
   }
 }
 
-/// Buses, routes, trips and the live map grouped behind one bottom-nav
-/// destination — the day-to-day fleet-running side of the app, as opposed
-/// to the people directory above.
-class _OperationsSection extends StatelessWidget {
-  const _OperationsSection({required this.schoolId});
+/// Vehicles, routes, trips, the live map, incidents and pickup points
+/// grouped behind one bottom-nav destination — the day-to-day fleet-running
+/// side of the app, as opposed to the people directory above.
+///
+/// The old inline `_BusesTab` has been **replaced** by
+/// [VehicleManagementPage] rather than kept alongside it: that page does
+/// everything the tab did (list, add, activate/deactivate — still through
+/// the unchanged BusesBloc) plus the vehicle profile and maintenance log,
+/// so keeping both would have meant two competing places to manage the
+/// same bus records.
+class _OperationsSection extends StatefulWidget {
+  const _OperationsSection({required this.schoolId, required this.tabRequest});
 
   final String schoolId;
 
+  /// Set by the host page to jump straight to a given sub-tab (from a
+  /// notification tap, or a dashboard alert). Cleared once consumed.
+  final ValueNotifier<int?> tabRequest;
+
+  /// Tab order: 0 vehicles, 1 routes, 2 trips, 3 live map, 4 incidents,
+  /// 5 pickup points. Only the two that something actually jumps to are
+  /// named — keeping constants for the rest would just be four unused
+  /// fields drifting out of sync with the TabBarView below.
+  static const liveMapTab = 3;
+  static const incidentsTab = 4;
+  static const tabCount = 6;
+
+  @override
+  State<_OperationsSection> createState() => _OperationsSectionState();
+}
+
+class _OperationsSectionState extends State<_OperationsSection>
+    with SingleTickerProviderStateMixin {
+  late final TabController _controller = TabController(
+    length: _OperationsSection.tabCount,
+    vsync: this,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    widget.tabRequest.addListener(_onTabRequested);
+    _onTabRequested();
+  }
+
+  @override
+  void dispose() {
+    widget.tabRequest.removeListener(_onTabRequested);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTabRequested() {
+    final requested = widget.tabRequest.value;
+    if (requested == null) return;
+    widget.tabRequest.value = null;
+    if (requested >= 0 && requested < _OperationsSection.tabCount) {
+      _controller.animateTo(requested);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(const S('Operations', 'العمليات').of(context)),
-          bottom: TabBar(
-            isScrollable: true,
-            tabs: [
-              Tab(text: const S('Buses', 'الأتوبيسات').of(context)),
-              Tab(text: const S('Routes', 'الخطوط').of(context)),
-              Tab(text: const S('Trips', 'الرحلات').of(context)),
-              Tab(text: const S('Live map', 'الخريطة المباشرة').of(context)),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(const S('Operations', 'العمليات').of(context)),
+        actions: [
+          IconButton(
+            tooltip: const S(
+              'Route deviations',
+              'الخروج عن المسار',
+            ).of(context),
+            icon: const Icon(Icons.alt_route),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RouteDeviationsPage(schoolId: widget.schoolId),
+              ),
+            ),
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _BusesTab(schoolId: schoolId),
-            _RoutesTab(schoolId: schoolId),
-            _TripsTab(schoolId: schoolId),
-            LiveOpsTab(schoolId: schoolId),
+          IconButton(
+            tooltip: const S('Drivers', 'إدارة السائقين').of(context),
+            icon: const Icon(Icons.badge_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    DriverManagementPage(schoolId: widget.schoolId),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: const S('Audit trail', 'سجل التدقيق').of(context),
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AuditTrailPage(schoolId: widget.schoolId),
+              ),
+            ),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _controller,
+          isScrollable: true,
+          tabs: [
+            Tab(text: const S('Vehicles', 'المركبات').of(context)),
+            Tab(text: const S('Routes', 'الخطوط').of(context)),
+            Tab(text: const S('Trips', 'الرحلات').of(context)),
+            Tab(text: const S('Live map', 'الخريطة المباشرة').of(context)),
+            Tab(text: const S('Incidents', 'البلاغات').of(context)),
+            Tab(text: const S('Pickup points', 'نقاط الاستلام').of(context)),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _controller,
+        children: [
+          VehicleManagementPage(schoolId: widget.schoolId),
+          _RoutesTab(schoolId: widget.schoolId),
+          _TripsTab(schoolId: widget.schoolId),
+          LiveOpsTab(schoolId: widget.schoolId),
+          IncidentsPage(schoolId: widget.schoolId),
+          PickupPointsPage(schoolId: widget.schoolId, showAppBar: false),
+        ],
       ),
     );
   }
@@ -1330,232 +1402,6 @@ class _MemberActionMenuRow extends StatelessWidget {
   }
 }
 
-class _BusesTab extends StatelessWidget {
-  const _BusesTab({required this.schoolId});
-
-  final String schoolId;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => BusesBloc(BusesRepository())..add(BusesStarted(schoolId)),
-      child: BlocBuilder<BusesBloc, BusesState>(
-        builder: (context, state) {
-          if (state is BusesLoading || state is BusesInitial) {
-            return ListView.builder(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              itemCount: 4,
-              itemBuilder: (_, _) => const AppSkeletonListTile(),
-            );
-          }
-          if (state is BusesFailure) {
-            return ErrorStateView(message: state.message);
-          }
-
-          final snapshot = state is BusesLoaded ? state.snapshot : null;
-          final docs = snapshot?.docs ?? const [];
-
-          return Scaffold(
-            floatingActionButton: FloatingActionButton.extended(
-              onPressed: () => _createBus(context),
-              icon: const Icon(Icons.add),
-              label: Text(const S('Bus', 'أتوبيس').of(context)),
-            ),
-            body: docs.isEmpty
-                ? EmptyStateView(
-                    icon: Icons.directions_bus_outlined,
-                    title: const S(
-                      'No buses yet.',
-                      'مفيش أتوبيسات لسه.',
-                    ).of(context),
-                    message: const S(
-                      'Add your first bus to start assigning it to trips.',
-                      'ضيف أول أتوبيس عشان تقدر تحدده لرحلة.',
-                    ).of(context),
-                    actionLabel: const S('Add bus', 'إضافة أتوبيس').of(context),
-                    onAction: () => _createBus(context),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: docs.length,
-                    separatorBuilder: (_, _) =>
-                        const SizedBox(height: AppSpacing.sm),
-                    itemBuilder: (_, index) {
-                      final doc = docs[index];
-                      final data = doc.data();
-                      final isActive = data['isActive'] == true;
-                      final colors = context.appColors;
-
-                      return Container(
-                        key: ValueKey(doc.id),
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color:
-                                    (isActive ? colors.success : colors.textMuted)
-                                        .withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                              ),
-                              child: Icon(
-                                Icons.directions_bus,
-                                color: isActive ? colors.success : colors.textMuted,
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    data['name']?.toString() ?? '',
-                                    style: Theme.of(context).textTheme.titleSmall
-                                        ?.copyWith(color: colors.textPrimary),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.confirmation_number_outlined,
-                                        size: 14,
-                                        color: colors.textMuted,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          data['plateNumber']?.toString() ?? '',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(color: colors.textMuted),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                StatusBadge(
-                                  label: isActive
-                                      ? const S('Active', 'نشطة').of(context)
-                                      : const S(
-                                          'Inactive',
-                                          'غير نشطة',
-                                        ).of(context),
-                                  tone: isActive
-                                      ? StatusTone.success
-                                      : StatusTone.neutral,
-                                ),
-                                Switch(
-                                  value: isActive,
-                                  onChanged: (value) {
-                                    context.read<BusesBloc>().add(
-                                      BusStatusChanged(
-                                        schoolId: schoolId,
-                                        busId: doc.id,
-                                        active: value,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _createBus(BuildContext context) async {
-    final name = TextEditingController();
-    final plate = TextEditingController();
-    final capacity = TextEditingController();
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Add bus', 'إضافة أتوبيس').of(dialogContext)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: InputDecoration(
-                labelText: const S('Name', 'الاسم').of(dialogContext),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: plate,
-              decoration: InputDecoration(
-                labelText: const S(
-                  'Plate number',
-                  'رقم اللوحة',
-                ).of(dialogContext),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: capacity,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: const S('Capacity', 'السعة').of(dialogContext),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(const S('Save', 'حفظ').of(dialogContext)),
-          ),
-        ],
-      ),
-    );
-    if (!context.mounted) return;
-
-    if (result == true && name.text.trim().isNotEmpty) {
-      context.read<BusesBloc>().add(
-        BusCreated(
-          schoolId: schoolId,
-          name: name.text,
-          plateNumber: plate.text,
-          capacity: int.tryParse(capacity.text),
-        ),
-      );
-    }
-
-    name.dispose();
-    plate.dispose();
-    capacity.dispose();
-  }
-}
-
 class _RoutesTab extends StatelessWidget {
   const _RoutesTab({required this.schoolId});
 
@@ -1614,7 +1460,7 @@ class _RoutesTab extends StatelessWidget {
                     itemBuilder: (_, index) {
                       final doc = docs[index];
                       final data = doc.data();
-                      final isActive = data['isActive'] == true;
+                      final route = SchoolRoute.fromMap(doc.id, data);
                       final description = data['description']?.toString();
                       final colors = context.appColors;
 
@@ -1648,7 +1494,7 @@ class _RoutesTab extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    data['name']?.toString() ?? '',
+                                    route.name,
                                     style: Theme.of(context).textTheme.titleSmall
                                         ?.copyWith(color: colors.textPrimary),
                                     overflow: TextOverflow.ellipsis,
@@ -1668,17 +1514,85 @@ class _RoutesTab extends StatelessWidget {
                                     overflow: TextOverflow.ellipsis,
                                     maxLines: 2,
                                   ),
+                                  const SizedBox(height: 6),
+                                  // The corridor width the deviation engine
+                                  // measures this route's buses against.
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.social_distance_outlined,
+                                        size: 14,
+                                        color: colors.textMuted,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          S(
+                                            'Deviation tolerance '
+                                                '${route.deviationToleranceMeters.round()} m',
+                                            'حد الخروج عن المسار '
+                                                '${route.deviationToleranceMeters.round()} متر',
+                                          ).of(context),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: colors.textMuted,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            StatusBadge(
-                              label: isActive
-                                  ? const S('Active', 'نشطة').of(context)
-                                  : const S('Inactive', 'غير نشطة').of(context),
-                              tone: isActive
-                                  ? StatusTone.success
-                                  : StatusTone.neutral,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                StatusBadge(
+                                  label: route.isActive
+                                      ? const S('Active', 'نشطة').of(context)
+                                      : const S(
+                                          'Inactive',
+                                          'غير نشطة',
+                                        ).of(context),
+                                  tone: route.isActive
+                                      ? StatusTone.success
+                                      : StatusTone.neutral,
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      tooltip: const S(
+                                        'Edit route',
+                                        'تعديل الخط',
+                                      ).of(context),
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _editRoute(
+                                        context,
+                                        route: route,
+                                        description: description,
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: route.isActive,
+                                      onChanged: (value) => context
+                                          .read<RoutesBloc>()
+                                          .add(
+                                            RouteStatusChanged(
+                                              schoolId: schoolId,
+                                              routeId: route.id,
+                                              active: value,
+                                            ),
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1692,62 +1606,202 @@ class _RoutesTab extends StatelessWidget {
   }
 
   Future<void> _createRoute(BuildContext context) async {
-    final name = TextEditingController();
-    final description = TextEditingController();
-
-    final result = await showDialog<bool>(
+    final bloc = context.read<RoutesBloc>();
+    final draft = await showDialog<_RouteDraft>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Add route', 'إضافة خط سير').of(dialogContext)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: name,
-              decoration: InputDecoration(
-                labelText: const S('Name', 'الاسم').of(dialogContext),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: description,
-              decoration: InputDecoration(
-                labelText: const S(
-                  'Description',
-                  'الوصف',
-                ).of(dialogContext),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(const S('Save', 'حفظ').of(dialogContext)),
-          ),
-        ],
+      builder: (dialogContext) => const _RouteDialog(),
+    );
+    if (draft == null) return;
+
+    bloc.add(
+      RouteCreated(
+        schoolId: schoolId,
+        name: draft.name,
+        description: draft.description,
+        deviationToleranceMeters: draft.deviationToleranceMeters,
       ),
     );
-    if (!context.mounted) return;
+  }
 
-    if (result == true && name.text.trim().isNotEmpty) {
-      context.read<RoutesBloc>().add(
-        RouteCreated(
-          schoolId: schoolId,
-          name: name.text,
-          description: description.text.trim().isEmpty
-              ? null
-              : description.text,
+  Future<void> _editRoute(
+    BuildContext context, {
+    required SchoolRoute route,
+    required String? description,
+  }) async {
+    final bloc = context.read<RoutesBloc>();
+    final draft = await showDialog<_RouteDraft>(
+      context: context,
+      builder: (dialogContext) =>
+          _RouteDialog(route: route, description: description),
+    );
+    if (draft == null) return;
+
+    bloc.add(
+      RouteUpdated(
+        schoolId: schoolId,
+        routeId: route.id,
+        name: draft.name,
+        description: draft.description,
+        deviationToleranceMeters: draft.deviationToleranceMeters,
+        isActive: route.isActive,
+      ),
+    );
+  }
+}
+
+class _RouteDraft {
+  const _RouteDraft({
+    required this.name,
+    required this.deviationToleranceMeters,
+    this.description,
+  });
+
+  final String name;
+  final String? description;
+  final double deviationToleranceMeters;
+}
+
+/// Add/edit a route, including its deviation tolerance — how far (in
+/// metres) a bus on this route may stray from its expected stop-to-stop
+/// path before the server-side deviation engine flags it. Exposed per
+/// route because a rural route and a dense-urban one genuinely need
+/// different corridor widths.
+class _RouteDialog extends StatefulWidget {
+  const _RouteDialog({this.route, this.description});
+
+  final SchoolRoute? route;
+  final String? description;
+
+  @override
+  State<_RouteDialog> createState() => _RouteDialogState();
+}
+
+class _RouteDialogState extends State<_RouteDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.route?.name ?? '',
+  );
+  late final TextEditingController _description = TextEditingController(
+    text: widget.description ?? '',
+  );
+  late double _tolerance =
+      widget.route?.deviationToleranceMeters ??
+      defaultDeviationToleranceMeters;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return AlertDialog(
+      title: Text(
+        widget.route == null
+            ? const S('Add route', 'إضافة خط سير').of(context)
+            : const S('Edit route', 'تعديل الخط').of(context),
+      ),
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _name,
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: const S('Name', 'الاسم').of(context),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: _description,
+                decoration: InputDecoration(
+                  labelText: const S('Description', 'الوصف').of(context),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                const S(
+                  'Deviation tolerance',
+                  'حد الخروج عن المسار',
+                ).of(context).toUpperCase(),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                const S(
+                  'How far a bus on this route may be from its expected '
+                      'stop-to-stop path before it is flagged as off route.',
+                  'قد إيه الأتوبيس على الخط ده ينفع يبعد عن مساره المتوقع '
+                      'قبل ما يتحسب خارج المسار.',
+                ).of(context),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Slider(
+                      value: _tolerance.clamp(
+                        minDeviationToleranceMeters,
+                        maxDeviationToleranceMeters,
+                      ),
+                      min: minDeviationToleranceMeters,
+                      max: maxDeviationToleranceMeters,
+                      divisions: 39,
+                      label: '${_tolerance.round()} m',
+                      onChanged: (value) => setState(() => _tolerance = value),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 72,
+                    child: Directionality(
+                      textDirection: ui.TextDirection.ltr,
+                      child: Text(
+                        '${_tolerance.round()} m',
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      );
-    }
-
-    name.dispose();
-    description.dispose();
+      ),
+      actions: [
+        AppButton.secondary(
+          label: const S('Cancel', 'إلغاء').of(context),
+          onPressed: () => Navigator.pop(context),
+        ),
+        AppButton.primary(
+          label: const S('Save', 'حفظ').of(context),
+          onPressed: _name.text.trim().isEmpty
+              ? null
+              : () => Navigator.pop(
+                  context,
+                  _RouteDraft(
+                    name: _name.text,
+                    description: _description.text.trim().isEmpty
+                        ? null
+                        : _description.text,
+                    deviationToleranceMeters: _tolerance,
+                  ),
+                ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1807,7 +1861,26 @@ class _TripsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => TripsBloc(TripsRepository())..add(TripsStarted(schoolId)),
-      child: BlocBuilder<TripsBloc, TripsState>(
+      child: BlocConsumer<TripsBloc, TripsState>(
+        // A reassignment reports its own outcome without disturbing the
+        // list the admin is working in.
+        listenWhen: (_, current) =>
+            current is TripsActionFailure || current is TripsActionSucceeded,
+        listener: (context, state) {
+          if (state is TripsActionFailure) {
+            AppSnackbar.error(context, state.message);
+          } else if (state is TripsActionSucceeded) {
+            AppSnackbar.success(
+              context,
+              const S(
+                'Trip reassigned. Affected parents and the new driver have '
+                    'been notified.',
+                'تم تغيير تخصيص الرحلة. أولياء الأمور المعنيين والسائق '
+                    'الجديد اتبلغوا.',
+              ).of(context),
+            );
+          }
+        },
         builder: (context, state) {
           if (state is TripsLoading || state is TripsInitial) {
             return ListView.builder(
@@ -1820,9 +1893,19 @@ class _TripsTab extends StatelessWidget {
             return ErrorStateView(message: state.message);
           }
 
-          final snapshot = state is TripsLoaded ? state.snapshot : null;
+          final snapshot = switch (state) {
+            TripsLoaded(:final snapshot) => snapshot,
+            TripsActionFailure(:final snapshot) => snapshot,
+            TripsActionSucceeded(:final snapshot) => snapshot,
+            _ => null,
+          };
           final docs = snapshot?.docs ?? const [];
-          final hasMore = state is TripsLoaded && state.hasMore;
+          final hasMore = switch (state) {
+            TripsLoaded(:final hasMore) => hasMore,
+            TripsActionFailure(:final hasMore) => hasMore,
+            TripsActionSucceeded(:final hasMore) => hasMore,
+            _ => false,
+          };
 
           return Scaffold(
             floatingActionButton: FloatingActionButton.extended(
@@ -1875,6 +1958,9 @@ class _TripsTab extends StatelessWidget {
                       final canCancel = trip.status == TripStatus.scheduled ||
                           trip.status == TripStatus.starting ||
                           trip.status == TripStatus.paused;
+                      final canReassign =
+                          trip.status != TripStatus.completed &&
+                          trip.status != TripStatus.cancelled;
                       final colors = context.appColors;
                       final tone = _tripStatusTone(trip.status);
                       final toneColor = _toneColor(colors, tone);
@@ -1990,8 +2076,44 @@ class _TripsTab extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            if (canCancel) ...[
+                            // A finished trip is history: reassigning it
+                            // would fire a parent notification about a trip
+                            // that is no longer happening, so the control
+                            // isn't offered (and the repository refuses it
+                            // too).
+                            if (canReassign) ...[
                               const SizedBox(width: AppSpacing.sm),
+                              IconButton(
+                                tooltip: const S(
+                                  'Reassign bus or driver',
+                                  'تغيير الأتوبيس أو السائق',
+                                ).of(context),
+                                icon: Icon(
+                                  Icons.swap_horiz,
+                                  color: colors.info,
+                                ),
+                                onPressed: () =>
+                                    _reassign(context, trip: trip),
+                              ),
+                            ],
+                            IconButton(
+                              tooltip: const S(
+                                'Change history',
+                                'سجل التغييرات',
+                              ).of(context),
+                              icon: Icon(
+                                Icons.history,
+                                color: colors.textMuted,
+                              ),
+                              onPressed: () => showModalBottomSheet<void>(
+                                context: context,
+                                builder: (_) => TripReassignmentHistorySheet(
+                                  schoolId: schoolId,
+                                  trip: trip,
+                                ),
+                              ),
+                            ),
+                            if (canCancel) ...[
                               IconButton(
                                 tooltip: const S(
                                   'Cancel trip',
@@ -2050,6 +2172,36 @@ class _TripsTab extends StatelessWidget {
     if (confirmed != true) return;
 
     bloc.add(TripCancelled(schoolId: schoolId, tripId: tripId));
+  }
+
+  /// Feature: Dynamic Route/Last-Minute Changes. The repository writes the
+  /// trip's `busId`/`driverId` (which is what makes the deployed
+  /// `onTripAssignmentChanged` function notify affected parents and the new
+  /// driver), a ReassignmentRecord, and an audit entry together.
+  Future<void> _reassign(
+    BuildContext context, {
+    required SchoolTrip trip,
+  }) async {
+    final bloc = context.read<TripsBloc>();
+    final draft = await showDialog<TripReassignmentDraft>(
+      context: context,
+      builder: (dialogContext) =>
+          TripReassignmentDialog(schoolId: schoolId, trip: trip),
+    );
+    if (draft == null || draft.isEmpty) return;
+
+    bloc.add(
+      TripReassigned(
+        schoolId: schoolId,
+        tripId: trip.id,
+        busId: draft.busId,
+        busName: draft.busName,
+        busPlateNumber: draft.busPlateNumber,
+        driverId: draft.driverId,
+        driverName: draft.driverName,
+        reason: draft.reason,
+      ),
+    );
   }
 
   Future<void> _createTrip(BuildContext context) async {

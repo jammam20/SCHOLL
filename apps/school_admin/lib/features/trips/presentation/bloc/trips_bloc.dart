@@ -45,6 +45,31 @@ class TripCancelled extends TripsEvent {
   final String tripId;
 }
 
+/// A last-minute bus and/or driver change — see
+/// [TripsRepository.reassignTrip], which writes the trip fields, a
+/// ReassignmentRecord and an audit entry together.
+class TripReassigned extends TripsEvent {
+  TripReassigned({
+    required this.schoolId,
+    required this.tripId,
+    this.busId,
+    this.busName,
+    this.busPlateNumber,
+    this.driverId,
+    this.driverName,
+    this.reason,
+  });
+
+  final String schoolId;
+  final String tripId;
+  final String? busId;
+  final String? busName;
+  final String? busPlateNumber;
+  final String? driverId;
+  final String? driverName;
+  final String? reason;
+}
+
 class _TripsSnapshotReceived extends TripsEvent {
   _TripsSnapshotReceived(this.snapshot);
   final QuerySnapshot<Map<String, dynamic>> snapshot;
@@ -72,6 +97,24 @@ class TripsFailure extends TripsState {
   final String message;
 }
 
+/// A reassignment that failed *after* the list had loaded, carried
+/// alongside the last good snapshot so a failed action shows as a snackbar
+/// without blanking the trips list an admin is working in.
+class TripsActionFailure extends TripsState {
+  TripsActionFailure(this.message, this.snapshot, {required this.hasMore});
+  final String message;
+  final QuerySnapshot<Map<String, dynamic>>? snapshot;
+  final bool hasMore;
+}
+
+/// A reassignment that succeeded — emitted once so the page can confirm it
+/// without claiming success before the write landed.
+class TripsActionSucceeded extends TripsState {
+  TripsActionSucceeded(this.snapshot, {required this.hasMore});
+  final QuerySnapshot<Map<String, dynamic>>? snapshot;
+  final bool hasMore;
+}
+
 class TripsBloc extends Bloc<TripsEvent, TripsState> {
   TripsBloc(this._repository) : super(TripsInitial()) {
     on<TripsStarted>(_onStarted);
@@ -80,6 +123,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     on<_TripsSnapshotFailed>(_onFailure);
     on<TripCreated>(_onCreated);
     on<TripCancelled>(_onCancelled);
+    on<TripReassigned>(_onReassigned);
   }
 
   static const pageSize = 30;
@@ -89,6 +133,9 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
   String _schoolId = '';
   int _limit = pageSize;
+  QuerySnapshot<Map<String, dynamic>>? _lastSnapshot;
+
+  bool get _hasMore => (_lastSnapshot?.docs.length ?? 0) >= _limit;
 
   Future<void> _onStarted(TripsStarted event, Emitter<TripsState> emit) async {
     emit(TripsLoading());
@@ -117,6 +164,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
   }
 
   void _onSnapshot(_TripsSnapshotReceived event, Emitter<TripsState> emit) {
+    _lastSnapshot = event.snapshot;
     emit(
       TripsLoaded(event.snapshot, hasMore: event.snapshot.docs.length >= _limit),
     );
@@ -156,6 +204,27 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       );
     } catch (e) {
       emit(TripsFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onReassigned(
+    TripReassigned event,
+    Emitter<TripsState> emit,
+  ) async {
+    try {
+      await _repository.reassignTrip(
+        schoolId: event.schoolId,
+        tripId: event.tripId,
+        busId: event.busId,
+        busName: event.busName,
+        busPlateNumber: event.busPlateNumber,
+        driverId: event.driverId,
+        driverName: event.driverName,
+        reason: event.reason,
+      );
+      emit(TripsActionSucceeded(_lastSnapshot, hasMore: _hasMore));
+    } catch (e) {
+      emit(TripsActionFailure(e.toString(), _lastSnapshot, hasMore: _hasMore));
     }
   }
 

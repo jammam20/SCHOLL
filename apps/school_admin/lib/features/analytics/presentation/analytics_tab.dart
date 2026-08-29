@@ -9,6 +9,7 @@ import '../../routes/data/routes_repository.dart';
 import '../../students/data/students_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../../widgets/async_error_view.dart';
+import 'safety_analytics_section.dart';
 
 /// Live operational analytics for a school: trip status mix, driver
 /// approval breakdown, trip volume over the last 7 days, and student load
@@ -61,6 +62,7 @@ class AnalyticsTab extends StatelessWidget {
                         if (hasError) return const AsyncErrorView();
 
                         return _AnalyticsBody(
+                          schoolId: schoolId,
                           trips: (tripsSnapshot.data?.docs ?? const [])
                               .map((doc) => SchoolTrip.fromMap(doc.id, doc.data()))
                               .toList(),
@@ -99,6 +101,7 @@ class AnalyticsTab extends StatelessWidget {
 
 class _AnalyticsBody extends StatelessWidget {
   const _AnalyticsBody({
+    required this.schoolId,
     required this.trips,
     required this.activeStudentCount,
     required this.studentRouteIds,
@@ -107,6 +110,7 @@ class _AnalyticsBody extends StatelessWidget {
     required this.routeNames,
   });
 
+  final String schoolId;
   final List<SchoolTrip> trips;
   final int activeStudentCount;
   final List<String> studentRouteIds;
@@ -208,6 +212,10 @@ class _AnalyticsBody extends StatelessWidget {
             ).of(context),
           ),
           _DriverStatusChart(statuses: driverStatuses),
+          // Safety analytics (incidents over time, deviation frequency by
+          // route, and pickup verification when that data exists) live in
+          // their own file so this tab stays about the fleet/people mix.
+          SafetyAnalyticsSection(schoolId: schoolId),
         ],
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:school_shared/school_shared.dart';
 
 import '../../../app/analytics.dart';
 
@@ -71,6 +72,40 @@ class StudentsRepository {
     }
     return batch.commit();
   }
+
+  /// Replaces the whole `authorizedPickupPersons` list on a student —
+  /// the people a parent has authorized to collect their own child
+  /// (Feature: Secure Student Pickup).
+  ///
+  /// What this actually does, and nothing more: it records the parent's
+  /// authorization on the student's own record so a driver can see the
+  /// name they're expecting. It grants the named person no account, no
+  /// login, and no access to this system, and it performs no identity
+  /// check of its own — the only check that happens is whatever the driver
+  /// does at the door against this list.
+  ///
+  /// Written as a whole-list replacement rather than an
+  /// arrayUnion/arrayRemove because firestore.rules allow-lists the
+  /// *fields* an update may touch, not the operations — and a full
+  /// replacement is what makes "remove this person" expressible at all.
+  /// Restricted by that rule to a parent of an already-approved student,
+  /// and to this field plus `updatedAt`.
+  Future<void> setAuthorizedPickupPersons({
+    required String schoolId,
+    required String studentId,
+    required List<AuthorizedPickupPerson> persons,
+  }) {
+    return _students(schoolId).doc(studentId).update({
+      'authorizedPickupPersons': persons.map((p) => p.toMap()).toList(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// A collision-free id for a newly added [AuthorizedPickupPerson].
+  /// Firestore's own client-side id generator, taken from a document
+  /// reference that is never written — cheaper and safer than hashing a
+  /// timestamp, and identical to how [addChild] gets its student id.
+  String newPickupPersonId(String schoolId) => _students(schoolId).doc().id;
 
   CollectionReference<Map<String, dynamic>> _absenceLog(String schoolId) {
     return _firestore

@@ -6,6 +6,7 @@ import 'package:school_shared/school_shared.dart';
 
 import '../../../../app/analytics.dart';
 import '../../../../tracking/data/driver_tracking_repository.dart';
+import '../../../audit/data/audit_log_repository.dart';
 import '../../../emergencies/data/emergencies_repository.dart';
 import '../../data/stop_order_repository.dart';
 import '../../data/trips_repository.dart';
@@ -51,6 +52,17 @@ class TripStopOrderChanged extends TripsEvent {
 
 class TripStudentBoarded extends TripsEvent {
   TripStudentBoarded({
+    required this.schoolId,
+    required this.tripId,
+    required this.studentId,
+  });
+  final String schoolId;
+  final String tripId;
+  final String studentId;
+}
+
+class TripStudentDroppedOff extends TripsEvent {
+  TripStudentDroppedOff({
     required this.schoolId,
     required this.tripId,
     required this.studentId,
@@ -149,8 +161,10 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     this._tracking, [
     StopOrderRepository? stopOrder,
     EmergenciesRepository? emergencies,
+    AuditLogRepository? auditLog,
   ]) : _stopOrder = stopOrder ?? StopOrderRepository(),
        _emergencies = emergencies ?? EmergenciesRepository(tracking: _tracking),
+       _auditLog = auditLog ?? AuditLogRepository(),
        super(TripsInitial()) {
     on<TripsStarted>(_onStarted);
     on<_TripsSnapshotReceived>(_onSnapshot);
@@ -158,6 +172,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     on<TripStartRequested>(_onStartRequested);
     on<TripStopOrderChanged>(_onStopOrderChanged);
     on<TripStudentBoarded>(_onStudentBoarded);
+    on<TripStudentDroppedOff>(_onStudentDroppedOff);
     on<TripPauseRequested>(_onPauseRequested);
     on<TripResumeRequested>(_onResumeRequested);
     on<TripCompleteRequested>(_onCompleteRequested);
@@ -170,6 +185,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
   final DriverTrackingRepository _tracking;
   final StopOrderRepository _stopOrder;
   final EmergenciesRepository _emergencies;
+  final AuditLogRepository _auditLog;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
 
@@ -340,6 +356,18 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     AppAnalytics.logStudentBoarded(tripId: event.tripId);
   });
 
+  Future<void> _onStudentDroppedOff(
+    TripStudentDroppedOff event,
+    Emitter<TripsState> emit,
+  ) => _runAction(emit, () async {
+    await _stopOrder.markDroppedOff(
+      schoolId: event.schoolId,
+      tripId: event.tripId,
+      studentId: event.studentId,
+    );
+    AppAnalytics.logStudentDroppedOff(tripId: event.tripId);
+  });
+
   Future<void> _onPauseRequested(
     TripPauseRequested event,
     Emitter<TripsState> emit,
@@ -397,13 +425,35 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     if (!_canTransitionLocally(event.tripId, TripStatus.emergency)) return;
     // Creates the emergency record and flips the trip's status to
     // TripStatus.emergency together, atomically — see
-    // EmergenciesRepository.createEmergency.
-    await _emergencies.createEmergency(
+    // EmergenciesRepository.createEmergency. Both driver-facing paths (the
+    // type+notes dialog and the one-tap hold-to-send SOS) land here, so
+    // there is exactly one place an emergency is ever raised from.
+    final emergencyId = await _emergencies.createEmergency(
       schoolId: event.schoolId,
       tripId: event.tripId,
       type: event.emergencyType,
       driverNote: event.driverNote,
     );
+    // The emergency document above is the authoritative record; this is its
+    // entry in the school-wide audit trail. Its failure is deliberately
+    // swallowed: an SOS that was genuinely raised must never be reported
+    // back to the driver as having failed because a secondary, immutable
+    // copy of it didn't write. Unlike the batched audit writes in the
+    // inspection/incident/verification repositories, this one can't be made
+    // atomic with the thing it records — createEmergency already runs in
+    // its own transaction.
+    try {
+      await _auditLog.record(
+        schoolId: event.schoolId,
+        action: AuditActions.emergencyRaised,
+        entityType: 'emergency',
+        entityId: emergencyId,
+        tripId: event.tripId,
+        metadata: {'type': event.emergencyType.value},
+      );
+    } catch (_) {
+      // Intentionally ignored — see above.
+    }
     // Make sure tracking is live during an emergency even if the trip was
     // paused (and therefore not currently broadcasting) beforehand.
     await _tracking.startTracking(

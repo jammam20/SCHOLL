@@ -8,8 +8,9 @@ import '../../../widgets/async_error_view.dart';
 import '../../schools/data/schools_repository.dart';
 import '../../students/presentation/child_settings_page.dart';
 import '../../tracking/data/parent_tracking_repository.dart';
-import '../../tracking/domain/eta_calculator.dart';
 import '../../tracking/domain/live_bus_position.dart';
+import '../../tracking/domain/parent_trip_eta.dart';
+import '../../tracking/presentation/eta_text.dart';
 import '../../tracking/presentation/live_trip_map.dart';
 import '../../trips/data/stop_order_repository.dart';
 import '../../trips/data/trips_repository.dart';
@@ -38,10 +39,15 @@ const _avatarColors = [
 /// the step-by-step timeline, the live map) is supporting detail underneath
 /// it, per the product brief's "understand extremely quickly" requirement.
 class ChildJourneyCard extends StatelessWidget {
-  const ChildJourneyCard({super.key, required this.schoolId, required this.student});
+  const ChildJourneyCard({super.key, required this.user, required this.student});
 
-  final String schoolId;
+  /// The signed-in parent. Carries the school this card reads from, and is
+  /// handed on to the screens reached from here that write on the parent's
+  /// behalf (child settings, contacting the school).
+  final AppUser user;
   final Student student;
+
+  String get schoolId => user.schoolId;
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +96,7 @@ class ChildJourneyCard extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (_) =>
-                            ChildSettingsPage(schoolId: schoolId, student: student),
+                            ChildSettingsPage(user: user, student: student),
                       ),
                     ),
                   ),
@@ -319,14 +325,17 @@ class _ActiveJourney extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Set<String>>(
-      stream: StopOrderRepository().watchBoardedStudents(
+    return StreamBuilder<TripStopProgress>(
+      stream: StopOrderRepository().watchStopProgress(
         schoolId: schoolId,
         tripId: trip.id,
       ),
-      builder: (context, boardedSnapshot) {
-        if (boardedSnapshot.hasError) return const AsyncErrorView(compact: true);
-        final hasBoarded = boardedSnapshot.data?.contains(student.id) ?? false;
+      builder: (context, progressSnapshot) {
+        if (progressSnapshot.hasError) {
+          return const AsyncErrorView(compact: true);
+        }
+        final progress = progressSnapshot.data ?? const TripStopProgress();
+        final hasBoarded = progress.boardedStudents.contains(student.id);
 
         // Live distance only matters while the trip is actively moving —
         // every other status resolves its stage from trip.status alone.
@@ -336,7 +345,7 @@ class _ActiveJourney extends StatelessWidget {
             student: student,
             hasBoarded: hasBoarded,
             distanceToPickupMeters: null,
-            etaToPickup: null,
+            eta: null,
           );
         }
 
@@ -346,19 +355,15 @@ class _ActiveJourney extends StatelessWidget {
             tripId: trip.id,
           ),
           builder: (context, locationSnapshot) {
-            if (locationSnapshot.hasError) {
-              return _Body(
-                trip: trip,
-                student: student,
-                hasBoarded: hasBoarded,
-                distanceToPickupMeters: null,
-                etaToPickup: null,
-              );
-            }
-
-            final busPosition = LiveBusPosition.fromRtdbValue(
-              locationSnapshot.data?.snapshot.value,
-            );
+            // A failed RTDB read leaves us in exactly the situation of a
+            // bus that hasn't broadcast yet: no position to reason from.
+            // The ETA engine names that case (noGpsSignal) instead of the
+            // card silently dropping the estimate.
+            final busPosition = locationSnapshot.hasError
+                ? null
+                : LiveBusPosition.fromRtdbValue(
+                    locationSnapshot.data?.snapshot.value,
+                  );
 
             return StreamBuilder<School?>(
               stream: SchoolsRepository().watchSchool(schoolId),
@@ -367,17 +372,12 @@ class _ActiveJourney extends StatelessWidget {
 
                 double? distanceToPickup;
                 double? distanceToSchool;
-                Duration? etaToPickup;
                 if (busPosition != null && student.hasLocation) {
                   distanceToPickup = haversineMeters(
                     busPosition.latitude,
                     busPosition.longitude,
                     student.latitude!,
                     student.longitude!,
-                  );
-                  etaToPickup = estimateEta(
-                    distanceMeters: distanceToPickup,
-                    reportedSpeedMetersPerSecond: busPosition.speedMetersPerSecond,
                   );
                 }
                 if (busPosition != null && school != null && school.hasLocation) {
@@ -395,7 +395,13 @@ class _ActiveJourney extends StatelessWidget {
                   hasBoarded: hasBoarded,
                   distanceToPickupMeters: distanceToPickup,
                   distanceToSchoolMeters: distanceToSchool,
-                  etaToPickup: etaToPickup,
+                  eta: computeParentTripEta(
+                    tripStatus: trip.status,
+                    progress: progress,
+                    student: student,
+                    school: school,
+                    busPosition: busPosition,
+                  ),
                 );
               },
             );
@@ -483,7 +489,7 @@ class _Body extends StatelessWidget {
     required this.hasBoarded,
     required this.distanceToPickupMeters,
     this.distanceToSchoolMeters,
-    required this.etaToPickup,
+    required this.eta,
   });
 
   final SchoolTrip trip;
@@ -491,7 +497,10 @@ class _Body extends StatelessWidget {
   final bool hasBoarded;
   final double? distanceToPickupMeters;
   final double? distanceToSchoolMeters;
-  final Duration? etaToPickup;
+
+  /// The shared ETA engine's answer for this child on this trip, or null
+  /// while the trip isn't active (no live estimate to make).
+  final ParentTripEta? eta;
 
   @override
   Widget build(BuildContext context) {
@@ -516,6 +525,14 @@ class _Body extends StatelessWidget {
         trip.status == TripStatus.starting ||
         trip.status == TripStatus.paused ||
         trip.status == TripStatus.emergency;
+
+    // An ETA is only meaningful for the stages where the parent is still
+    // waiting for the bus to reach them.
+    final showEta =
+        stage == JourneyStage.onTheWay ||
+        stage == JourneyStage.approachingPickup;
+    final etaDuration = eta?.eta.etaToNextStop;
+    final unavailableReason = eta?.eta.unavailableReason;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -553,13 +570,25 @@ class _Body extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (stage == JourneyStage.onTheWay ||
-                          stage == JourneyStage.approachingPickup)
-                        _EtaChip(eta: etaToPickup),
+                      if (showEta && etaDuration != null)
+                        _EtaChip(eta: etaDuration),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   StatusBadge(label: _stageBadgeLabel(stage).of(context), tone: tone),
+                  // When there's no reliable ETA, say *why* rather than
+                  // leaving a gap where a number used to be — the shared
+                  // engine hands us the reason precisely so a parent isn't
+                  // left wondering whether the app is broken.
+                  if (showEta && etaDuration == null && unavailableReason != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      etaUnavailableText(unavailableReason).of(context),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.textMuted,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -579,6 +608,20 @@ class _Body extends StatelessWidget {
           DateFormat.jm().format(trip.scheduledAt),
           style: theme.textTheme.bodySmall?.copyWith(color: colors.textSecondary),
         ),
+        // Real route progress from the trip's own stop order — where this
+        // child sits in today's run, not a guess.
+        if (eta != null && eta!.hasStopPosition && !hasBoarded)
+          Text(
+            S(
+              'Your stop is ${eta!.stopNumber} of ${eta!.totalStops} on '
+                  "today's route",
+              'محطتك رقم ${eta!.stopNumber} من ${eta!.totalStops} في خط '
+                  'النهاردة',
+            ).of(context),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
         const SizedBox(height: AppSpacing.lg),
         JourneyTimeline(stage: stage, hasBoarded: hasBoarded),
         if (showMap) ...[
@@ -586,6 +629,7 @@ class _Body extends StatelessWidget {
           LiveTripMap(
             schoolId: student.schoolId,
             tripId: trip.id,
+            tripStatus: trip.status,
             student: student,
           ),
         ],
@@ -632,21 +676,22 @@ class _Body extends StatelessWidget {
   };
 }
 
+/// Only ever rendered when the ETA engine actually produced a duration —
+/// the "no ETA, and here's why" case is a separate line under the status
+/// badge, not a chip pretending to hold a number.
 class _EtaChip extends StatelessWidget {
   const _EtaChip({required this.eta});
 
-  final Duration? eta;
+  final Duration eta;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final label = eta == null
-        ? const S('ETA unavailable', 'الوقت المتوقع مش متاح').of(context)
-        : eta!.inMinutes < 1
+    final label = eta.inMinutes < 1
         ? const S('Arriving soon', 'هيوصل قريب').of(context)
         : S(
-            'Arriving in ${eta!.inMinutes} min',
-            'هيوصل خلال ${eta!.inMinutes} د',
+            'Arriving in ${eta.inMinutes} min',
+            'هيوصل خلال ${eta.inMinutes} د',
           ).of(context);
 
     return Padding(

@@ -89,6 +89,12 @@ abstract final class AuditActions {
   static const driverReassigned = 'driver_reassigned';
   static const pickupVerified = 'pickup_verified';
   static const pickupVerificationFailed = 'pickup_verification_failed';
+  // A verification attempt that is neither a pass nor a fail: the record
+  // exists (PickupVerificationStatus.pending) but nothing has actually
+  // checked the presented code yet. Needed so the driver app's qrCode/otp
+  // methods can be audited honestly instead of borrowing `pickupVerified`,
+  // which would claim a check that didn't happen.
+  static const pickupVerificationPending = 'pickup_verification_pending';
   static const inspectionCompleted = 'inspection_completed';
   static const inspectionFailed = 'inspection_failed';
 }

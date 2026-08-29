@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../audit/data/audit_log_repository.dart';
 import '../domain/emergency_operation_exception.dart';
 
 /// Admin-side monitoring/resolution of emergencies raised by drivers (see
@@ -13,12 +14,17 @@ import '../domain/emergency_operation_exception.dart';
 /// emergencies/{emergencyId}`), and this needs every one of them across
 /// every trip in the school, not just the ones on currently-live trips.
 class EmergenciesRepository {
-  EmergenciesRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
-    : _firestore = firestore ?? FirebaseFirestore.instance,
-      _auth = auth ?? FirebaseAuth.instance;
+  EmergenciesRepository({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    AuditLogRepository? auditLog,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auth = auth ?? FirebaseAuth.instance,
+       _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final AuditLogRepository _auditLog;
 
   DocumentReference<Map<String, dynamic>> _emergency(
     String schoolId,
@@ -123,5 +129,18 @@ class EmergenciesRepository {
         },
       );
     });
+
+    // Written after the transaction commits, never inside it: an audit
+    // entry must record something that actually happened, and it must
+    // never be able to roll back the resolution it describes (see
+    // AuditLogRepository.recordSafely).
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.emergencyResolved,
+      entityType: 'emergency',
+      entityId: emergencyId,
+      tripId: tripId,
+      metadata: {'resolutionNote': ?resolutionNote?.trim()},
+    );
   }
 }

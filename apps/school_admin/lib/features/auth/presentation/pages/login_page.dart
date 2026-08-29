@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../admin/presentation/admin_home_page.dart';
+import '../../../staff/presentation/staff_home_page.dart';
 import '../../data/firebase_auth_repository.dart';
 import '../cubit/auth_cubit.dart';
 
@@ -46,14 +47,18 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) => BlocBuilder<AuthCubit, AuthState>(
     builder: (context, state) {
-      // AdminHomePage brings its own full-screen Scaffold (tab bar), so it
-      // must not be nested inside the sign-in form's centered,
-      // width-constrained box below.
+      // AdminHomePage/StaffHomePage each bring their own full-screen
+      // Scaffold (tab bar), so neither must be nested inside the sign-in
+      // form's centered, width-constrained box below.
+      //
+      // This is the app's single post-login role branch: `staff` is a
+      // read-only operational role and gets a shell with no write actions
+      // anywhere, never the admin one with its controls hidden.
       if (state is AuthSignedIn) {
-        return AdminHomePage(
-          user: state.user,
-          onSignOut: context.read<AuthCubit>().signOut,
-        );
+        final signOut = context.read<AuthCubit>().signOut;
+        return state.user.role == UserRole.staff
+            ? StaffHomePage(user: state.user, onSignOut: signOut)
+            : AdminHomePage(user: state.user, onSignOut: signOut);
       }
 
       final colors = Theme.of(context).colorScheme;

@@ -66,10 +66,18 @@ class AuthCubit extends Cubit<AuthState> {
       return;
     }
 
-    if (user.role != UserRole.admin) {
+    // This app serves two roles: full admins, and `staff` — a read-only
+    // operational role that gets its own StaffHomePage (see LoginPage,
+    // which branches on AuthSignedIn.user.role). Staff are never treated
+    // as a subset of admin: they go through the same approval gates below
+    // and are handed a shell with no write actions at all, mirroring how
+    // firestore.rules spells out every staff grant separately rather than
+    // folding it into isSchoolAdmin.
+    if (user.role != UserRole.admin && user.role != UserRole.staff) {
       emit(
         const AuthSignedOut(
-          message: 'This account is not an administrator account.',
+          message:
+              'This account is not an administrator or school staff account.',
         ),
       );
       return;
@@ -92,9 +100,7 @@ class AuthCubit extends Cubit<AuthState> {
 
     if (!user.canAccessApp) {
       emit(
-        const AuthSignedOut(
-          message: 'Your administrator account is not active.',
-        ),
+        const AuthSignedOut(message: 'Your account is not active.'),
       );
       return;
     }

@@ -135,6 +135,123 @@ void main() {
     });
   });
 
+  group('checkDropOffEligibility', () {
+    const stopOrder = ['student-1', 'student-2', '__school__'];
+
+    test('eligible when active, on the trip, boarded, and not yet dropped off', () {
+      final result = checkDropOffEligibility(
+        tripStatus: TripStatus.active,
+        stopOrder: stopOrder,
+        boardedStudents: {'student-1'},
+        droppedOffStudents: {},
+        studentId: 'student-1',
+      );
+      expect(result, DropOffEligibility.eligible);
+    });
+
+    test('already dropped off is reported distinctly (not an error) for idempotency', () {
+      final result = checkDropOffEligibility(
+        tripStatus: TripStatus.active,
+        stopOrder: stopOrder,
+        boardedStudents: {'student-1'},
+        droppedOffStudents: {'student-1'},
+        studentId: 'student-1',
+      );
+      expect(result, DropOffEligibility.alreadyDroppedOff);
+    });
+
+    test('a student who never boarded cannot be dropped off', () {
+      final result = checkDropOffEligibility(
+        tripStatus: TripStatus.active,
+        stopOrder: stopOrder,
+        boardedStudents: {},
+        droppedOffStudents: {},
+        studentId: 'student-1',
+      );
+      expect(result, DropOffEligibility.notBoarded);
+    });
+
+    test('an already-dropped-off student stays idempotent even if unboarded', () {
+      final result = checkDropOffEligibility(
+        tripStatus: TripStatus.active,
+        stopOrder: stopOrder,
+        boardedStudents: {},
+        droppedOffStudents: {'student-1'},
+        studentId: 'student-1',
+      );
+      expect(result, DropOffEligibility.alreadyDroppedOff);
+    });
+
+    test('drop-off is refused when the trip is not active', () {
+      for (final status in [
+        TripStatus.scheduled,
+        TripStatus.starting,
+        TripStatus.paused,
+        TripStatus.completed,
+        TripStatus.cancelled,
+        TripStatus.emergency,
+      ]) {
+        final result = checkDropOffEligibility(
+          tripStatus: status,
+          stopOrder: stopOrder,
+          boardedStudents: {'student-1'},
+          droppedOffStudents: {},
+          studentId: 'student-1',
+        );
+        expect(result, DropOffEligibility.tripNotActive, reason: 'status: $status');
+      }
+    });
+
+    test('a student not on this trip is refused', () {
+      final result = checkDropOffEligibility(
+        tripStatus: TripStatus.active,
+        stopOrder: stopOrder,
+        boardedStudents: {'someone-elses-kid'},
+        droppedOffStudents: {},
+        studentId: 'someone-elses-kid',
+      );
+      expect(result, DropOffEligibility.studentNotOnTrip);
+    });
+
+    test('multiple students remain independently tracked', () {
+      final boarded = {'student-1', 'student-2'};
+      final droppedOff = {'student-1'};
+      expect(
+        checkDropOffEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: stopOrder,
+          boardedStudents: boarded,
+          droppedOffStudents: droppedOff,
+          studentId: 'student-1',
+        ),
+        DropOffEligibility.alreadyDroppedOff,
+      );
+      expect(
+        checkDropOffEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: stopOrder,
+          boardedStudents: boarded,
+          droppedOffStudents: droppedOff,
+          studentId: 'student-2',
+        ),
+        DropOffEligibility.eligible,
+      );
+    });
+
+    test('the school sentinel stop is never a droppable student', () {
+      // It is in the stop order, but nobody ever boards it, so the only
+      // honest answer is "not boarded" rather than eligible.
+      final result = checkDropOffEligibility(
+        tripStatus: TripStatus.active,
+        stopOrder: stopOrder,
+        boardedStudents: {'student-1'},
+        droppedOffStudents: {},
+        studentId: '__school__',
+      );
+      expect(result, DropOffEligibility.notBoarded);
+    });
+  });
+
   group('isValidStopReorder', () {
     test('accepts a reorder of exactly the same stops', () {
       expect(

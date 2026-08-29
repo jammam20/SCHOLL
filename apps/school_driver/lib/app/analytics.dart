@@ -19,6 +19,12 @@ class AppAnalytics {
   static Future<void> logStudentBoarded({required String tripId}) => _analytics
       .logEvent(name: 'student_boarded', parameters: {'trip_id': tripId});
 
+  static Future<void> logStudentDroppedOff({required String tripId}) =>
+      _analytics.logEvent(
+        name: 'student_dropped_off',
+        parameters: {'trip_id': tripId},
+      );
+
   static Future<void> logEmergencyCreated({
     required String tripId,
     required String emergencyType,

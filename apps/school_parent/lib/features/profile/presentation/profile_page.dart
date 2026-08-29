@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../legal/presentation/legal_page.dart';
+import '../../messages/presentation/parent_requests_page.dart';
 import '../../settings/presentation/notification_settings_page.dart';
 import '../data/profile_repository.dart';
 
@@ -102,6 +103,34 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
+            title: const S('Your school', 'مدرستك').of(context),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.forum_outlined),
+              title: Text(
+                const S('Messages to school', 'رسايل للمدرسة').of(context),
+              ),
+              subtitle: Text(
+                const S(
+                  'Ask about a trip or a pickup change — the school passes '
+                      'anything the driver needs on to them.',
+                  'اسأل عن رحلة أو تغيير في الاستلام — المدرسة بتبلغ السواق '
+                      'باللي يهمه.',
+                ).of(context),
+              ),
+              isThreeLine: true,
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ParentRequestsPage(user: user),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xl3),

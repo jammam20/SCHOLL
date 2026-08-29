@@ -220,6 +220,23 @@ service cloud.firestore {
             request.auth.uid in resource.data.parentIds &&
             request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly(['absentOn', 'updatedAt']);
+        // A parent maintains the list of people they've authorized to
+        // collect their own (already-approved) child — see
+        // StudentsRepository.setAuthorizedPickupPersons in the parent app
+        // and AuthorizedPickupPerson in school_shared (Feature: Secure
+        // Student Pickup). Kept as its own rule rather than widening the
+        // absence rule's allow-list above, so each parent-writable field
+        // stays independently scoped: this one can never also flip
+        // `absentOn`, and the absence toggle can never rewrite the
+        // authorized-pickup list. The list is a record of the parent's own
+        // authorization, not an identity check — nothing here grants a
+        // named person any access to this system.
+        allow update: if isActiveMember(schoolId) &&
+            resource.data.approved == true &&
+            ('parentIds' in resource.data) &&
+            request.auth.uid in resource.data.parentIds &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['authorizedPickupPersons', 'updatedAt']);
       }
 
       // A durable log of "student X was marked absent on date Y", written
@@ -234,6 +251,34 @@ service cloud.firestore {
         allow create: if isActiveMember(schoolId) &&
             request.resource.data.recordedBy == request.auth.uid;
         allow update, delete: if false;
+      }
+
+      // A parent's message/request to the school (Feature: Parent–Driver
+      // communication). Modeled directly on `absenceLog` above — a
+      // self-attested, parent-created record an admin then acts on — with
+      // two differences: the parent may read back their *own* entries (so
+      // they can see whether the school picked the request up), and an
+      // admin may mark one read/closed.
+      //
+      // The routing is the feature: there is deliberately **no driver read
+      // access** here and no rule that would ever give one. A parent writes
+      // to the school; the school's admin relays whatever the driver needs.
+      // A parent can only ever create an `open` request, for themselves
+      // (`parentUid` self-attested exactly like `absenceLog.recordedBy`),
+      // in the school the path already names. An admin's update is
+      // field-allow-listed to the triage fields so acknowledging a request
+      // can never edit the parent's original message.
+      match /parentRequests/{requestId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() ||
+            (isActiveMember(schoolId) && resource.data.parentUid == request.auth.uid);
+        allow create: if isActiveMember(schoolId) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.parentUid == request.auth.uid &&
+            request.resource.data.status == 'open';
+        allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'readBy', 'readAt']);
+        allow delete: if false;
       }
 
       match /buses/{busId} {

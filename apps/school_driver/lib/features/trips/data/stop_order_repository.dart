@@ -55,6 +55,22 @@ class StopOrderRepository {
     });
   }
 
+  /// The other half of ridership: who has already been handed over at the
+  /// end of their ride. Stored as a plain `List<String>` on the trip
+  /// document exactly like `boardedStudents` (firestore.rules permits the
+  /// assigned driver to write it while the trip is `active`), so the parent
+  /// app can watch it live the same way.
+  Stream<Set<String>> watchDroppedOffStudents({
+    required String schoolId,
+    required String tripId,
+  }) {
+    return _trip(schoolId, tripId).snapshots().map((snapshot) {
+      final droppedOff = snapshot.data()?['droppedOffStudents'];
+      if (droppedOff is! List) return const <String>{};
+      return droppedOff.whereType<String>().toSet();
+    });
+  }
+
   /// Computes a nearest-neighbor pickup order starting from the driver's
   /// current position through every present student on the route who has a
   /// pickup point set (students marked absent today — see
@@ -248,6 +264,103 @@ class StopOrderRepository {
       });
       transaction.set(tripRef.collection('events').doc(), {
         'type': 'studentBoarded',
+        'studentId': studentId,
+        'driverId': driverId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  /// Marks [studentId] dropped off for this trip — the mirror image of
+  /// [markBoarded], down to the transaction shape: re-read the live trip
+  /// document, prove ownership against it, run the pure eligibility check
+  /// ([checkDropOffEligibility]) against *that* data rather than anything
+  /// the client had cached, then write. A repeat tap/retry is a silent,
+  /// idempotent no-op rather than an error, and a student can never be
+  /// dropped off without first having been boarded (the resulting
+  /// `boardedStudents`/`droppedOffStudents` pair is what an admin's
+  /// attendance report reads, so "delivered but never picked up" must not
+  /// be representable).
+  ///
+  /// Unlike [markBoarded] this does not read the student document at all —
+  /// today's absence flag is only relevant to *getting on* the bus; a
+  /// student already aboard has to be handed over regardless of what their
+  /// record says.
+  Future<void> markDroppedOff({
+    required String schoolId,
+    required String tripId,
+    required String studentId,
+  }) async {
+    final driverId = _auth.currentUser?.uid;
+    if (driverId == null) {
+      throw const TripOperationException(
+        TripOperationError.unauthorized,
+        'You need to be signed in to do that.',
+      );
+    }
+
+    final tripRef = _trip(schoolId, tripId);
+
+    await _firestore.runTransaction((transaction) async {
+      final tripSnapshot = await transaction.get(tripRef);
+      final tripData = tripSnapshot.data();
+      if (!tripSnapshot.exists || tripData == null) {
+        throw const TripOperationException(
+          TripOperationError.tripNotFound,
+          'This trip could not be found.',
+        );
+      }
+
+      assertOwnership(
+        tripDriverId: tripData['driverId'] as String? ?? '',
+        currentUserId: driverId,
+      );
+
+      final trip = SchoolTrip.fromMap(tripSnapshot.id, tripData);
+      final stopOrder =
+          (tripData['stopOrder'] as List?)?.whereType<String>().toList() ?? const [];
+      final boarded =
+          (tripData['boardedStudents'] as List?)?.whereType<String>().toSet() ?? const {};
+      final droppedOff =
+          (tripData['droppedOffStudents'] as List?)?.whereType<String>().toSet() ??
+              const {};
+
+      final eligibility = checkDropOffEligibility(
+        tripStatus: trip.status,
+        stopOrder: stopOrder,
+        boardedStudents: boarded,
+        droppedOffStudents: droppedOff,
+        studentId: studentId,
+      );
+
+      switch (eligibility) {
+        case DropOffEligibility.alreadyDroppedOff:
+          return; // Idempotent: nothing left to do.
+        case DropOffEligibility.notBoarded:
+          throw const TripOperationException(
+            TripOperationError.studentNotBoarded,
+            "This student hasn't been picked up on this trip yet.",
+          );
+        case DropOffEligibility.tripNotActive:
+          throw const TripOperationException(
+            TripOperationError.tripNotActive,
+            'Drop-off can only be recorded while the trip is active.',
+          );
+        case DropOffEligibility.studentNotOnTrip:
+          throw const TripOperationException(
+            TripOperationError.studentNotOnTrip,
+            "This student isn't on this trip's stop order.",
+          );
+        case DropOffEligibility.eligible:
+          break;
+      }
+
+      transaction.update(tripRef, {
+        'droppedOffStudents': FieldValue.arrayUnion([studentId]),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.set(tripRef.collection('events').doc(), {
+        'type': 'studentDroppedOff',
         'studentId': studentId,
         'driverId': driverId,
         'createdAt': FieldValue.serverTimestamp(),

@@ -13,11 +13,47 @@ class RoutesStarted extends RoutesEvent {
 }
 
 class RouteCreated extends RoutesEvent {
-  RouteCreated({required this.schoolId, required this.name, this.description});
+  RouteCreated({
+    required this.schoolId,
+    required this.name,
+    this.description,
+    this.deviationToleranceMeters = defaultDeviationToleranceMeters,
+  });
 
   final String schoolId;
   final String name;
   final String? description;
+  final double deviationToleranceMeters;
+}
+
+class RouteUpdated extends RoutesEvent {
+  RouteUpdated({
+    required this.schoolId,
+    required this.routeId,
+    required this.name,
+    required this.deviationToleranceMeters,
+    required this.isActive,
+    this.description,
+  });
+
+  final String schoolId;
+  final String routeId;
+  final String name;
+  final String? description;
+  final double deviationToleranceMeters;
+  final bool isActive;
+}
+
+class RouteStatusChanged extends RoutesEvent {
+  RouteStatusChanged({
+    required this.schoolId,
+    required this.routeId,
+    required this.active,
+  });
+
+  final String schoolId;
+  final String routeId;
+  final bool active;
 }
 
 class _RoutesSnapshotReceived extends RoutesEvent {
@@ -52,6 +88,8 @@ class RoutesBloc extends Bloc<RoutesEvent, RoutesState> {
     on<_RoutesSnapshotReceived>(_onSnapshot);
     on<_RoutesSnapshotFailed>(_onFailure);
     on<RouteCreated>(_onCreated);
+    on<RouteUpdated>(_onUpdated);
+    on<RouteStatusChanged>(_onStatusChanged);
   }
 
   final RoutesRepository _repository;
@@ -89,6 +127,37 @@ class RoutesBloc extends Bloc<RoutesEvent, RoutesState> {
         schoolId: event.schoolId,
         name: event.name,
         description: event.description,
+        deviationToleranceMeters: event.deviationToleranceMeters,
+      );
+    } catch (e) {
+      emit(RoutesFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdated(RouteUpdated event, Emitter<RoutesState> emit) async {
+    try {
+      await _repository.updateRoute(
+        schoolId: event.schoolId,
+        routeId: event.routeId,
+        name: event.name,
+        description: event.description,
+        deviationToleranceMeters: event.deviationToleranceMeters,
+        isActive: event.isActive,
+      );
+    } catch (e) {
+      emit(RoutesFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onStatusChanged(
+    RouteStatusChanged event,
+    Emitter<RoutesState> emit,
+  ) async {
+    try {
+      await _repository.setRouteActive(
+        schoolId: event.schoolId,
+        routeId: event.routeId,
+        active: event.active,
       );
     } catch (e) {
       emit(RoutesFailure(e.toString()));

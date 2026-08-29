@@ -12,6 +12,7 @@ enum TripOperationError {
   tripNotFound,
   studentNotOnTrip,
   studentAbsent,
+  studentNotBoarded,
   tripNotActive,
   invalidStopOrder,
   emergencyAlreadyActive,
@@ -76,6 +77,42 @@ BoardingEligibility checkBoardingEligibility({
   if (boardedStudents.contains(studentId)) return BoardingEligibility.alreadyBoarded;
   if (studentIsAbsentToday) return BoardingEligibility.absent;
   return BoardingEligibility.eligible;
+}
+
+/// Whether marking [studentId] dropped off should actually happen right
+/// now. Deliberately shaped exactly like [checkBoardingEligibility] — same
+/// pure-function-returning-an-enum contract, same "the already-done case is
+/// not an error" rule — so the two halves of ridership (picked up, handed
+/// over) can never drift into two different notions of what's allowed.
+///
+/// [DropOffEligibility.alreadyDroppedOff] is checked *before*
+/// [DropOffEligibility.notBoarded] so that a repeated tap stays idempotent
+/// even in the odd case where a student's boarding record was removed
+/// out from under an already-recorded drop-off — the drop-off already
+/// happened, and re-reporting it as "not boarded" would be a lie about a
+/// fact this trip already recorded.
+enum DropOffEligibility {
+  eligible,
+  alreadyDroppedOff,
+  notBoarded,
+  tripNotActive,
+  studentNotOnTrip,
+}
+
+DropOffEligibility checkDropOffEligibility({
+  required TripStatus tripStatus,
+  required List<String> stopOrder,
+  required Set<String> boardedStudents,
+  required Set<String> droppedOffStudents,
+  required String studentId,
+}) {
+  if (tripStatus != TripStatus.active) return DropOffEligibility.tripNotActive;
+  if (!stopOrder.contains(studentId)) return DropOffEligibility.studentNotOnTrip;
+  if (droppedOffStudents.contains(studentId)) {
+    return DropOffEligibility.alreadyDroppedOff;
+  }
+  if (!boardedStudents.contains(studentId)) return DropOffEligibility.notBoarded;
+  return DropOffEligibility.eligible;
 }
 
 /// A trip's stop order may only be *reordered* — every reorder must carry
