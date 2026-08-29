@@ -342,21 +342,64 @@ async function tokensAndPrefsForUser(
   return { tokens, prefs: prefsFromUserData(data) };
 }
 
-/// Tokens for every one of `uids` who has `prefKey` enabled (or hasn't
-/// customized it, since prefs default to "on").
+/// Tokens (and the matching uids, for the in-app inbox — see
+/// writeNotificationRecords) for every one of `uids` who has `prefKey`
+/// enabled (or hasn't customized it, since prefs default to "on").
 async function tokensForUidsWithPref(
   uids: string[],
   prefKey: keyof Omit<NotificationPrefs, "minutesBefore">,
-): Promise<string[]> {
+): Promise<{ tokens: string[]; uids: string[] }> {
   const uniqueUids = [...new Set(uids)].filter((uid) => uid.length > 0);
   const tokens = new Set<string>();
+  const matchedUids: string[] = [];
   for (const uid of uniqueUids) {
     const { tokens: userTokens, prefs } = await tokensAndPrefsForUser(uid);
     if (prefs[prefKey]) {
       userTokens.forEach((token) => tokens.add(token));
+      matchedUids.push(uid);
     }
   }
-  return [...tokens];
+  return { tokens: [...tokens], uids: matchedUids };
+}
+
+/// Writes one in-app inbox entry (`users/{uid}/notifications/{id}`) per
+/// recipient, alongside the FCM push — this is what gives the "Smart
+/// Notifications" feature a durable, readable history instead of only a
+/// transient push a user could miss. Best-effort: a failed inbox write
+/// never blocks or fails the push it accompanies.
+async function writeNotificationRecords(
+  uids: string[],
+  schoolId: string,
+  type: string,
+  title: string,
+  body: string,
+  extra?: { tripId?: string; busId?: string; studentId?: string },
+): Promise<void> {
+  const uniqueUids = [...new Set(uids)].filter((uid) => uid.length > 0);
+  if (uniqueUids.length === 0) return;
+
+  await Promise.all(
+    uniqueUids.map((uid) =>
+      db
+        .collection("users")
+        .doc(uid)
+        .collection("notifications")
+        .add({
+          schoolId,
+          type,
+          title,
+          body,
+          read: false,
+          createdAt: FieldValue.serverTimestamp(),
+          ...(extra?.tripId ? { tripId: extra.tripId } : {}),
+          ...(extra?.busId ? { busId: extra.busId } : {}),
+          ...(extra?.studentId ? { studentId: extra.studentId } : {}),
+        })
+        .catch((error) =>
+          console.error(`Failed to write notification inbox entry for ${uid}`, error),
+        ),
+    ),
+  );
 }
 
 async function parentIdsForRoute(
@@ -500,16 +543,25 @@ export const onTripStatusChanged = onDocumentUpdated(
 
     if (status === "emergency") {
       const parentIds = await parentIdsForRoute(schoolId, routeId);
+      const adminUids = await schoolAdminUids(schoolId);
       const tokens = new Set(await fcmTokensForSchoolAdmins(schoolId));
       for (const uid of parentIds) {
         const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
         userTokens.forEach((token) => tokens.add(token));
       }
-      await sendPushNotification(
-        [...tokens],
+      const body = `⚠️ ${routeName} reported an emergency.`;
+      await sendPushNotification([...tokens], "School Bus", body, {
+        type: "emergency",
+        schoolId,
+        tripId,
+      });
+      await writeNotificationRecords(
+        [...adminUids, ...parentIds],
+        schoolId,
+        "emergency",
         "School Bus",
-        `⚠️ ${routeName} reported an emergency.`,
-        { type: "emergency", schoolId, tripId },
+        body,
+        { tripId },
       );
       return;
     }
@@ -518,16 +570,201 @@ export const onTripStatusChanged = onDocumentUpdated(
     if (!notification) return;
 
     const parentIds = await parentIdsForRoute(schoolId, routeId);
-    const tokens = await tokensForUidsWithPref(
+    const { tokens, uids } = await tokensForUidsWithPref(
       parentIds,
       notification.prefKey,
     );
-    await sendPushNotification(
-      tokens,
-      "School Bus",
-      `🚌 ${routeName} ${notification.body}.`,
-      { type: "trip", schoolId, tripId },
+    const body = `🚌 ${routeName} ${notification.body}.`;
+    await sendPushNotification(tokens, "School Bus", body, {
+      type: "trip",
+      schoolId,
+      tripId,
+    });
+    await writeNotificationRecords(uids, schoolId, "trip", "School Bus", body, {
+      tripId,
+    });
+  },
+);
+
+async function schoolAdminUids(schoolId: string): Promise<string[]> {
+  const membersSnap = await db
+    .collection("schools")
+    .doc(schoolId)
+    .collection("members")
+    .where("role", "==", "admin")
+    .where("status", "==", "approved")
+    .get();
+  return membersSnap.docs.map((doc) => doc.id);
+}
+
+/// Notifies the specific student's own parents (not the whole route) the
+/// moment they're marked boarded or dropped off — Feature: Smart
+/// Notifications' "Student boarded"/"Student dropped off" event types,
+/// Feature: Student Ridership's own boardedStudents/droppedOffStudents
+/// arrays as the single source of truth for "did this already happen"
+/// (comparing before/after here, rather than a separate per-student flag,
+/// so this can never drift from what the manifest itself shows).
+export const onTripBoardingChanged = onDocumentUpdated(
+  "schools/{schoolId}/trips/{tripId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+
+    const { schoolId, tripId } = event.params;
+    const routeName = String(after.routeName ?? "Your bus");
+
+    const beforeBoarded = new Set<string>(
+      Array.isArray(before.boardedStudents) ? before.boardedStudents : [],
     );
+    const afterBoarded = new Set<string>(
+      Array.isArray(after.boardedStudents) ? after.boardedStudents : [],
+    );
+    const beforeDropped = new Set<string>(
+      Array.isArray(before.droppedOffStudents) ? before.droppedOffStudents : [],
+    );
+    const afterDropped = new Set<string>(
+      Array.isArray(after.droppedOffStudents) ? after.droppedOffStudents : [],
+    );
+
+    const newlyBoarded = [...afterBoarded].filter((id) => !beforeBoarded.has(id));
+    const newlyDropped = [...afterDropped].filter((id) => !beforeDropped.has(id));
+    if (newlyBoarded.length === 0 && newlyDropped.length === 0) return;
+
+    const studentIds = [...newlyBoarded, ...newlyDropped];
+    const studentsSnap = await db.getAll(
+      ...studentIds.map((id) =>
+        db.collection("schools").doc(schoolId).collection("students").doc(id),
+      ),
+    );
+
+    for (const snap of studentsSnap) {
+      if (!snap.exists) continue;
+      const student = snap.data()!;
+      const parentIds: string[] = Array.isArray(student.parentIds)
+        ? student.parentIds.filter((id: unknown): id is string => typeof id === "string")
+        : [];
+      if (parentIds.length === 0) continue;
+
+      const studentName = String(student.name ?? "Your child");
+      const isBoarded = newlyBoarded.includes(snap.id);
+      const body = isBoarded
+        ? `✅ ${studentName} boarded the ${routeName} bus.`
+        : `🏫 ${studentName} was dropped off from the ${routeName} bus.`;
+
+      const tokens = new Set<string>();
+      for (const uid of parentIds) {
+        const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
+        userTokens.forEach((token) => tokens.add(token));
+      }
+      await sendPushNotification([...tokens], "School Bus", body, {
+        type: isBoarded ? "student_boarded" : "student_dropped_off",
+        schoolId,
+        tripId,
+      });
+      await writeNotificationRecords(
+        parentIds,
+        schoolId,
+        isBoarded ? "student_boarded" : "student_dropped_off",
+        "School Bus",
+        body,
+        { tripId, studentId: snap.id },
+      );
+    }
+  },
+);
+
+/// Notifies affected parents (and, for a driver swap, the newly assigned
+/// driver) when an admin reassigns a trip's bus or driver — Feature:
+/// Dynamic Route/Last-Minute Changes' "notifications to relevant users"
+/// requirement, and Feature: Smart Notifications' "Bus changed" event type.
+/// The audit-preserving ReassignmentRecord itself is written by the admin
+/// client directly (see firestore.rules' trips/{tripId}/reassignments
+/// rule) — this function only reacts to the resulting trip-document change
+/// to notify people, mirroring how onTripStatusChanged only reacts to
+/// (never itself decides) a status change.
+export const onTripAssignmentChanged = onDocumentUpdated(
+  "schools/{schoolId}/trips/{tripId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.busId === after.busId && before.driverId === after.driverId) return;
+
+    const { schoolId, tripId } = event.params;
+    const routeId = String(after.routeId ?? "");
+    const routeName = String(after.routeName ?? "Your bus");
+    const busChanged = before.busId !== after.busId;
+    const driverChanged = before.driverId !== after.driverId;
+
+    const parts: string[] = [];
+    if (busChanged) parts.push(`bus changed to ${String(after.busName ?? "a different bus")}`);
+    if (driverChanged) parts.push("driver changed");
+    const body = `🚍 ${routeName}: ${parts.join(", ")}.`;
+
+    const parentIds = await parentIdsForRoute(schoolId, routeId);
+    const tokens = new Set<string>();
+    for (const uid of parentIds) {
+      const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
+      userTokens.forEach((token) => tokens.add(token));
+    }
+    const notifyUids = [...parentIds];
+    if (driverChanged && typeof after.driverId === "string" && after.driverId) {
+      const { tokens: driverTokens } = await tokensAndPrefsForUser(after.driverId);
+      driverTokens.forEach((token) => tokens.add(token));
+      notifyUids.push(after.driverId);
+    }
+
+    await sendPushNotification([...tokens], "School Bus", body, {
+      type: "bus_changed",
+      schoolId,
+      tripId,
+    });
+    await writeNotificationRecords(notifyUids, schoolId, "bus_changed", "School Bus", body, {
+      tripId,
+    });
+  },
+);
+
+/// A school-wide (or audience-scoped) broadcast an admin sends from the
+/// admin app — Feature: Smart Notifications' "School message" event type.
+/// Written by the admin client to `schools/{schoolId}/messages/{id}` (see
+/// firestore.rules); this function only fans it out as a push + inbox
+/// entries, exactly like every other event type here.
+export const onSchoolMessageCreated = onDocumentWritten(
+  "schools/{schoolId}/messages/{messageId}",
+  async (event) => {
+    if (!event.data?.after.exists || event.data.before.exists) return; // create-only
+
+    const { schoolId } = event.params;
+    const message = event.data.after.data()!;
+    const title = String(message.title ?? "School Bus");
+    const body = String(message.body ?? "");
+    const audience = String(message.audience ?? "all");
+    if (!body) return;
+
+    const membersQuery = db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("members")
+      .where("status", "==", "approved")
+      .where("isActive", "==", true);
+    const membersSnap =
+      audience === "all"
+        ? await membersQuery.get()
+        : await membersQuery.where("role", "==", audience === "parents" ? "parent" : "driver").get();
+
+    const uids = membersSnap.docs.map((doc) => doc.id);
+    const tokens = new Set<string>();
+    for (const uid of uids) {
+      const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
+      userTokens.forEach((token) => tokens.add(token));
+    }
+    await sendPushNotification([...tokens], title, body, {
+      type: "school_message",
+      schoolId,
+    });
+    await writeNotificationRecords(uids, schoolId, "school_message", title, body);
   },
 );
 
@@ -612,13 +849,17 @@ export const onDriverLocationWritten = onValueWritten(
       const studentName = String(student.name ?? "your child");
 
       if (!arrivedIds.has(doc.id) && distance <= PROXIMITY_METERS) {
-        const tokens = await tokensForUidsWithPref(parentIds, "arrival");
-        await sendPushNotification(
-          tokens,
-          "Bus arriving",
-          `🚌 ${routeName} bus is arriving at ${studentName}'s pickup point.`,
-          { type: "trip", schoolId, tripId },
-        );
+        const { tokens, uids } = await tokensForUidsWithPref(parentIds, "arrival");
+        const body = `🚌 ${routeName} bus is arriving at ${studentName}'s pickup point.`;
+        await sendPushNotification(tokens, "Bus arriving", body, {
+          type: "trip",
+          schoolId,
+          tripId,
+        });
+        await writeNotificationRecords(uids, schoolId, "trip", "Bus arriving", body, {
+          tripId,
+          studentId: doc.id,
+        });
         updates[`arrived/${doc.id}`] = true;
         arrivedIds.add(doc.id);
       }
@@ -628,13 +869,18 @@ export const onDriverLocationWritten = onValueWritten(
 
         const { tokens, prefs } = await tokensAndPrefsForUser(parentUid);
         if (prefs.minutesBefore > 0 && etaMinutes <= prefs.minutesBefore) {
-          await sendPushNotification(
-            tokens,
-            "Bus on the way",
+          const body =
             `🚌 ${routeName} bus is about ` +
-              `${Math.max(1, Math.round(etaMinutes))} min from ${studentName}.`,
-            { type: "trip", schoolId, tripId },
-          );
+            `${Math.max(1, Math.round(etaMinutes))} min from ${studentName}.`;
+          await sendPushNotification(tokens, "Bus on the way", body, {
+            type: "trip",
+            schoolId,
+            tripId,
+          });
+          await writeNotificationRecords([parentUid], schoolId, "trip", "Bus on the way", body, {
+            tripId,
+            studentId: doc.id,
+          });
           updates[`preArrival/${doc.id}/${parentUid}`] = true;
         }
       }
@@ -655,13 +901,16 @@ export const onDriverLocationWritten = onValueWritten(
         );
         if (distance <= PROXIMITY_METERS) {
           const parentIds = await parentIdsForRoute(schoolId, routeId);
-          const tokens = await tokensForUidsWithPref(parentIds, "arrival");
-          await sendPushNotification(
-            tokens,
-            "Bus arrived",
-            `🚌 ${routeName} bus has arrived at school.`,
-            { type: "trip", schoolId, tripId },
-          );
+          const { tokens, uids } = await tokensForUidsWithPref(parentIds, "arrival");
+          const body = `🚌 ${routeName} bus has arrived at school.`;
+          await sendPushNotification(tokens, "Bus arrived", body, {
+            type: "trip",
+            schoolId,
+            tripId,
+          });
+          await writeNotificationRecords(uids, schoolId, "trip", "Bus arrived", body, {
+            tripId,
+          });
           updates["arrived/__school__"] = true;
         }
       }
@@ -670,8 +919,243 @@ export const onDriverLocationWritten = onValueWritten(
     if (Object.keys(updates).length > 0) {
       await notifyStateRef.update(updates);
     }
+
+    await evaluateRouteDeviation({
+      schoolId,
+      tripId,
+      trip,
+      busLatitude: latitude,
+      busLongitude: longitude,
+      studentsSnap,
+    });
   },
 );
+
+// ---------------------------------------------------------------------------
+// Route deviation detection
+// ---------------------------------------------------------------------------
+
+/// Mirrors packages/school_shared/lib/src/domain/deviation_engine.dart's
+/// evaluateDeviation exactly (state machine, point-to-segment math, and the
+/// "alert once per episode" behavior) — kept in sync deliberately the same
+/// way TripStatus.canTransitionTo is duplicated between Dart and this file,
+/// since Cloud Functions run TypeScript and can't import the Dart package.
+type DeviationStatus = "normal" | "deviation_started" | "deviating" | "deviation_ended";
+
+function degToRad(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
+function distanceToSegmentMeters(
+  pLat: number,
+  pLng: number,
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number,
+): number {
+  const metersPerDegreeLat = 111320;
+  const metersPerDegreeLng = 111320 * Math.cos(degToRad(pLat));
+
+  const px = pLng * metersPerDegreeLng;
+  const py = pLat * metersPerDegreeLat;
+  const ax = aLng * metersPerDegreeLng;
+  const ay = aLat * metersPerDegreeLat;
+  const bx = bLng * metersPerDegreeLng;
+  const by = bLat * metersPerDegreeLat;
+
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSquared = dx * dx + dy * dy;
+
+  let t = 0;
+  if (lengthSquared !== 0) {
+    t = ((px - ax) * dx + (py - ay) * dy) / lengthSquared;
+    t = Math.max(0, Math.min(1, t));
+  }
+
+  const closestX = ax + t * dx;
+  const closestY = ay + t * dy;
+  const ddx = px - closestX;
+  const ddy = py - closestY;
+  return Math.sqrt(ddx * ddx + ddy * ddy);
+}
+
+function distanceToPathMeters(
+  lat: number,
+  lng: number,
+  points: { latitude: number; longitude: number }[],
+): number {
+  if (points.length === 0) return 0;
+  if (points.length === 1) {
+    return haversineMeters(lat, lng, points[0].latitude, points[0].longitude);
+  }
+  let min = Infinity;
+  for (let i = 0; i < points.length - 1; i++) {
+    const d = distanceToSegmentMeters(
+      lat,
+      lng,
+      points[i].latitude,
+      points[i].longitude,
+      points[i + 1].latitude,
+      points[i + 1].longitude,
+    );
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+const DEFAULT_DEVIATION_TOLERANCE_METERS = 400;
+
+/// Evaluates the bus's current position against the trip's expected
+/// stop-by-stop path (see DeviationRecord/SchoolRoute's own doc comments —
+/// there is no separately-stored route polyline in this system, so the
+/// trip's own stop order is the closest thing to "the expected route").
+/// Persists the single live `deviation` doc per trip, appends a closed
+/// history record to `routeDeviations` when an episode ends, and alerts
+/// school admins exactly once per episode (on the NORMAL/DEVIATION_ENDED ->
+/// DEVIATION_STARTED transition) — never on every subsequent GPS update
+/// while still deviating.
+async function evaluateRouteDeviation(args: {
+  schoolId: string;
+  tripId: string;
+  trip: FirebaseFirestore.DocumentData;
+  busLatitude: number;
+  busLongitude: number;
+  studentsSnap: FirebaseFirestore.QuerySnapshot | null;
+}): Promise<void> {
+  const { schoolId, tripId, trip, busLatitude, busLongitude, studentsSnap } = args;
+
+  const stopOrder: string[] = Array.isArray(trip.stopOrder) ? trip.stopOrder : [];
+  if (stopOrder.length < 2) return; // nothing to compare against yet
+
+  const studentById = new Map<string, FirebaseFirestore.DocumentData>();
+  for (const doc of studentsSnap?.docs ?? []) {
+    studentById.set(doc.id, doc.data());
+  }
+
+  const schoolSnap = await db.collection("schools").doc(schoolId).get();
+  const school = schoolSnap.data();
+
+  const points: { latitude: number; longitude: number }[] = [];
+  for (const stopId of stopOrder) {
+    if (stopId === "__school__") {
+      const lat = Number(school?.latitude);
+      const lng = Number(school?.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) points.push({ latitude: lat, longitude: lng });
+      continue;
+    }
+    const student = studentById.get(stopId);
+    const lat = Number(student?.latitude);
+    const lng = Number(student?.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) points.push({ latitude: lat, longitude: lng });
+  }
+  if (points.length < 2) return;
+
+  let toleranceMeters = DEFAULT_DEVIATION_TOLERANCE_METERS;
+  const routeId = String(trip.routeId ?? "");
+  if (routeId) {
+    const routeSnap = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("routes")
+      .doc(routeId)
+      .get();
+    const tolerance = Number(routeSnap.data()?.deviationToleranceMeters);
+    if (Number.isFinite(tolerance) && tolerance > 0) toleranceMeters = tolerance;
+  }
+
+  const deviationRef = db
+    .collection("schools")
+    .doc(schoolId)
+    .collection("trips")
+    .doc(tripId)
+    .collection("deviation")
+    .doc("current");
+  const deviationSnap = await deviationRef.get();
+  const previous = deviationSnap.data();
+  const previousStatus = (previous?.status as DeviationStatus) ?? "normal";
+  const previousMax = Number(previous?.maxDeviationMeters) || 0;
+
+  const distance = distanceToPathMeters(busLatitude, busLongitude, points);
+  const wasDeviating = previousStatus === "deviation_started" || previousStatus === "deviating";
+
+  let status: DeviationStatus;
+  let maxDeviation: number;
+  let shouldAlert = false;
+  let episodeEnded = false;
+
+  if (distance <= toleranceMeters) {
+    if (wasDeviating) {
+      status = "deviation_ended";
+      maxDeviation = previousMax;
+      episodeEnded = true;
+    } else {
+      status = "normal";
+      maxDeviation = 0;
+    }
+  } else if (wasDeviating) {
+    status = "deviating";
+    maxDeviation = Math.max(previousMax, distance);
+  } else {
+    status = "deviation_started";
+    maxDeviation = distance;
+    shouldAlert = true;
+  }
+
+  const now = FieldValue.serverTimestamp();
+  const startedAt = wasDeviating ? previous?.startedAt ?? now : now;
+
+  await deviationRef.set(
+    {
+      schoolId,
+      tripId,
+      busId: trip.busId ?? "",
+      driverId: trip.driverId ?? "",
+      routeId: routeId || null,
+      status,
+      startedAt: status === "normal" ? null : startedAt,
+      endedAt: episodeEnded ? now : null,
+      maxDeviationMeters: maxDeviation,
+      currentDeviationMeters: distance,
+    },
+    { merge: false },
+  );
+
+  if (episodeEnded) {
+    await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("routeDeviations")
+      .add({
+        schoolId,
+        tripId,
+        busId: trip.busId ?? "",
+        driverId: trip.driverId ?? "",
+        routeId: routeId || null,
+        status: "deviation_ended",
+        startedAt,
+        endedAt: now,
+        maxDeviationMeters: maxDeviation,
+        currentDeviationMeters: distance,
+      });
+  }
+
+  if (shouldAlert) {
+    const routeName = String(trip.routeName ?? "A bus");
+    const body = `🛑 ${routeName} has deviated from its expected route.`;
+    const adminUids = await schoolAdminUids(schoolId);
+    const tokens = await fcmTokensForSchoolAdmins(schoolId);
+    await sendPushNotification(tokens, "Route deviation", body, {
+      type: "route_deviation",
+      schoolId,
+      tripId,
+    });
+    await writeNotificationRecords(adminUids, schoolId, "route_deviation", "Route deviation", body, {
+      tripId,
+    });
+  }
+}
 
 // Saving notification preferences used to be a callable here, but that
 // meant the settings screen silently did nothing unless this project was

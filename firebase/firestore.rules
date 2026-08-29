@@ -28,6 +28,15 @@ service cloud.firestore {
           membership(schoolId).data.role == 'admin';
     }
 
+    // Read-only operational role (Feature: School Staff/Teacher) — never
+    // treated as a subset of isSchoolAdmin anywhere in these rules; every
+    // grant staff gets is spelled out explicitly as its own `|| isSchoolStaff(...)`
+    // clause on read-only rules, and staff never appears in a write rule.
+    function isSchoolStaff(schoolId) {
+      return isActiveMember(schoolId) &&
+          membership(schoolId).data.role == 'staff';
+    }
+
     function isSelf(uid) {
       return signedIn() && request.auth.uid == uid;
     }
@@ -50,7 +59,7 @@ service cloud.firestore {
     // there's no shared `approved` field between the two, so that check
     // can't live in this shared helper).
     function isSelfServeRole(role) {
-      return role == 'parent' || role == 'driver' || role == 'admin';
+      return role == 'parent' || role == 'driver' || role == 'admin' || role == 'staff';
     }
 
     // Mirrors TRIP_STATUS_TRANSITIONS in functions/src/index.ts (dormant —
@@ -82,6 +91,18 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['notificationPrefs', 'name', 'updatedAt']);
       allow delete: if false;
+
+      // In-app notification inbox (Feature: Smart Notifications) — written
+      // only by the onTripStatusChanged/onDriverLocationWritten Cloud
+      // Functions via the Admin SDK (which bypasses these rules entirely),
+      // at the same moment they send the matching FCM push. A client can
+      // never create/delete an entry; the owning user may only flip `read`.
+      match /notifications/{notificationId} {
+        allow read: if isSelf(uid);
+        allow create, delete: if false;
+        allow update: if isSelf(uid) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      }
     }
 
     match /systemAdmins/{uid} {
@@ -113,6 +134,7 @@ service cloud.firestore {
     // denied. Read-only: writes still go through the nested rule below.
     match /{path=**}/emergencies/{emergencyId} {
       allow read: if isSchoolAdmin(resource.data.schoolId) || isSystemAdmin() ||
+          isSchoolStaff(resource.data.schoolId) ||
           (isActiveMember(resource.data.schoolId) &&
               resource.data.driverId == request.auth.uid);
     }
@@ -174,7 +196,7 @@ service cloud.firestore {
         // A parent needs to read their own child's record (to find its
         // assigned routeId and follow that route's trips), but nothing
         // else about students in the school.
-        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() ||
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
             (isActiveMember(schoolId) &&
                 ('parentIds' in resource.data) &&
                 request.auth.uid in resource.data.parentIds);
@@ -215,15 +237,109 @@ service cloud.firestore {
       }
 
       match /buses/{busId} {
-        allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+
+        // Itemized maintenance/document records (Feature: Vehicle
+        // Management) — a bus's own due-date fields (insuranceExpiry etc.)
+        // live directly on the bus doc above and are covered by its own
+        // write rule; this subcollection is the append-style history of
+        // completed/scheduled items behind those dates.
+        match /maintenance/{recordId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+          allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        }
       }
 
       match /routes/{routeId} {
-        allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
 
         match /stops/{stopId} {
           allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
         }
+      }
+
+      // Admin-defined shared/safe pickup locations (Feature: Smart Pickup
+      // Points) — read by any active member (a parent needs to see the
+      // point their child is assigned to), written only by an admin.
+      match /pickupPoints/{pickupPointId} {
+        allow read: if isActiveMember(schoolId) || isSystemAdmin();
+        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+      }
+
+      // Operational detail for a driver (Feature: Driver Management) — kept
+      // out of the auth-facing `members/{uid}` doc entirely. The driver may
+      // read their own; only an admin may write (assign buses/routes, log
+      // license/training).
+      match /driverProfiles/{uid} {
+        allow read: if isSelf(uid) || isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+      }
+
+      // General incident reports (Feature: Safety/Incident System) —
+      // distinct from the per-trip `emergencies` subcollection below (SOS):
+      // an incident does not require flipping the trip to
+      // TripStatus.emergency, so a driver may file one without that
+      // escalation. Only the reporting driver may create; only a school
+      // admin may acknowledge/resolve (their own two allowed transitions,
+      // one field at a time so a resolve can't also silently edit the
+      // original report).
+      match /incidents/{incidentId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+            (isActiveMember(schoolId) && resource.data.driverId == request.auth.uid);
+        allow create: if isActiveMember(schoolId) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.driverId == request.auth.uid &&
+            request.resource.data.status == 'reported';
+        allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+            ((resource.data.status == 'reported' &&
+                request.resource.data.status == 'acknowledged' &&
+                request.resource.data.diff(resource.data).affectedKeys()
+                    .hasOnly(['status', 'acknowledgedAt', 'acknowledgedBy'])) ||
+                ((resource.data.status == 'reported' || resource.data.status == 'acknowledged') &&
+                    request.resource.data.status == 'resolved' &&
+                    request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'resolvedAt', 'resolvedBy', 'resolutionNotes',
+                            'acknowledgedAt', 'acknowledgedBy'])));
+        allow delete: if false;
+      }
+
+      // Route-deviation history (Feature: Route Deviation Detection) —
+      // written only by the onDriverLocationWritten Cloud Function via the
+      // Admin SDK when a deviation episode closes; never written by a
+      // client. Read-only for admins/staff for historical reporting.
+      match /routeDeviations/{deviationId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+        allow write: if false;
+      }
+
+      // School-wide (or audience-scoped) broadcast messages (Feature: Smart
+      // Notifications' "School message" type) — admin-authored, fanned out
+      // to a push + inbox entry per matching member by onSchoolMessageCreated
+      // (functions/src/index.ts). Never editable/deletable once sent.
+      match /messages/{messageId} {
+        allow read: if isActiveMember(schoolId) || isSystemAdmin();
+        allow create: if isSchoolAdmin(schoolId) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // A single immutable, append-only operational audit trail (Feature:
+      // Digital Audit Trail) — mirrors the existing trips/{id}/events
+      // write-only-subcollection convention, generalized to the whole
+      // school instead of one trip. Any active member may create an entry
+      // for their own action (`actorUid` must be the caller); nobody may
+      // ever update or delete one. Queryable only by admin/staff/system
+      // admin, per the feature's own "ordinary users cannot modify audit
+      // records" and "queryable by authorized Admin/Staff" requirements.
+      match /auditLog/{entryId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+        allow create: if isActiveMember(schoolId) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
       }
 
       match /trips/{tripId} {
@@ -255,13 +371,15 @@ service cloud.firestore {
             resource.data.driverId == request.auth.uid &&
             request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly([
-                  'stopOrder', 'boardedStudents', 'status', 'startedAt',
-                  'completedAt', 'pausedAt', 'resumedAt', 'cancelledAt',
+                  'stopOrder', 'boardedStudents', 'droppedOffStudents', 'status',
+                  'startedAt', 'completedAt', 'pausedAt', 'resumedAt', 'cancelledAt',
                   'cancelReason', 'updatedAt'
                 ]) &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
                 isValidTripTransition(resource.data.status, request.resource.data.status)) &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['boardedStudents']) ||
+                resource.data.status == 'active') &&
+            (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['droppedOffStudents']) ||
                 resource.data.status == 'active');
 
         // A minimal, write-only event trail (trip started/paused/resumed/
@@ -316,6 +434,65 @@ service cloud.firestore {
                   (isActiveMember(schoolId) &&
                       resource.data.driverId == request.auth.uid));
           allow delete: if false;
+        }
+
+        // The single *live* deviation record for this trip (Feature: Route
+        // Deviation Detection) — written only by the
+        // onDriverLocationWritten Cloud Function via the Admin SDK on every
+        // GPS update while a deviation episode may be starting/ongoing/
+        // ending; never written by a client (a driver/admin cannot self-
+        // report "not deviating"). A fixed doc id ('current') is used by
+        // convention rather than one per episode — see DeviationRecord.
+        match /deviation/{docId} {
+          allow read: if isActiveMember(schoolId) || isSystemAdmin();
+          allow write: if false;
+        }
+
+        // Secure pickup verification (Feature: Secure Student Pickup) — the
+        // assigned driver records the outcome of each attempted pickup.
+        // Read is open to the trip's driver, this school's admin/staff, and
+        // any parent of the specific student the record is about.
+        match /pickupVerifications/{verificationId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+              (isActiveMember(schoolId) &&
+                  (resource.data.driverId == request.auth.uid ||
+                      (exists(/databases/$(database)/documents/schools/$(schoolId)/students/$(resource.data.studentId)) &&
+                          request.auth.uid in get(/databases/$(database)/documents/schools/$(schoolId)/students/$(resource.data.studentId)).data.parentIds)));
+          allow create: if isActiveMember(schoolId) &&
+              get(/databases/$(database)/documents/schools/$(schoolId)/trips/$(tripId)).data.driverId == request.auth.uid &&
+              request.resource.data.schoolId == schoolId &&
+              request.resource.data.tripId == tripId &&
+              request.resource.data.driverId == request.auth.uid;
+          allow update, delete: if false;
+        }
+
+        // Audit-preserving record of a last-minute bus/driver/route change
+        // (Feature: Dynamic Route/Last-Minute Changes) — written alongside
+        // (never instead of) the admin's own direct update to the trip
+        // document's busId/driverId/routeId fields, which the existing
+        // unrestricted admin `write` rule on trips already permits.
+        match /reassignments/{reassignmentId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+          allow create: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+              request.resource.data.schoolId == schoolId &&
+              request.resource.data.tripId == tripId &&
+              request.resource.data.changedBy == request.auth.uid;
+          allow update, delete: if false;
+        }
+
+        // Pre/post-trip vehicle inspection checklists (Feature: Vehicle
+        // Pre/Post Inspection) — the assigned driver records their own;
+        // never editable afterward (a failed/critical inspection is a fact,
+        // not something to quietly correct).
+        match /inspections/{inspectionId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+              (isActiveMember(schoolId) && resource.data.driverId == request.auth.uid);
+          allow create: if isActiveMember(schoolId) &&
+              get(/databases/$(database)/documents/schools/$(schoolId)/trips/$(tripId)).data.driverId == request.auth.uid &&
+              request.resource.data.schoolId == schoolId &&
+              request.resource.data.tripId == tripId &&
+              request.resource.data.driverId == request.auth.uid;
+          allow update, delete: if false;
         }
       }
     }

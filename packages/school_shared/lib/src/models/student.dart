@@ -1,4 +1,5 @@
 import '../utils/dates.dart';
+import 'pickup_verification.dart';
 
 class Student {
   const Student({
@@ -12,6 +13,8 @@ class Student {
     this.longitude,
     this.approved = true,
     this.absentOn,
+    this.pickupPointId,
+    this.authorizedPickupPersons = const [],
   });
 
   final String id;
@@ -31,6 +34,17 @@ class Student {
   // arrival/ETA notifications for this student's parents specifically.
   final double? latitude;
   final double? longitude;
+
+  // Optional shared/safe pickup point (Feature: Smart Pickup Points) this
+  // student is assigned to instead of (or in addition to) their exact
+  // door-to-door coordinate above. Null means "uses latitude/longitude
+  // directly", matching all existing behavior unchanged.
+  final String? pickupPointId;
+
+  // People a parent has pre-authorized to collect this student (Feature:
+  // Secure Student Pickup). Empty by default — every existing student
+  // continues to work exactly as before until a parent adds one.
+  final List<AuthorizedPickupPerson> authorizedPickupPersons;
 
   // False while a student a parent added themselves is awaiting admin
   // approval (see StudentsRepository.addChild in the parent app). Always
@@ -64,6 +78,12 @@ class Student {
       longitude: (data['longitude'] as num?)?.toDouble(),
       approved: data['approved'] != false,
       absentOn: data['absentOn'] as String?,
+      pickupPointId: data['pickupPointId'] as String?,
+      authorizedPickupPersons: (data['authorizedPickupPersons'] as List?)
+              ?.map((e) => AuthorizedPickupPerson.fromMap(
+                  Map<String, dynamic>.from(e as Map)))
+              .toList() ??
+          const [],
     );
   }
 }
