@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../trips/domain/journey_stage.dart';
 
 /// A vertical checklist of a trip's 9-step lifecycle: everything up to
@@ -77,13 +77,14 @@ class _TimelineStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final tones = context.appColors;
     final (dotColor, lineColorAfter, icon) = switch (state) {
-      _StepState.completed => (const Color(0xFF17B26A), colors.primary, Icons.check),
-      _StepState.current => (colors.primary, colors.outlineVariant, null),
-      _StepState.upcoming => (colors.outlineVariant, colors.outlineVariant, null),
-      _StepState.paused => (const Color(0xFFF79009), colors.outlineVariant, Icons.pause),
-      _StepState.emergency => (colors.error, colors.outlineVariant, Icons.priority_high),
-      _StepState.cancelled => (colors.outlineVariant, colors.outlineVariant, Icons.close),
+      _StepState.completed => (tones.success, colors.primary, Icons.check),
+      _StepState.current => (colors.primary, tones.border, null),
+      _StepState.upcoming => (tones.border, tones.border, null),
+      _StepState.paused => (tones.warning, tones.border, Icons.pause),
+      _StepState.emergency => (tones.emergency, tones.border, Icons.priority_high),
+      _StepState.cancelled => (tones.border, tones.border, Icons.close),
     };
     final isEmphasized = state == _StepState.current ||
         state == _StepState.paused ||
@@ -142,8 +143,8 @@ class _TimelineStep extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: isEmphasized ? FontWeight.w800 : FontWeight.w500,
                   color: state == _StepState.upcoming || state == _StepState.cancelled
-                      ? colors.onSurfaceVariant
-                      : colors.onSurface,
+                      ? tones.textMuted
+                      : tones.textPrimary,
                   decoration: state == _StepState.cancelled
                       ? TextDecoration.lineThrough
                       : null,
