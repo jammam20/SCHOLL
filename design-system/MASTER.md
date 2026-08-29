@@ -6,6 +6,10 @@ Implementation lives in `packages/school_shared/lib/src/design/` and is consumed
 
 > **Note on the requested stack:** the brief referenced Riverpod. The codebase actually uses `flutter_bloc` end-to-end (Cubits for auth, Blocs for trip/list orchestration), and `go_router` is a declared but unused dependency — every app navigates with plain `Navigator.push`. This document and the implementation preserve the **actual** existing stack (bloc + Navigator) rather than introducing Riverpod/GoRouter, per the standing instruction to not rewrite architecture. Swapping state-management or routing libraries is out of scope for a UI/UX phase.
 
+> **UI/UX Pro Max integration:** the `ui-ux-pro-max` local skill (`.claude/skills/ui-ux-pro-max/`) was verified executable (`py -3.13 .../scripts/search.py ...`, confirmed producing real, structured output) and used as a design-system input. Its own generated recommendation for this product — style **"Minimalism & Swiss Style"** ("clean, simple, spacious, functional... enterprise apps, dashboards, professional tools") with typography **Lexend (heading) + Source Sans 3 (body)** ("corporate, trustworthy, accessible, readable... enterprise, government, healthcare, finance, accessibility-focused") — was adopted: §3 below now uses that pairing in place of the single-family Plus Jakarta Sans used previously. Full persisted output: `design-system/jammam-school-bus/MASTER.md`.
+>
+> **One recommendation was deliberately rejected and is documented here rather than silently dropped:** querying the same tool for the *parent* app specifically (keywords included "family") matched its **"Claymorphism"** entry — a pink, bubbly, toy-like children's-app style. Applying that to a school-safety trust product would directly contradict this entire project's standing "not childish, not decorative" direction and its own emergency-communication requirements. The tool is a keyword-matched catalog of general product/marketing-site patterns, not a bespoke judgment for this domain — its output was used where it fit (typography, Flutter widget-level guidance) and set aside where it didn't (that one style match), per the standing instruction to make the most reasonable professional decision when a tool's output doesn't fit.
+
 ---
 
 ## 1. Brand
@@ -53,7 +57,7 @@ All values are tokens in `AppColorTokens` (`packages/school_shared/lib/src/desig
 
 ## 3. Typography
 
-**Latin:** Plus Jakarta Sans (already in use across all four apps — kept, not replaced, since it is already a confident geometric sans with no default-Flutter-template smell).
+**Latin:** **Lexend** for headings/titles, **Source Sans 3** for body/label text — the pairing UI/UX Pro Max's design-system query returned for this exact product ("corporate, trustworthy, accessible, readable... enterprise, government, healthcare, finance, accessibility-focused"). Replaces the previous single-family Plus Jakarta Sans. Lexend is specifically designed to reduce visual stress in reading, which is a genuine fit for a status/emergency-heavy interface, not just a stylistic swap.
 
 **Arabic:** Plus Jakarta Sans has no Arabic glyphs, so Arabic text was previously falling back to whatever system font each Android version ships — inconsistent weight, inconsistent spacing, occasionally ugly. This phase adds **Cairo** (Google Fonts) as the dedicated Arabic face — geometric, highly legible at small sizes, wide weight range, and it visually pairs with Plus Jakarta Sans's own geometric structure instead of clashing with it. `AppTypography.textTheme(locale)` picks the correct family per active locale automatically; no screen chooses a font manually.
 

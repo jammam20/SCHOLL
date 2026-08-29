@@ -18,31 +18,57 @@ class AppSettings {
   static final themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
   static final locale = ValueNotifier<Locale>(const Locale('en'));
 
+  /// Restoring a saved theme/language is a nice-to-have, never something
+  /// worth blocking app startup over — in a storage-partitioned or
+  /// otherwise restricted browser context (e.g. an embedded preview pane),
+  /// `SharedPreferences.getInstance()` on web can hang instead of failing
+  /// fast, since it waits on a JS promise that may never settle rather
+  /// than throwing synchronously. A short timeout plus a catch-all means a
+  /// blocked/unavailable storage backend degrades to "start with defaults"
+  /// instead of an app that never renders its first frame.
   static Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedTheme = prefs.getString(_themeModeKey);
-    if (savedTheme == 'dark') themeMode.value = ThemeMode.dark;
-    final savedLocale = prefs.getString(_localeKey);
-    if (savedLocale == 'ar') locale.value = const Locale('ar');
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 2),
+      );
+      final savedTheme = prefs.getString(_themeModeKey);
+      if (savedTheme == 'dark') themeMode.value = ThemeMode.dark;
+      final savedLocale = prefs.getString(_localeKey);
+      if (savedLocale == 'ar') locale.value = const Locale('ar');
+    } catch (_) {
+      // Defaults (light, English) already set above — nothing else to do.
+    }
   }
 
   static Future<void> toggleTheme() async {
     themeMode.value = themeMode.value == ThemeMode.dark
         ? ThemeMode.light
         : ThemeMode.dark;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _themeModeKey,
-      themeMode.value == ThemeMode.dark ? 'dark' : 'light',
-    );
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 2),
+      );
+      await prefs.setString(
+        _themeModeKey,
+        themeMode.value == ThemeMode.dark ? 'dark' : 'light',
+      );
+    } catch (_) {
+      // The toggle itself already applied above; only persistence failed.
+    }
   }
 
   static Future<void> toggleLocale() async {
     locale.value = locale.value.languageCode == 'ar'
         ? const Locale('en')
         : const Locale('ar');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_localeKey, locale.value.languageCode);
+    try {
+      final prefs = await SharedPreferences.getInstance().timeout(
+        const Duration(seconds: 2),
+      );
+      await prefs.setString(_localeKey, locale.value.languageCode);
+    } catch (_) {
+      // The toggle itself already applied above; only persistence failed.
+    }
   }
 }
 
