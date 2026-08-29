@@ -13,14 +13,20 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = context.appColors;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(const S('Profile', 'الملف الشخصي').of(context)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.md,
+          AppSpacing.xl,
+          AppSpacing.xl3,
+        ),
         children: [
           Center(
             child: Column(
@@ -30,7 +36,10 @@ class ProfilePage extends StatelessWidget {
                   height: 84,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [colors.primary, colors.tertiary],
+                      colors: [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.tertiary,
+                      ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -46,17 +55,18 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.lg),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       user.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
+                        color: colors.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpacing.xs),
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.edit_outlined, size: 18),
@@ -66,18 +76,26 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ),
                 if (user.email.isNotEmpty)
-                  Text(user.email, style: TextStyle(color: colors.onSurfaceVariant)),
-                const SizedBox(height: 4),
+                  Text(
+                    user.email,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.sm),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
-                    color: colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
                     const S('Parent', 'ولي أمر').of(context),
                     style: TextStyle(
-                      color: colors.onPrimaryContainer,
+                      color: theme.colorScheme.onPrimaryContainer,
                       fontWeight: FontWeight.w700,
                       fontSize: 12.5,
                     ),
@@ -86,14 +104,10 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          Text(
-            const S('Preferences', 'التفضيلات').of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
+            title: const S('App settings', 'إعدادات التطبيق').of(context),
           ),
-          const SizedBox(height: 10),
           Card(
             child: Column(
               children: [
@@ -125,7 +139,10 @@ class ProfilePage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.notifications_outlined),
                   title: Text(
-                    const S('Notification settings', 'إعدادات الإشعارات').of(context),
+                    const S(
+                      'Notification settings',
+                      'إعدادات الإشعارات',
+                    ).of(context),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
@@ -150,12 +167,12 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          OutlinedButton.icon(
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(title: const S('Account', 'الحساب').of(context)),
+          AppButton.secondary(
+            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            icon: Icons.logout,
             onPressed: onSignOut,
-            style: OutlinedButton.styleFrom(foregroundColor: colors.error),
-            icon: const Icon(Icons.logout),
-            label: Text(const S('Sign out', 'تسجيل الخروج').of(context)),
           ),
         ],
       ),
@@ -183,6 +200,23 @@ class ProfilePage extends StatelessWidget {
     );
     controller.dispose();
     if (name == null || name.trim().isEmpty) return;
-    await ProfileRepository().updateName(schoolId: user.schoolId, name: name);
+
+    // The write can fail (offline, a rules rejection, a transient Firestore
+    // error) — previously nothing told the parent when that happened, so
+    // an edited name would silently revert on the next reload with no
+    // explanation. Surface it the same way every other in-app save failure
+    // is surfaced.
+    try {
+      await ProfileRepository().updateName(schoolId: user.schoolId, name: name);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackbar.error(
+        context,
+        const S(
+          "Couldn't save your name — try again.",
+          'معرفناش نحفظ اسمك — جرب تاني.',
+        ).of(context),
+      );
+    }
   }
 }

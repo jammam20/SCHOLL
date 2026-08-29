@@ -64,9 +64,16 @@ class StopOrderView extends StatelessWidget {
 
             final order = orderSnapshot.data ?? const <String>[];
             if (order.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text("Computing today's pickup order…"),
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: EmptyStateView(
+                  compact: true,
+                  icon: Icons.hourglass_top_rounded,
+                  title: const S(
+                    "Computing today's pickup order…",
+                    'جارٍ حساب ترتيب الالتقاط لهذا اليوم…',
+                  ).of(context),
+                ),
               );
             }
 
@@ -115,25 +122,20 @@ class StopOrderView extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text(
-                          "Today's route",
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                        const Spacer(),
-                        Text(
+                    const SizedBox(height: AppSpacing.sm),
+                    SectionHeader(
+                      title: const S("Today's route", 'مسار اليوم').of(context),
+                      trailing: Text(
+                        S(
                           '$boardedCount / $totalStudents picked up',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          '$boardedCount من $totalStudents تم اصطحابهم',
+                        ).of(context),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 10),
                     if (markers.isNotEmpty)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
@@ -158,8 +160,15 @@ class StopOrderView extends StatelessWidget {
                         isFirst: i == 0,
                         isLast: i == order.length - 1,
                         label: order[i] == schoolStopId
-                            ? 'School (final stop)'
-                            : students[order[i]]?.name ?? 'Unknown student',
+                            ? const S(
+                                'School (final stop)',
+                                'المدرسة (آخر محطة)',
+                              ).of(context)
+                            : students[order[i]]?.name ??
+                                  const S(
+                                    'Unknown student',
+                                    'طالب غير معروف',
+                                  ).of(context),
                         isSchool: order[i] == schoolStopId,
                         isBoarded: boarded.contains(order[i]),
                         onMoveTo: (newIndex) {
@@ -224,7 +233,7 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final dotColor = isBoarded
-        ? const Color(0xFF17B26A)
+        ? context.appColors.success
         : (isSchool ? colors.tertiary : colors.primary);
     final lineColor = colors.outlineVariant.withValues(alpha: 0.7);
 
@@ -275,52 +284,77 @@ class _TimelineRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 16, top: 2),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontWeight: isSchool ? FontWeight.w800 : FontWeight.w600,
-                        decoration: isBoarded ? TextDecoration.lineThrough : null,
-                        color: isBoarded ? colors.onSurfaceVariant : null,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontWeight: isSchool
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                            decoration: isBoarded
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: isBoarded ? colors.onSurfaceVariant : null,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (!isSchool && isBoarded)
+                        StatusBadge(
+                          label: const S('Boarded', 'تم الصعود').of(context),
+                          tone: StatusTone.success,
+                        ),
+                    ],
                   ),
                   if (!isSchool && !isBoarded) ...[
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<int>(
-                        value: index,
-                        items: [
-                          for (var i = 0; i < total - 1; i++)
-                            DropdownMenuItem(value: i, child: Text('#${i + 1}')),
-                        ],
-                        onChanged: (newIndex) {
-                          if (newIndex != null && newIndex != index) {
-                            onMoveTo(newIndex);
-                          }
-                        },
-                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        StatusBadge(
+                          label: const S(
+                            'Pending',
+                            'قيد الانتظار',
+                          ).of(context),
+                          tone: StatusTone.warning,
+                        ),
+                        const Spacer(),
+                        DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: index,
+                            items: [
+                              for (var i = 0; i < total - 1; i++)
+                                DropdownMenuItem(
+                                  value: i,
+                                  child: Text('#${i + 1}'),
+                                ),
+                            ],
+                            onChanged: (newIndex) {
+                              if (newIndex != null && newIndex != index) {
+                                onMoveTo(newIndex);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.tonal(
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          onPressed: onBoard,
+                          child: Text(const S('Board', 'ركوب').of(context)),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonal(
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: onBoard,
-                      child: const Text('Board'),
-                    ),
-                  ] else if (!isSchool && isBoarded)
-                    Text(
-                      'Boarded',
-                      style: TextStyle(
-                        color: const Color(0xFF17B26A),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12.5,
-                      ),
-                    ),
+                  ],
                 ],
               ),
             ),

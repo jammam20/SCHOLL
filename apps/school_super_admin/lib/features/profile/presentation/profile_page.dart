@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:school_shared/school_shared.dart';
 
-import '../../../app/app_settings.dart';
 import '../../legal/presentation/legal_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -9,16 +9,39 @@ class ProfilePage extends StatelessWidget {
   final String name;
   final VoidCallback onSignOut;
 
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: const S('Sign out?', 'تسجيل الخروج؟').of(context),
+      message: const S(
+        "You'll need to sign in again to access the platform control "
+            'panel.',
+        'هتحتاج تسجل دخولك تاني عشان توصل للوحة تحكم المنصة.',
+      ).of(context),
+      confirmLabel: const S('Sign out', 'تسجيل الخروج').of(context),
+      cancelLabel: const S('Cancel', 'إلغاء').of(context),
+      destructive: true,
+    );
+    if (confirmed == true) onSignOut();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final appColors = context.appColors;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(const S('Profile', 'الملف الشخصي').of(context)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.md,
+          AppSpacing.xl,
+          AppSpacing.xl3,
+        ),
         children: [
           Center(
             child: Column(
@@ -41,25 +64,27 @@ class ProfilePage extends StatelessWidget {
                     size: 36,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: appColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
                     const S('Platform owner', 'مالك المنصة').of(context),
-                    style: TextStyle(
+                    style: theme.textTheme.labelLarge?.copyWith(
                       color: colors.onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
                       fontSize: 12.5,
                     ),
                   ),
@@ -67,14 +92,10 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          Text(
-            const S('Preferences', 'التفضيلات').of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
+            title: const S('Preferences', 'التفضيلات').of(context),
           ),
-          const SizedBox(height: 10),
           Card(
             child: Column(
               children: [
@@ -117,12 +138,11 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          OutlinedButton.icon(
-            onPressed: onSignOut,
-            style: OutlinedButton.styleFrom(foregroundColor: colors.error),
-            icon: const Icon(Icons.logout),
-            label: Text(const S('Sign out', 'تسجيل الخروج').of(context)),
+          const SizedBox(height: AppSpacing.xl3),
+          AppButton.destructive(
+            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            icon: Icons.logout,
+            onPressed: () => _confirmSignOut(context),
           ),
         ],
       ),

@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/analytics.dart';
-import '../../../widgets/async_error_view.dart';
 import '../../emergencies/data/emergencies_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../data/ops_tracking_repository.dart';
@@ -26,6 +25,7 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
   static const _fallbackCenter = LatLng(30.0444, 31.2357);
 
   final Map<String, LatLng> _positions = {};
+  GoogleMapController? _mapController;
 
   void _updatePosition(String tripId, LatLng? position) {
     if (!mounted) return;
@@ -38,12 +38,61 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
     });
   }
 
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+  }
+
+  /// Fits the camera to every currently-broadcasting bus. The map never
+  /// auto-recenters after its initial load (buses drift out of view as a
+  /// trip progresses), so this gives the admin an explicit way to snap back
+  /// to "see everything" — same bounds-fitting approach already used by the
+  /// parent app's live trip map, just triggered by a button instead of a
+  /// new-position callback.
+  void _fitAllBuses() {
+    final controller = _mapController;
+    if (controller == null || _positions.isEmpty) return;
+
+    if (_positions.length == 1) {
+      controller.animateCamera(
+        CameraUpdate.newLatLngZoom(_positions.values.first, 15),
+      );
+      return;
+    }
+
+    final points = _positions.values.toList();
+    var minLat = points.first.latitude;
+    var maxLat = points.first.latitude;
+    var minLng = points.first.longitude;
+    var maxLng = points.first.longitude;
+    for (final point in points) {
+      minLat = minLat < point.latitude ? minLat : point.latitude;
+      maxLat = maxLat > point.latitude ? maxLat : point.latitude;
+      minLng = minLng < point.longitude ? minLng : point.longitude;
+      maxLng = maxLng > point.longitude ? maxLng : point.longitude;
+    }
+
+    controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        ),
+        64,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: TripsRepository().watchTrips(widget.schoolId),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const AsyncErrorView();
+        if (snapshot.hasError) {
+          return ErrorStateView(onRetry: () => setState(() {}));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         final trips = (snapshot.data?.docs ?? const [])
             .map((doc) => SchoolTrip.fromMap(doc.id, doc.data()))
@@ -64,6 +113,7 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
         return Stack(
           children: [
             GoogleMap(
+              onMapCreated: _onMapCreated,
               initialCameraPosition: CameraPosition(target: center, zoom: 11),
               markers: {
                 for (final entry in _positions.entries)
@@ -93,28 +143,25 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
                 tripId: trip.id,
                 onPosition: (position) => _updatePosition(trip.id, position),
               ),
-            Positioned(
-              left: 12,
-              top: 12,
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    trips.isEmpty
-                        ? 'No trips on the road right now.'
-                        : '${_positions.length} of ${trips.length} bus(es) broadcasting',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
+            PositionedDirectional(
+              start: AppSpacing.md,
+              top: AppSpacing.md,
+              child: _BroadcastInfoCard(
+                broadcasting: _positions.length,
+                total: trips.length,
               ),
             ),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
+            PositionedDirectional(
+              end: AppSpacing.md,
+              top: AppSpacing.md,
+              child: _RecenterButton(
+                onPressed: _positions.isEmpty ? null : _fitAllBuses,
+              ),
+            ),
+            PositionedDirectional(
+              start: AppSpacing.md,
+              end: AppSpacing.md,
+              bottom: AppSpacing.md,
               child: _ActiveEmergenciesPanel(schoolId: widget.schoolId),
             ),
           ],
@@ -124,11 +171,96 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
   }
 }
 
+/// The "N of M buses broadcasting" pill — a genuinely floating surface over
+/// the map, so it gets an explicit elevation shadow rather than the flat
+/// border-forward treatment ordinary cards use. See
+/// `design-system/MASTER.md` §6.
+class _BroadcastInfoCard extends StatelessWidget {
+  const _BroadcastInfoCard({required this.broadcasting, required this.total});
+
+  final int broadcasting;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        boxShadow: AppShadows.level1(colors.textPrimary),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.directions_bus_filled_rounded,
+            size: 18,
+            color: colors.textSecondary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            total == 0
+                ? const S(
+                    'No trips on the road right now.',
+                    'مفيش رحلات على الطريق دلوقتي.',
+                  ).of(context)
+                : S(
+                    '$broadcasting of $total bus(es) broadcasting',
+                    '$broadcasting من $total باص بيبث موقعه',
+                  ).of(context),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A floating "fit all buses" control — the map never auto-recenters once
+/// buses drift, so this gives the admin an explicit way back to "see
+/// everything." Disabled (not hidden) when nothing is broadcasting yet, per
+/// `design-system/MASTER.md` §9 ("Disabled" — reduced opacity, not a color
+/// swap alone).
+class _RecenterButton extends StatelessWidget {
+  const _RecenterButton({required this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        shape: BoxShape.circle,
+        boxShadow: AppShadows.level1(colors.textPrimary),
+      ),
+      child: IconButton(
+        tooltip: const S('Fit all buses', 'عرض كل الباصات').of(context),
+        icon: Icon(
+          Icons.center_focus_strong_rounded,
+          color: onPressed == null ? colors.disabled : colors.textPrimary,
+        ),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
 /// A minimal, functional list of the school's currently active emergencies
 /// with a resolve action — the business/data layer this backs
 /// (EmergenciesRepository) needs *some* surface for an admin to actually
-/// see and act on it; this reuses the same Card/ListTile styling already
-/// used elsewhere on this tab rather than introducing anything new.
+/// see and act on it. Floats over the map like the info card above, so it
+/// gets the same elevation treatment, one level heavier given its urgency.
 class _ActiveEmergenciesPanel extends StatelessWidget {
   const _ActiveEmergenciesPanel({required this.schoolId});
 
@@ -142,50 +274,171 @@ class _ActiveEmergenciesPanel extends StatelessWidget {
         final docs = snapshot.data?.docs ?? const [];
         if (docs.isEmpty) return const SizedBox.shrink();
 
-        return Card(
-          color: Theme.of(context).colorScheme.errorContainer,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 220),
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              itemCount: docs.length,
-              itemBuilder: (_, index) {
-                final doc = docs[index];
-                final emergency = SchoolEmergency.fromMap(doc.id, doc.data());
+        final colors = context.appColors;
+        final theme = Theme.of(context);
 
-                return ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.warning_amber_rounded),
-                  title: Text(
-                    '${emergency.type.name} — ${DateFormat.jm().format(emergency.createdAt)}',
+        return Container(
+          constraints: const BoxConstraints(maxHeight: 260),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: colors.emergency.withValues(alpha: 0.35)),
+            boxShadow: AppShadows.level2(colors.textPrimary),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 18,
+                      color: colors.emergency,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        S(
+                          'Active emergencies (${docs.length})',
+                          'حالات طوارئ نشطة (${docs.length})',
+                        ).of(context),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: colors.emergency,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
                   ),
-                  subtitle: emergency.driverNote == null
-                      ? null
-                      : Text(emergency.driverNote!),
-                  trailing: OutlinedButton(
-                    onPressed: () => EmergenciesRepository()
-                        .resolveEmergency(
-                          schoolId: schoolId,
-                          tripId: emergency.tripId,
-                          emergencyId: emergency.id,
-                        )
-                        .then((_) => AppAnalytics.logEmergencyResolved(tripId: emergency.tripId))
-                        .catchError((Object error) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(error.toString())),
-                          );
-                        }),
-                    child: const Text('Resolve'),
-                  ),
-                );
-              },
-            ),
+                  itemCount: docs.length,
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: AppSpacing.lg),
+                  itemBuilder: (_, index) {
+                    final doc = docs[index];
+                    final emergency = SchoolEmergency.fromMap(doc.id, doc.data());
+                    return _EmergencyTile(schoolId: schoolId, emergency: emergency);
+                  },
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
           ),
         );
       },
     );
+  }
+}
+
+class _EmergencyTile extends StatefulWidget {
+  const _EmergencyTile({required this.schoolId, required this.emergency});
+
+  final String schoolId;
+  final SchoolEmergency emergency;
+
+  @override
+  State<_EmergencyTile> createState() => _EmergencyTileState();
+}
+
+class _EmergencyTileState extends State<_EmergencyTile> {
+  bool _resolving = false;
+
+  Future<void> _resolve() async {
+    setState(() => _resolving = true);
+    try {
+      await EmergenciesRepository().resolveEmergency(
+        schoolId: widget.schoolId,
+        tripId: widget.emergency.tripId,
+        emergencyId: widget.emergency.id,
+      );
+      await AppAnalytics.logEmergencyResolved(tripId: widget.emergency.tripId);
+      if (!mounted) return;
+      AppSnackbar.success(
+        context,
+        const S('Emergency resolved.', 'تم حل حالة الطوارئ.').of(context),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppSnackbar.error(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _resolving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final emergency = widget.emergency;
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StatusBadge(
+                  label: _emergencyTypeLabel(emergency.type, context),
+                  tone: StatusTone.emergency,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  DateFormat.jm().format(emergency.createdAt),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.textMuted,
+                  ),
+                ),
+                if (emergency.driverNote != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    emergency.driverNote!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          AppButton.secondary(
+            label: const S('Resolve', 'حل').of(context),
+            loading: _resolving,
+            onPressed: _resolving ? null : _resolve,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _emergencyTypeLabel(EmergencyType type, BuildContext context) {
+  switch (type) {
+    case EmergencyType.accident:
+      return const S('Accident', 'حادث').of(context);
+    case EmergencyType.vehicleBreakdown:
+      return const S('Vehicle breakdown', 'عطل في الباص').of(context);
+    case EmergencyType.medical:
+      return const S('Medical', 'حالة طبية').of(context);
+    case EmergencyType.security:
+      return const S('Security', 'أمنية').of(context);
+    case EmergencyType.other:
+      return const S('Other', 'أخرى').of(context);
   }
 }
 

@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../widgets/async_error_view.dart';
 import '../data/reports_repository.dart';
 
 /// Real, computed operational reports — attendance and trip performance —
@@ -34,7 +33,12 @@ class _ReportsTabState extends State<ReportsTab> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              AppSpacing.xs,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -71,10 +75,10 @@ class _ReportsTabState extends State<ReportsTab> {
                   ),
                   builder: (context, absencesSnapshot) {
                     if (tripsSnapshot.hasError || absencesSnapshot.hasError) {
-                      return const AsyncErrorView();
+                      return ErrorStateView(onRetry: () => setState(() {}));
                     }
                     if (!tripsSnapshot.hasData || !absencesSnapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const _ReportsLoadingSkeleton();
                     }
 
                     final trips = tripsSnapshot.data!.docs
@@ -96,6 +100,66 @@ class _ReportsTabState extends State<ReportsTab> {
   }
 }
 
+/// Matches the eventual dashboard's shape (two rows of stat cards, then a
+/// few list rows) so the loading state doesn't jump/reflow once real data
+/// arrives. See `design-system/MASTER.md` §9.
+class _ReportsLoadingSkeleton extends StatelessWidget {
+  const _ReportsLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    Widget statSkeleton() => Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          border: Border.all(color: colors.border),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSkeleton(width: 90, height: 12),
+            SizedBox(height: AppSpacing.sm),
+            AppSkeleton(width: 56, height: 22),
+          ],
+        ),
+      ),
+    );
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xl2,
+      ),
+      children: [
+        Row(
+          children: [
+            statSkeleton(),
+            const SizedBox(width: AppSpacing.md),
+            statSkeleton(),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            statSkeleton(),
+            const SizedBox(width: AppSpacing.md),
+            statSkeleton(),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl3),
+        const AppSkeletonListTile(),
+        const AppSkeletonListTile(),
+        const AppSkeletonListTile(),
+      ],
+    );
+  }
+}
+
 class _ReportsBody extends StatelessWidget {
   const _ReportsBody({required this.trips, required this.absences});
 
@@ -104,6 +168,7 @@ class _ReportsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
     final completed = trips.where((t) => t.status == TripStatus.completed).toList();
     final cancelled = trips.where((t) => t.status == TripStatus.cancelled).length;
     final emergencies = trips.where((t) => t.status == TripStatus.emergency).length;
@@ -154,82 +219,89 @@ class _ReportsBody extends StatelessWidget {
       ..sort((a, b) => b.completed.compareTo(a.completed));
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.xl2,
+      ),
       children: [
-        Text(
-          const S('Trip performance', 'أداء الرحلات').of(context),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        SectionHeader(
+          title: const S('Trip performance', 'أداء الرحلات').of(context),
         ),
-        const SizedBox(height: 12),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: _StatCard(
+              child: MetricStatCard(
                 icon: Icons.task_alt,
+                tone: colors.success,
                 label: const S('Completion rate', 'نسبة الإنجاز').of(context),
                 value: completionRate == null
                     ? '—'
                     : '${(completionRate * 100).round()}%',
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: _StatCard(
+              child: MetricStatCard(
                 icon: Icons.schedule,
+                tone: colors.info,
                 label: const S('On-time rate', 'نسبة الالتزام بالمعاد').of(context),
                 value: onTimeRate == null ? '—' : '${(onTimeRate * 100).round()}%',
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: _StatCard(
+              child: MetricStatCard(
                 icon: Icons.timer_outlined,
                 label: const S('Avg. trip duration', 'متوسط مدة الرحلة').of(context),
                 value: avgDuration == null ? '—' : _formatDuration(avgDuration),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: _StatCard(
+              child: MetricStatCard(
                 icon: Icons.warning_amber_rounded,
+                tone: colors.emergency,
                 label: const S('Emergencies', 'حالات الطوارئ').of(context),
                 value: '$emergencies',
               ),
             ),
           ],
         ),
-        const SizedBox(height: 28),
-        Text(
-          const S('Attendance', 'الحضور والغياب').of(context),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        const SizedBox(height: AppSpacing.xl3),
+        SectionHeader(
+          title: const S('Attendance', 'الحضور والغياب').of(context),
         ),
-        const SizedBox(height: 12),
-        _StatCard(
-          icon: Icons.event_busy,
-          label: const S(
-            'Total absences in range',
-            'إجمالي الغياب في المدة دي',
-          ).of(context),
-          value: '${absences.length}',
-          fullWidth: true,
+        SizedBox(
+          width: double.infinity,
+          child: MetricStatCard(
+            icon: Icons.event_busy,
+            tone: colors.warning,
+            label: const S(
+              'Total absences in range',
+              'إجمالي الغياب في المدة دي',
+            ).of(context),
+            value: '${absences.length}',
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.xl2),
         Text(
           const S('Most frequently absent', 'الأكتر غيابًا').of(context),
           style: Theme.of(context).textTheme.titleSmall,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         if (topAbsent.isEmpty)
-          _EmptyHint(
-            text: const S(
+          EmptyStateView(
+            compact: true,
+            icon: Icons.event_available_outlined,
+            title: const S(
               'No absences recorded in this range.',
               'مفيش غياب متسجل في المدة دي.',
             ).of(context),
@@ -241,17 +313,15 @@ class _ReportsBody extends StatelessWidget {
                 .map((e) => MapEntry(e.key, e.value))
                 .toList(),
           ),
-        const SizedBox(height: 28),
-        Text(
-          const S('By driver', 'حسب السواق').of(context),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        const SizedBox(height: AppSpacing.xl3),
+        SectionHeader(
+          title: const S('By driver', 'حسب السواق').of(context),
         ),
-        const SizedBox(height: 12),
         if (driverEntries.isEmpty)
-          _EmptyHint(
-            text: const S(
+          EmptyStateView(
+            compact: true,
+            icon: Icons.event_busy_outlined,
+            title: const S(
               'No trips scheduled in this range.',
               'مفيش رحلات متجدولة في المدة دي.',
             ).of(context),
@@ -259,7 +329,7 @@ class _ReportsBody extends StatelessWidget {
         else
           ...driverEntries.map(
             (stats) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               child: ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.badge)),
                 title: Text(
@@ -306,55 +376,6 @@ class _DriverStats {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.fullWidth = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool fullWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              backgroundColor: colors.primaryContainer,
-              foregroundColor: colors.onPrimaryContainer,
-              child: Icon(icon, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(value, style: Theme.of(context).textTheme.headlineSmall),
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _RankedBars extends StatelessWidget {
   const _RankedBars({required this.entries});
 
@@ -367,7 +388,7 @@ class _RankedBars extends StatelessWidget {
       children: [
         for (final entry in entries)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Row(
               children: [
                 SizedBox(
@@ -389,10 +410,13 @@ class _RankedBars extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '${entry.value}',
-                  style: Theme.of(context).textTheme.labelMedium,
+                const SizedBox(width: AppSpacing.sm),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    '${entry.value}',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
                 ),
               ],
             ),
@@ -400,18 +424,4 @@ class _RankedBars extends StatelessWidget {
       ],
     );
   }
-}
-
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: Theme.of(
-      context,
-    ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-  );
 }

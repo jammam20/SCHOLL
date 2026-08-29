@@ -4,7 +4,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../common/presentation/location_picker_page.dart';
-import '../../../widgets/async_error_view.dart';
 import '../../legal/presentation/legal_page.dart';
 import '../../schools/data/schools_repository.dart';
 import '../data/profile_repository.dart';
@@ -18,13 +17,19 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final appColors = context.appColors;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(const S('Profile', 'الملف الشخصي').of(context)),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.md,
+          AppSpacing.xl,
+          AppSpacing.xl3,
+        ),
         children: [
           Center(
             child: Column(
@@ -50,17 +55,15 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       user.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpacing.xs),
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.edit_outlined, size: 18),
@@ -70,13 +73,22 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ),
                 if (user.email.isNotEmpty)
-                  Text(user.email, style: TextStyle(color: colors.onSurfaceVariant)),
-                const SizedBox(height: 4),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Text(
+                      user.email,
+                      style: TextStyle(color: appColors.textSecondary),
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.xs),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
                     const S('School administrator', 'مدير المدرسة').of(context),
@@ -90,23 +102,15 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          Text(
-            const S('My school', 'مدرستي').of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
+            title: const S('My school', 'مدرستي').of(context),
           ),
-          const SizedBox(height: 10),
           _SchoolCard(schoolId: user.schoolId),
-          const SizedBox(height: 28),
-          Text(
-            const S('Preferences', 'التفضيلات').of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
+            title: const S('Preferences', 'التفضيلات').of(context),
           ),
-          const SizedBox(height: 10),
           Card(
             child: Column(
               children: [
@@ -149,12 +153,11 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          OutlinedButton.icon(
+          const SizedBox(height: AppSpacing.xl3),
+          AppButton.destructive(
+            icon: Icons.logout,
+            label: const S('Sign out', 'تسجيل الخروج').of(context),
             onPressed: onSignOut,
-            style: OutlinedButton.styleFrom(foregroundColor: colors.error),
-            icon: const Icon(Icons.logout),
-            label: Text(const S('Sign out', 'تسجيل الخروج').of(context)),
           ),
         ],
       ),
@@ -173,9 +176,9 @@ class ProfilePage extends StatelessWidget {
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
           ),
-          FilledButton(
+          AppButton.primary(
+            label: const S('Save', 'حفظ').of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: Text(const S('Save', 'حفظ').of(dialogContext)),
           ),
         ],
       ),
@@ -202,8 +205,8 @@ class _SchoolCard extends StatelessWidget {
         if (snapshot.hasError) {
           return const Card(
             child: Padding(
-              padding: EdgeInsets.all(20),
-              child: AsyncErrorView(compact: true),
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: ErrorStateView(compact: true),
             ),
           );
         }
@@ -211,7 +214,7 @@ class _SchoolCard extends StatelessWidget {
         if (data == null) {
           return const Card(
             child: Padding(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(AppSpacing.xl),
               child: Center(child: CircularProgressIndicator()),
             ),
           );
@@ -232,60 +235,66 @@ class _SchoolCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         data['name']?.toString() ?? '',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (isActive ? const Color(0xFF17B26A) : colors.error)
-                            .withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        isActive
-                            ? const S('Active', 'نشطة').of(context)
-                            : const S('Inactive', 'غير نشطة').of(context),
-                        style: TextStyle(
-                          color: isActive ? const Color(0xFF17B26A) : colors.error,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                        ),
-                      ),
+                    StatusBadge(
+                      label: isActive
+                          ? const S('Active', 'نشطة').of(context)
+                          : const S('Inactive', 'غير نشطة').of(context),
+                      tone: isActive ? StatusTone.success : StatusTone.error,
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Code: ${data['code'] ?? '-'}',
-                  style: TextStyle(color: colors.onSurfaceVariant),
+                const SizedBox(height: AppSpacing.xs),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Text(
+                    'Code: ${data['code'] ?? '-'}',
+                    style: TextStyle(color: colors.onSurfaceVariant),
+                  ),
                 ),
-                const Divider(height: 24),
+                const Divider(height: AppSpacing.xl2),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 18, color: colors.onSurfaceVariant),
-                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.location_on_outlined,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: Text(
-                        latitude == null || longitude == null
-                            ? const S(
+                      child: latitude == null || longitude == null
+                          ? Text(
+                              const S(
                                 'Location not set — every trip needs this as its final stop.',
                                 'الموقع لسه مش متحدد — كل رحلة محتاجة تنتهي هنا.',
-                              ).of(context)
-                            : 'Lat ${latitude.toStringAsFixed(5)}, '
-                                  'Lng ${longitude.toStringAsFixed(5)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                              ).of(context),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            )
+                          : Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Text(
+                                'Lat ${latitude.toStringAsFixed(5)}, '
+                                    'Lng ${longitude.toStringAsFixed(5)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
                     ),
-                    TextButton(
+                    const SizedBox(width: AppSpacing.sm),
+                    AppButton.secondary(
+                      label: latitude == null
+                          ? const S('Set', 'تحديد').of(context)
+                          : const S('Edit', 'تعديل').of(context),
                       onPressed: () async {
                         final picked = await Navigator.push<LatLng>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => LocationPickerPage(
-                              title: 'Set school location',
+                              title: const S(
+                                'Set school location',
+                                'تحديد موقع المدرسة',
+                              ).of(context),
                               initialPosition: latitude == null || longitude == null
                                   ? null
                                   : LatLng(latitude, longitude),
@@ -299,18 +308,19 @@ class _SchoolCard extends StatelessWidget {
                             latitude: picked.latitude,
                             longitude: picked.longitude,
                           );
+                          if (!context.mounted) return;
+                          AppSnackbar.success(
+                            context,
+                            const S(
+                              'School location updated.',
+                              'تم تحديث موقع المدرسة.',
+                            ).of(context),
+                          );
                         } on SchoolLocationException catch (e) {
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text(e.message)));
+                          AppSnackbar.error(context, e.message);
                         }
                       },
-                      child: Text(
-                        latitude == null
-                            ? const S('Set', 'تحديد').of(context)
-                            : const S('Edit', 'تعديل').of(context),
-                      ),
                     ),
                   ],
                 ),

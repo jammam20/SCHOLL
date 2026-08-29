@@ -50,11 +50,19 @@ class _LiveTripMapState extends State<LiveTripMap> {
   @override
   Widget build(BuildContext context) {
     if (!widget.student.hasLocation) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          "Your child's pickup point isn't set yet — ask the school to add it "
-          'from the Students tab.',
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: EmptyStateView(
+          compact: true,
+          icon: Icons.location_off_outlined,
+          title: const S(
+            "Pickup point isn't set yet",
+            'نقطة الاستلام لسه مش متحددة',
+          ).of(context),
+          message: const S(
+            'Ask the school to add it from the Students tab.',
+            'كلّم المدرسة تضيفها من تبويب الطلاب.',
+          ).of(context),
         ),
       );
     }
@@ -98,7 +106,9 @@ class _LiveTripMapState extends State<LiveTripMap> {
                   builder: (context, locationSnapshot) {
                     if (locationSnapshot.hasError) {
                       return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(
+                          vertical: AppSpacing.sm,
+                        ),
                         child: AsyncErrorView(compact: true),
                       );
                     }
@@ -107,10 +117,22 @@ class _LiveTripMapState extends State<LiveTripMap> {
                       locationSnapshot.data?.snapshot.value,
                     );
                     if (busPosition == null) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text(
-                          'Waiting for the bus to start broadcasting…',
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.sm,
+                        ),
+                        child: EmptyStateView(
+                          compact: true,
+                          icon: Icons.directions_bus_outlined,
+                          title: const S(
+                            'Waiting for the bus',
+                            'في انتظار الأتوبيس',
+                          ).of(context),
+                          message: const S(
+                            'The bus has not started broadcasting its '
+                                'location yet.',
+                            'الأتوبيس لسه ما بدأش يبث موقعه.',
+                          ).of(context),
                         ),
                       );
                     }
@@ -133,11 +155,51 @@ class _LiveTripMapState extends State<LiveTripMap> {
                       reportedSpeedMetersPerSecond: speed,
                     )!;
 
+                    final colors = context.appColors;
+                    final tone = hasBoarded
+                        ? StatusTone.success
+                        : StatusTone.info;
+                    final toneColor = tone == StatusTone.success
+                        ? colors.success
+                        : colors.info;
+                    final statusText = hasBoarded
+                        ? S(
+                            '${widget.student.name} boarded the bus',
+                            '${widget.student.name} ركب الأتوبيس',
+                          ).of(context)
+                        : distanceToStudent < 100
+                        ? const S(
+                            'Bus is arriving at your pickup point now',
+                            'الأتوبيس واصل نقطة استلامك دلوقتي',
+                          ).of(context)
+                        : stopIndex >= 0
+                        ? S(
+                            'ETA to your pickup point: '
+                                '${_formatEta(context, etaToStudent)} · stop '
+                                '${stopIndex + 1} of ${order.length}',
+                            'الوقت المتوقع لنقطة استلامك: '
+                                '${_formatEta(context, etaToStudent)} · محطة '
+                                '${stopIndex + 1} من ${order.length}',
+                          ).of(context)
+                        : S(
+                            'ETA to your pickup point: '
+                                '${_formatEta(context, etaToStudent)}',
+                            'الوقت المتوقع لنقطة استلامك: '
+                                '${_formatEta(context, etaToStudent)}',
+                          ).of(context);
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: toneColor.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
                           child: Row(
                             children: [
                               Icon(
@@ -145,28 +207,25 @@ class _LiveTripMapState extends State<LiveTripMap> {
                                     ? Icons.check_circle
                                     : Icons.directions_bus,
                                 size: 18,
-                                color: hasBoarded
-                                    ? Colors.green
-                                    : Theme.of(context).colorScheme.primary,
+                                color: toneColor,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Text(
-                                  hasBoarded
-                                      ? '${widget.student.name} boarded the bus'
-                                      : distanceToStudent < 100
-                                      ? 'Bus is arriving at your pickup point now'
-                                      : 'ETA to your pickup point: '
-                                            '${_formatEta(etaToStudent)}'
-                                            '${stopIndex >= 0 ? ' · stop ${stopIndex + 1} of ${order.length}' : ''}',
-                                  style: Theme.of(context).textTheme.titleSmall,
+                                  statusText,
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(
+                                        color: colors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.sm),
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           child: SizedBox(
                             height: 220,
                             child: TweenAnimationBuilder<LatLng>(
@@ -263,17 +322,30 @@ class _LiveTripMapState extends State<LiveTripMap> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Lat ${latitude.toStringAsFixed(5)}, '
-                          'Lng ${longitude.toStringAsFixed(5)}'
-                          '${speed != null ? ' · ${speed.toStringAsFixed(1)} m/s' : ''}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                        const SizedBox(height: AppSpacing.sm),
+                        // Coordinates/speed are numeric and stay
+                        // left-to-right even inside an Arabic layout, per
+                        // design-system/MASTER.md §13.
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(
+                            'Lat ${latitude.toStringAsFixed(5)}, '
+                            'Lng ${longitude.toStringAsFixed(5)}'
+                            '${speed != null ? ' · ${speed.toStringAsFixed(1)} m/s' : ''}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.textMuted),
+                          ),
                         ),
                         if (updatedAt != null)
                           Text(
-                            'Updated ${TimeOfDay.fromDateTime(updatedAt).format(context)}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            S(
+                              'Updated '
+                                  '${TimeOfDay.fromDateTime(updatedAt).format(context)}',
+                              'آخر تحديث '
+                                  '${TimeOfDay.fromDateTime(updatedAt).format(context)}',
+                            ).of(context),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.textMuted),
                           ),
                       ],
                     );
@@ -319,11 +391,13 @@ class _LiveTripMapState extends State<LiveTripMap> {
     );
   }
 
-  String _formatEta(Duration eta) {
+  String _formatEta(BuildContext context, Duration eta) {
     final minutes = eta.inMinutes;
-    if (minutes < 1) return 'under 1 min';
-    if (minutes == 1) return '1 min';
-    return '$minutes min';
+    if (minutes < 1) {
+      return const S('under 1 min', 'أقل من دقيقة').of(context);
+    }
+    if (minutes == 1) return const S('1 min', 'دقيقة واحدة').of(context);
+    return S('$minutes min', '$minutes د').of(context);
   }
 }
 

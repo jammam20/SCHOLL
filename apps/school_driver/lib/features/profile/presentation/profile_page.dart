@@ -85,14 +85,8 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          Text(
-            const S('Preferences', 'التفضيلات').of(context),
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(title: const S('Preferences', 'التفضيلات').of(context)),
           Card(
             child: Column(
               children: [
@@ -135,12 +129,11 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 28),
-          OutlinedButton.icon(
+          const SizedBox(height: AppSpacing.xl3),
+          AppButton.destructive(
+            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            icon: Icons.logout,
             onPressed: onSignOut,
-            style: OutlinedButton.styleFrom(foregroundColor: colors.error),
-            icon: const Icon(Icons.logout),
-            label: Text(const S('Sign out', 'تسجيل الخروج').of(context)),
           ),
         ],
       ),
@@ -149,25 +142,66 @@ class ProfilePage extends StatelessWidget {
 
   Future<void> _editName(BuildContext context) async {
     final controller = TextEditingController(text: user.name);
-    final name = await showDialog<String>(
+    var isSaving = false;
+
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Edit name', 'تعديل الاسم').of(dialogContext)),
-        content: TextField(controller: controller, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+      barrierDismissible: false,
+      builder: (_) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: Text(const S('Edit name', 'تعديل الاسم').of(dialogContext)),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            enabled: !isSaving,
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: Text(const S('Save', 'حفظ').of(dialogContext)),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: isSaving
+                  ? null
+                  : () => Navigator.pop(dialogContext, false),
+              child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+            ),
+            AppButton.primary(
+              label: const S('Save', 'حفظ').of(dialogContext),
+              loading: isSaving,
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) return;
+                setState(() => isSaving = true);
+                try {
+                  await ProfileRepository().updateName(
+                    schoolId: user.schoolId,
+                    name: name,
+                  );
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext, true);
+                  }
+                } catch (_) {
+                  if (dialogContext.mounted) {
+                    setState(() => isSaving = false);
+                    AppSnackbar.error(
+                      dialogContext,
+                      const S(
+                        "Couldn't save your name — try again.",
+                        'تعذّر حفظ اسمك — حاول مرة أخرى.',
+                      ).of(dialogContext),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
+
     controller.dispose();
-    if (name == null || name.trim().isEmpty) return;
-    await ProfileRepository().updateName(schoolId: user.schoolId, name: name);
+    if (saved == true && context.mounted) {
+      AppSnackbar.success(
+        context,
+        const S('Name updated', 'تم تحديث الاسم').of(context),
+      );
+    }
   }
 }

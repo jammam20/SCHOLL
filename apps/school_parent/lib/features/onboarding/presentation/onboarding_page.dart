@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../app/app_settings.dart';
+import 'package:school_shared/school_shared.dart';
 
 const _seenKey = 'onboarding_seen';
 
@@ -110,7 +109,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final colors = context.appColors;
     final isLast = _index == _slides.length - 1;
 
     return Scaffold(
@@ -118,9 +119,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
         child: Column(
           children: [
             Align(
-              alignment: Alignment.topRight,
+              alignment: AlignmentDirectional.topEnd,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -129,7 +130,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       onPressed: AppSettings.toggleLocale,
                       icon: const Icon(Icons.translate),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     TextButton(
                       onPressed: _finish,
                       child: Text(const S('Skip', 'تخطي').of(context)),
@@ -146,7 +147,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 itemBuilder: (context, index) {
                   final slide = _slides[index];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl3,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -155,26 +158,29 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           height: 96,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [colors.primary, colors.tertiary],
+                              colors: [scheme.primary, scheme.tertiary],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(AppRadius.xl),
                           ),
                           child: Icon(slide.icon, color: Colors.white, size: 44),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: AppSpacing.xl3),
                         Text(
                           slide.title.of(context),
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(fontWeight: FontWeight.w800),
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: colors.textPrimary,
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.md),
                         Text(
                           slide.subtitle.of(context),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: colors.onSurfaceVariant),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -188,18 +194,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 for (var i = 0; i < _slides.length; i++)
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
                     width: i == _index ? 22 : 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: i == _index ? colors.primary : colors.outlineVariant,
-                      borderRadius: BorderRadius.circular(4),
+                      color: i == _index ? scheme.primary : colors.border,
+                      borderRadius: BorderRadius.circular(AppRadius.sm / 2.5),
                     ),
                   ),
               ],
             ),
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl2),
               child: FilledButton(
                 onPressed: isLast
                     ? _finish

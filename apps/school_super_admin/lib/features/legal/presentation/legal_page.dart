@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../../../app/app_settings.dart';
+import 'package:school_shared/school_shared.dart';
 
 /// Privacy policy and terms of use for the platform-owner panel. Unlike
 /// the school-facing apps (where each school is its own data controller),
@@ -19,7 +18,7 @@ class LegalPage extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         children: isArabic ? _arabicSections(context) : _englishSections(context),
       ),
     );
@@ -42,7 +41,7 @@ class LegalPage extends StatelessWidget {
           'through self-registration, and are reviewed by the platform '
           'owner.',
     ),
-    const SizedBox(height: 24),
+    const SizedBox(height: AppSpacing.xl3),
     _Section(
       title: 'Terms of Use',
       body:
@@ -69,7 +68,7 @@ class LegalPage extends StatelessWidget {
           'حسابات المشرف العام على اللوحة دي بتتعمل يدويًا، مش بالتسجيل '
           'الذاتي، ومراجعة من مالك المنصة.',
     ),
-    const SizedBox(height: 24),
+    const SizedBox(height: AppSpacing.xl3),
     _Section(
       title: 'شروط الاستخدام',
       body:
@@ -89,18 +88,34 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 10),
-        Text(body, style: Theme.of(context).textTheme.bodyMedium),
-      ],
+    final theme = Theme.of(context);
+    final appColors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl2),
+      decoration: BoxDecoration(
+        color: appColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: appColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: appColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            body,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: appColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

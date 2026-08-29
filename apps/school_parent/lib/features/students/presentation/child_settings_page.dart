@@ -25,6 +25,7 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
   bool _saving = false;
 
   Future<void> _toggleAbsent(bool value) async {
+    final previous = _absentToday;
     setState(() {
       _absentToday = value;
       _saving = true;
@@ -36,6 +37,23 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
         studentName: widget.student.name,
         absentOn: value ? todayIsoDate() : null,
       );
+    } catch (_) {
+      // The optimistic toggle above already flipped the switch; if the
+      // write actually failed (offline, a rules rejection, a transient
+      // Firestore error) it must revert, otherwise the parent believes
+      // their child is marked absent/present when the driver's app never
+      // saw the change — matching the rollback pattern already used in
+      // NotificationSettingsPage._apply.
+      if (mounted) {
+        setState(() => _absentToday = previous);
+        AppSnackbar.error(
+          context,
+          const S(
+            "Couldn't save that — try again.",
+            'معرفناش نحفظ ده — جرب تاني.',
+          ).of(context),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -44,7 +62,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final student = widget.student;
-    final colorScheme = Theme.of(context).colorScheme;
+    final colors = context.appColors;
+    final hasRoute = student.routeId != null && student.routeId!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -56,10 +75,23 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         children: [
-          Card(
-            color: _absentToday ? colorScheme.errorContainer : null,
+          SectionHeader(
+            title: const S('Attendance', 'الحضور').of(context),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: _absentToday
+                  ? colors.warning.withValues(alpha: 0.08)
+                  : colors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: _absentToday
+                    ? colors.warning.withValues(alpha: 0.3)
+                    : colors.border,
+              ),
+            ),
             child: SwitchListTile(
               title: Text(const S('Absent today', 'غايب النهاردة').of(context)),
               subtitle: Text(
@@ -76,12 +108,20 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                         'شغّل ده لو ${student.name} مش هيركب الأتوبيس '
                             'النهاردة.',
                       ).of(context),
+                style: TextStyle(color: colors.textSecondary),
               ),
               value: _absentToday,
               onChanged: _saving ? null : _toggleAbsent,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
+            title: const S('Route & pickup', 'الخط ونقطة الاستلام').of(context),
+            subtitle: const S(
+              'Set by your school — read-only here.',
+              'بيحددها المدرسة — للعرض بس هنا.',
+            ).of(context),
+          ),
           Card(
             child: Column(
               children: [
@@ -89,12 +129,18 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                   leading: const Icon(Icons.route),
                   title: Text(const S('Route', 'الخط').of(context)),
                   subtitle: Text(
-                    student.routeId == null || student.routeId!.isEmpty
-                        ? const S(
+                    hasRoute
+                        ? const S('Assigned', 'متحدد').of(context)
+                        : const S(
                             'Not assigned yet — contact your school.',
                             'لسه مش متحدد — كلم مدرستك.',
-                          ).of(context)
-                        : const S('Assigned', 'متحدد').of(context),
+                          ).of(context),
+                  ),
+                  trailing: StatusBadge(
+                    label: hasRoute
+                        ? const S('Assigned', 'متحدد').of(context)
+                        : const S('Missing', 'ناقص').of(context),
+                    tone: hasRoute ? StatusTone.success : StatusTone.warning,
                   ),
                 ),
                 const Divider(height: 1),
@@ -110,6 +156,14 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                             'Not set yet — contact your school.',
                             'لسه مش متحددة — كلم مدرستك.',
                           ).of(context),
+                  ),
+                  trailing: StatusBadge(
+                    label: student.hasLocation
+                        ? const S('Set', 'محددة').of(context)
+                        : const S('Missing', 'ناقص').of(context),
+                    tone: student.hasLocation
+                        ? StatusTone.success
+                        : StatusTone.warning,
                   ),
                 ),
               ],

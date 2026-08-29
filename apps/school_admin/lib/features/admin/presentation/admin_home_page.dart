@@ -253,6 +253,55 @@ class _OperationsSection extends StatelessWidget {
   }
 }
 
+/// Shared loading placeholder for the three People-tab paginated lists —
+/// mirrors the eventual list's shape (avatar + two lines) so the screen
+/// doesn't jump/reflow once real content arrives. See
+/// `design-system/MASTER.md` §9.
+class _PeopleListSkeleton extends StatelessWidget {
+  const _PeopleListSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      itemCount: 6,
+      itemBuilder: (_, index) =>
+          AppSkeletonListTile(key: ValueKey('skeleton-$index')),
+    );
+  }
+}
+
+/// Maps a member's stored `status` string (drivers/parents — `pending` /
+/// `approved` / `suspended` / `rejected`, see `DriversRepository` /
+/// `ParentsRepository`) onto the one shared status pattern used everywhere
+/// else in the product, per `design-system/MASTER.md` §2/§8.
+StatusTone _memberStatusTone(String status) {
+  switch (status) {
+    case 'approved':
+      return StatusTone.success;
+    case 'suspended':
+    case 'rejected':
+      return StatusTone.error;
+    case 'pending':
+    default:
+      return StatusTone.warning;
+  }
+}
+
+String _memberStatusLabel(BuildContext context, String status) {
+  switch (status) {
+    case 'approved':
+      return const S('Approved', 'مقبول').of(context);
+    case 'suspended':
+      return const S('Suspended', 'موقوف').of(context);
+    case 'rejected':
+      return const S('Rejected', 'مرفوض').of(context);
+    case 'pending':
+    default:
+      return const S('Pending', 'قيد الانتظار').of(context);
+  }
+}
+
 class _StudentsTab extends StatelessWidget {
   const _StudentsTab({required this.schoolId});
 
@@ -265,42 +314,64 @@ class _StudentsTab extends StatelessWidget {
           StudentsBloc(StudentsRepository())..add(StudentsStarted(schoolId)),
       child: BlocBuilder<StudentsBloc, StudentsState>(
         builder: (context, state) {
+          final reduceMotion = MediaQuery.of(context).disableAnimations;
+          final colors = context.appColors;
+
+          Widget body;
           if (state is StudentsLoading || state is StudentsInitial) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is StudentsFailure) {
-            return Center(child: Text(state.message));
-          }
+            body = const _PeopleListSkeleton(key: ValueKey('loading'));
+          } else if (state is StudentsFailure) {
+            body = Center(
+              key: const ValueKey('error'),
+              child: ErrorStateView(
+                message: state.message,
+                onRetry: () => context.read<StudentsBloc>().add(
+                  StudentsStarted(schoolId),
+                ),
+              ),
+            );
+          } else {
+            final snapshot = state is StudentsLoaded ? state.snapshot : null;
+            final docs = snapshot?.docs ?? const [];
+            final hasMore = state is StudentsLoaded && state.hasMore;
 
-          final snapshot = state is StudentsLoaded ? state.snapshot : null;
-          final docs = snapshot?.docs ?? const [];
-          final hasMore = state is StudentsLoaded && state.hasMore;
-
-          return Scaffold(
-            floatingActionButton: FloatingActionButton.extended(
-              onPressed: () => _createStudent(context),
-              icon: const Icon(Icons.add),
-              label: Text(const S('Student', 'طالب').of(context)),
-            ),
-            body: docs.isEmpty
-                ? Center(
-                    child: Text(
-                      const S('No students yet.', 'مفيش طلاب لسه.').of(context),
+            body = docs.isEmpty
+                ? EmptyStateView(
+                    key: const ValueKey('empty'),
+                    icon: Icons.groups_outlined,
+                    title: const S('No students yet', 'مفيش طلاب لسه').of(
+                      context,
                     ),
+                    message: const S(
+                      'Add your first student to start assigning routes '
+                          'and pickup points.',
+                      'ضيف أول طالب عشان تبدأ تحدد الخطوط ونقاط الاستلام.',
+                    ).of(context),
+                    actionLabel: const S('Add student', 'إضافة طالب').of(
+                      context,
+                    ),
+                    onAction: () => _createStudent(context),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     itemCount: docs.length + (hasMore ? 1 : 0),
                     itemBuilder: (_, index) {
                       if (index == docs.length) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          key: const ValueKey('load-more'),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
                           child: Center(
-                            child: OutlinedButton(
+                            child: AppButton.secondary(
+                              label: const S('Load more', 'حمّل المزيد').of(
+                                context,
+                              ),
+                              icon: Icons.expand_more,
                               onPressed: () => context
                                   .read<StudentsBloc>()
                                   .add(StudentsLoadMoreRequested()),
-                              child: Text(const S('Load more', 'حمّل المزيد').of(context)),
                             ),
                           ),
                         );
@@ -312,39 +383,67 @@ class _StudentsTab extends StatelessWidget {
                         data['parentIds'] as List? ?? const [],
                       );
                       final latitude = (data['latitude'] as num?)?.toDouble();
-                      final longitude = (data['longitude'] as num?)?.toDouble();
+                      final longitude = (data['longitude'] as num?)
+                          ?.toDouble();
                       final approved = data['approved'] != false;
                       final absentOn = data['absentOn'] as String?;
                       final isAbsentToday =
                           absentOn != null && absentOn == todayIsoDate();
                       final isArabic =
-                          Localizations.localeOf(context).languageCode == 'ar';
+                          Localizations.localeOf(context).languageCode ==
+                          'ar';
 
                       if (!approved) {
                         return Card(
-                          color: Colors.amber.withValues(alpha: 0.1),
-                          child: ListTile(
-                            leading: const CircleAvatar(
-                              child: Icon(Icons.hourglass_top),
+                          key: ValueKey(doc.id),
+                          color: colors.warning.withValues(alpha: 0.08),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.sm,
                             ),
-                            title: Text(data['name']?.toString() ?? ''),
-                            subtitle: Text(
-                              const S(
-                                'Added by a parent — awaiting your approval',
-                                'ولي الأمر ضافه — في انتظار موافقتك',
-                              ).of(context),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            child: Row(
                               children: [
+                                CircleAvatar(
+                                  backgroundColor: colors.warning.withValues(
+                                    alpha: 0.16,
+                                  ),
+                                  child: Icon(
+                                    Icons.hourglass_top,
+                                    color: colors.warning,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.md),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        data['name']?.toString() ?? '',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      StatusBadge(
+                                        tone: StatusTone.warning,
+                                        label: const S(
+                                          'Awaiting approval',
+                                          'في انتظار الموافقة',
+                                        ).of(context),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 IconButton(
                                   tooltip: const S(
                                     'Approve',
                                     'موافقة',
                                   ).of(context),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.check_circle,
-                                    color: Colors.green,
+                                    color: colors.success,
                                   ),
                                   onPressed: () => context
                                       .read<StudentsBloc>()
@@ -356,10 +455,12 @@ class _StudentsTab extends StatelessWidget {
                                       ),
                                 ),
                                 IconButton(
-                                  tooltip: const S('Reject', 'رفض').of(context),
-                                  icon: const Icon(
+                                  tooltip: const S('Reject', 'رفض').of(
+                                    context,
+                                  ),
+                                  icon: Icon(
                                     Icons.cancel,
-                                    color: Colors.red,
+                                    color: colors.error,
                                   ),
                                   onPressed: () => context
                                       .read<StudentsBloc>()
@@ -376,58 +477,115 @@ class _StudentsTab extends StatelessWidget {
                         );
                       }
 
-                      return ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.person)),
-                        title: Text(data['name']?.toString() ?? ''),
-                        subtitle: Text(
-                          isArabic
-                              ? 'الصف: ${data['grade'] ?? '-'} · '
-                                    '${routeId == null || routeId.isEmpty ? 'من غير خط' : 'الخط متحدد'} · '
-                                    '${parentIds.length} ولي أمر مرتبط · '
-                                    '${latitude == null ? 'من غير نقطة استلام' : 'نقطة الاستلام متحددة'}'
-                                    '${isAbsentToday ? ' · غايب النهاردة' : ''}'
-                              : 'Grade: ${data['grade'] ?? '-'} · '
-                                    '${routeId == null || routeId.isEmpty ? 'No route' : 'Route assigned'} · '
-                                    '${parentIds.length} parent(s) linked · '
-                                    '${latitude == null ? 'No pickup point' : 'Pickup point set'}'
-                                    '${isAbsentToday ? ' · Absent today' : ''}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: const S(
-                                'Assign route, pickup point & link parents',
-                                'تحديد الخط ونقطة الاستلام وربط أولياء الأمور',
-                              ).of(context),
-                              icon: const Icon(Icons.manage_accounts),
-                              onPressed: () => _manageStudent(
-                                context,
-                                schoolId: schoolId,
-                                studentId: doc.id,
-                                currentRouteId: routeId,
-                                currentParentIds: parentIds,
-                                currentLatitude: latitude,
-                                currentLongitude: longitude,
+                      final isActive = data['isActive'] == true;
+
+                      return Card(
+                        key: ValueKey(doc.id),
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                            AppSpacing.lg,
+                            AppSpacing.sm,
+                            AppSpacing.sm,
+                            AppSpacing.sm,
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: colors.surfaceElevated,
+                                foregroundColor: colors.textSecondary,
+                                child: const Icon(Icons.person),
                               ),
-                            ),
-                            Switch(
-                              value: data['isActive'] == true,
-                              onChanged: (value) {
-                                context.read<StudentsBloc>().add(
-                                  StudentStatusChanged(
-                                    schoolId: schoolId,
-                                    studentId: doc.id,
-                                    active: value,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      data['name']?.toString() ?? '',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleSmall,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      isArabic
+                                          ? 'الصف: ${data['grade'] ?? '-'} · '
+                                                '${routeId == null || routeId.isEmpty ? 'من غير خط' : 'الخط متحدد'} · '
+                                                '${parentIds.length} ولي أمر مرتبط · '
+                                                '${latitude == null ? 'من غير نقطة استلام' : 'نقطة الاستلام متحددة'}'
+                                          : 'Grade: ${data['grade'] ?? '-'} · '
+                                                '${routeId == null || routeId.isEmpty ? 'No route' : 'Route assigned'} · '
+                                                '${parentIds.length} parent(s) linked · '
+                                                '${latitude == null ? 'No pickup point' : 'Pickup point set'}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: colors.textSecondary,
+                                          ),
+                                    ),
+                                    if (isAbsentToday) ...[
+                                      const SizedBox(height: 6),
+                                      StatusBadge(
+                                        tone: StatusTone.warning,
+                                        label: const S(
+                                          'Absent today',
+                                          'غايب النهاردة',
+                                        ).of(context),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: const S(
+                                  'Assign route, pickup point & link parents',
+                                  'تحديد الخط ونقطة الاستلام وربط أولياء الأمور',
+                                ).of(context),
+                                icon: const Icon(Icons.manage_accounts),
+                                onPressed: () => _manageStudent(
+                                  context,
+                                  schoolId: schoolId,
+                                  studentId: doc.id,
+                                  currentRouteId: routeId,
+                                  currentParentIds: parentIds,
+                                  currentLatitude: latitude,
+                                  currentLongitude: longitude,
+                                ),
+                              ),
+                              Switch(
+                                value: isActive,
+                                onChanged: (value) {
+                                  context.read<StudentsBloc>().add(
+                                    StudentStatusChanged(
+                                      schoolId: schoolId,
+                                      studentId: doc.id,
+                                      active: value,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
-                  ),
+                  );
+          }
+
+          return Scaffold(
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () => _createStudent(context),
+              icon: const Icon(Icons.add),
+              label: Text(const S('Student', 'طالب').of(context)),
+            ),
+            body: AnimatedSwitcher(
+              duration: reduceMotion
+                  ? Duration.zero
+                  : AppDurations.stateSwitch,
+              child: body,
+            ),
           );
         },
       ),
@@ -452,12 +610,14 @@ class _StudentsTab extends StatelessWidget {
                 labelText: const S('Name', 'الاسم').of(dialogContext),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: grade,
               decoration: InputDecoration(
                 labelText: const S('Grade', 'الصف').of(dialogContext),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: phone,
               decoration: InputDecoration(
@@ -467,13 +627,13 @@ class _StudentsTab extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(
+          AppButton.secondary(
+            label: const S('Cancel', 'إلغاء').of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
           ),
-          FilledButton(
+          AppButton.primary(
+            label: const S('Save', 'حفظ').of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(const S('Save', 'حفظ').of(dialogContext)),
           ),
         ],
       ),
@@ -590,6 +750,19 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
   late double? _longitude = widget.initialLongitude;
   String? _parentToAdd;
 
+  /// The small uppercase "section eyebrow" used above each field group in
+  /// this dialog — MASTER.md §3's `labelSmall`/Label style, used here for
+  /// "section eyebrows" exactly as documented.
+  Widget _sectionLabel(BuildContext context, String text) {
+    final colors = context.appColors;
+    return Text(
+      text.toUpperCase(),
+      style: Theme.of(
+        context,
+      ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -601,10 +774,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                const S('Route', 'الخط').of(context),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
+              _sectionLabel(context, const S('Route', 'الخط').of(context)),
               const SizedBox(height: 8),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: RoutesRepository().watchRoutes(widget.schoolId),
@@ -642,14 +812,24 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                   );
                 },
               ),
-              const SizedBox(height: 20),
-              Text(
+              const SizedBox(height: AppSpacing.xl),
+              _sectionLabel(
+                context,
                 const S('Pickup point', 'نقطة الاستلام').of(context),
-                style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
+                  Icon(
+                    _latitude == null
+                        ? Icons.location_off_outlined
+                        : Icons.location_on,
+                    size: 18,
+                    color: _latitude == null
+                        ? context.appColors.textMuted
+                        : context.appColors.success,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       _latitude == null || _longitude == null
@@ -664,7 +844,12 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
-                  TextButton(
+                  const SizedBox(width: AppSpacing.sm),
+                  AppButton.secondary(
+                    icon: _latitude == null ? Icons.add_location_alt : Icons.edit_location_alt,
+                    label: _latitude == null
+                        ? const S('Set', 'تحديد').of(context)
+                        : const S('Edit', 'تعديل').of(context),
                     onPressed: () async {
                       final picked = await Navigator.push<LatLng>(
                         context,
@@ -684,18 +869,13 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                       });
                       widget.onLocationChanged(picked.latitude, picked.longitude);
                     },
-                    child: Text(
-                      _latitude == null
-                          ? const S('Set', 'تحديد').of(context)
-                          : const S('Edit', 'تعديل').of(context),
-                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Text(
+              const SizedBox(height: AppSpacing.xl),
+              _sectionLabel(
+                context,
                 const S('Linked parents', 'أولياء الأمور المرتبطين').of(context),
-                style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -721,11 +901,25 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                       if (_parentIds.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            const S(
-                              'No parents linked yet.',
-                              'مفيش أولياء أمور مرتبطين لسه.',
-                            ).of(context),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 16,
+                                color: context.appColors.textMuted,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                const S(
+                                  'No parents linked yet.',
+                                  'مفيش أولياء أمور مرتبطين لسه.',
+                                ).of(context),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: context.appColors.textSecondary,
+                                    ),
+                              ),
+                            ],
                           ),
                         ),
                       Wrap(
@@ -734,6 +928,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                         children: _parentIds
                             .map(
                               (uid) => Chip(
+                                avatar: const Icon(Icons.person, size: 16),
                                 label: Text(parentNames[uid] ?? uid),
                                 onDeleted: () {
                                   setState(() => _parentIds.remove(uid));
@@ -743,7 +938,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                             )
                             .toList(),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
@@ -767,8 +962,10 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                                   setState(() => _parentToAdd = value),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          FilledButton(
+                          const SizedBox(width: AppSpacing.sm),
+                          AppButton.primary(
+                            icon: Icons.link,
+                            label: const S('Link', 'ربط').of(context),
                             onPressed: _parentToAdd == null
                                 ? null
                                 : () {
@@ -779,7 +976,6 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                                     });
                                     widget.onParentLinked(uid);
                                   },
-                            child: Text(const S('Link', 'ربط').of(context)),
                           ),
                         ],
                       ),
@@ -792,9 +988,9 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        AppButton.secondary(
+          label: const S('Done', 'تم').of(context),
           onPressed: () => Navigator.pop(context),
-          child: Text(const S('Done', 'تم').of(context)),
         ),
       ],
     );
@@ -813,86 +1009,140 @@ class _DriversTab extends StatelessWidget {
           DriversBloc(DriversRepository())..add(DriversStarted(schoolId)),
       child: BlocBuilder<DriversBloc, DriversState>(
         builder: (context, state) {
+          final reduceMotion = MediaQuery.of(context).disableAnimations;
+
+          Widget body;
           if (state is DriversLoading || state is DriversInitial) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is DriversFailure) {
-            return Center(child: Text(state.message));
-          }
-
-          final snapshot = state is DriversLoaded ? state.snapshot : null;
-          final docs = snapshot?.docs ?? const [];
-          final hasMore = state is DriversLoaded && state.hasMore;
-
-          if (docs.isEmpty) {
-            return Center(
-              child: Text(
-                const S('No drivers found.', 'مفيش سائقين.').of(context),
+            body = const _PeopleListSkeleton(key: ValueKey('loading'));
+          } else if (state is DriversFailure) {
+            body = Center(
+              key: const ValueKey('error'),
+              child: ErrorStateView(
+                message: state.message,
+                onRetry: () =>
+                    context.read<DriversBloc>().add(DriversStarted(schoolId)),
               ),
             );
+          } else {
+            final snapshot = state is DriversLoaded ? state.snapshot : null;
+            final docs = snapshot?.docs ?? const [];
+            final hasMore = state is DriversLoaded && state.hasMore;
+
+            body = docs.isEmpty
+                ? EmptyStateView(
+                    key: const ValueKey('empty'),
+                    icon: Icons.badge_outlined,
+                    title: const S('No drivers found', 'مفيش سائقين').of(
+                      context,
+                    ),
+                    message: const S(
+                      'Drivers appear here once they sign up and request '
+                          'to join your school.',
+                      'السواقين هيظهروا هنا لما يسجلوا ويطلبوا الانضمام '
+                          'لمدرستك.',
+                    ).of(context),
+                  )
+                : ListView.builder(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    itemCount: docs.length + (hasMore ? 1 : 0),
+                    itemBuilder: (_, index) {
+                      if (index == docs.length) {
+                        return Padding(
+                          key: const ValueKey('load-more'),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
+                          child: Center(
+                            child: AppButton.secondary(
+                              label: const S('Load more', 'حمّل المزيد').of(
+                                context,
+                              ),
+                              icon: Icons.expand_more,
+                              onPressed: () => context
+                                  .read<DriversBloc>()
+                                  .add(DriversLoadMoreRequested()),
+                            ),
+                          ),
+                        );
+                      }
+                      final doc = docs[index];
+                      final data = doc.data();
+                      final status = data['status']?.toString() ?? 'pending';
+
+                      return Card(
+                        key: ValueKey(doc.id),
+                        child: ListTile(
+                          leading: const CircleAvatar(child: Icon(Icons.badge)),
+                          title: Text(
+                            data['displayName']?.toString() ??
+                                data['name']?.toString() ??
+                                doc.id,
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: StatusBadge(
+                              tone: _memberStatusTone(status),
+                              label: _memberStatusLabel(context, status),
+                            ),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            tooltip: const S(
+                              'More actions',
+                              'إجراءات إضافية',
+                            ).of(context),
+                            onSelected: (value) {
+                              final bloc = context.read<DriversBloc>();
+                              if (value == 'approve') {
+                                bloc.add(DriverApproved(schoolId, doc.id));
+                              } else if (value == 'suspend') {
+                                bloc.add(DriverSuspended(schoolId, doc.id));
+                              } else if (value == 'reject') {
+                                bloc.add(DriverRejected(schoolId, doc.id));
+                              }
+                            },
+                            itemBuilder: (menuContext) => [
+                              PopupMenuItem(
+                                value: 'approve',
+                                child: _MemberActionMenuRow(
+                                  icon: Icons.check_circle_outline,
+                                  color: menuContext.appColors.success,
+                                  label: const S('Approve', 'موافقة').of(
+                                    menuContext,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'suspend',
+                                child: _MemberActionMenuRow(
+                                  icon: Icons.pause_circle_outline,
+                                  color: menuContext.appColors.warning,
+                                  label: const S('Suspend', 'إيقاف').of(
+                                    menuContext,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'reject',
+                                child: _MemberActionMenuRow(
+                                  icon: Icons.cancel_outlined,
+                                  color: menuContext.appColors.error,
+                                  label: const S('Reject', 'رفض').of(
+                                    menuContext,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: docs.length + (hasMore ? 1 : 0),
-            itemBuilder: (_, index) {
-              if (index == docs.length) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                    child: OutlinedButton(
-                      onPressed: () => context
-                          .read<DriversBloc>()
-                          .add(DriversLoadMoreRequested()),
-                      child: Text(const S('Load more', 'حمّل المزيد').of(context)),
-                    ),
-                  ),
-                );
-              }
-              final doc = docs[index];
-              final data = doc.data();
-              final status = data['status']?.toString() ?? 'pending';
-
-              return Card(
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.badge)),
-                  title: Text(
-                    data['displayName']?.toString() ??
-                        data['name']?.toString() ??
-                        doc.id,
-                  ),
-                  subtitle: Text(
-                    S('Status: $status', 'الحالة: $status').of(context),
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      final bloc = context.read<DriversBloc>();
-                      if (value == 'approve') {
-                        bloc.add(DriverApproved(schoolId, doc.id));
-                      } else if (value == 'suspend') {
-                        bloc.add(DriverSuspended(schoolId, doc.id));
-                      } else if (value == 'reject') {
-                        bloc.add(DriverRejected(schoolId, doc.id));
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'approve',
-                        child: Text(const S('Approve', 'موافقة').of(context)),
-                      ),
-                      PopupMenuItem(
-                        value: 'suspend',
-                        child: Text(const S('Suspend', 'إيقاف').of(context)),
-                      ),
-                      PopupMenuItem(
-                        value: 'reject',
-                        child: Text(const S('Reject', 'رفض').of(context)),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          return AnimatedSwitcher(
+            duration: reduceMotion ? Duration.zero : AppDurations.stateSwitch,
+            child: body,
           );
         },
       ),
@@ -912,92 +1162,170 @@ class _ParentsTab extends StatelessWidget {
           ParentsBloc(ParentsRepository())..add(ParentsStarted(schoolId)),
       child: BlocBuilder<ParentsBloc, ParentsState>(
         builder: (context, state) {
+          final reduceMotion = MediaQuery.of(context).disableAnimations;
+
+          Widget body;
           if (state is ParentsLoading || state is ParentsInitial) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ParentsFailure) {
-            return Center(child: Text(state.message));
-          }
-
-          final snapshot = state is ParentsLoaded ? state.snapshot : null;
-          final docs = snapshot?.docs ?? const [];
-          final hasMore = state is ParentsLoaded && state.hasMore;
-
-          if (docs.isEmpty) {
-            return Center(
-              child: Text(
-                const S(
-                  'No parents found.',
-                  'مفيش أولياء أمور.',
-                ).of(context),
+            body = const _PeopleListSkeleton(key: ValueKey('loading'));
+          } else if (state is ParentsFailure) {
+            body = Center(
+              key: const ValueKey('error'),
+              child: ErrorStateView(
+                message: state.message,
+                onRetry: () =>
+                    context.read<ParentsBloc>().add(ParentsStarted(schoolId)),
               ),
             );
+          } else {
+            final snapshot = state is ParentsLoaded ? state.snapshot : null;
+            final docs = snapshot?.docs ?? const [];
+            final hasMore = state is ParentsLoaded && state.hasMore;
+
+            body = docs.isEmpty
+                ? EmptyStateView(
+                    key: const ValueKey('empty'),
+                    icon: Icons.family_restroom_outlined,
+                    title: const S('No parents found', 'مفيش أولياء أمور').of(
+                      context,
+                    ),
+                    message: const S(
+                      'Parents appear here once they sign up and request '
+                          'to join your school.',
+                      'أولياء الأمور هيظهروا هنا لما يسجلوا ويطلبوا '
+                          'الانضمام لمدرستك.',
+                    ).of(context),
+                  )
+                : ListView.builder(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    itemCount: docs.length + (hasMore ? 1 : 0),
+                    itemBuilder: (_, index) {
+                      if (index == docs.length) {
+                        return Padding(
+                          key: const ValueKey('load-more'),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
+                          child: Center(
+                            child: AppButton.secondary(
+                              label: const S('Load more', 'حمّل المزيد').of(
+                                context,
+                              ),
+                              icon: Icons.expand_more,
+                              onPressed: () => context
+                                  .read<ParentsBloc>()
+                                  .add(ParentsLoadMoreRequested()),
+                            ),
+                          ),
+                        );
+                      }
+                      final doc = docs[index];
+                      final data = doc.data();
+                      final status = data['status']?.toString() ?? 'pending';
+
+                      return Card(
+                        key: ValueKey(doc.id),
+                        child: ListTile(
+                          leading: const CircleAvatar(child: Icon(Icons.person)),
+                          title: Text(
+                            data['displayName']?.toString() ??
+                                data['name']?.toString() ??
+                                doc.id,
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: StatusBadge(
+                              tone: _memberStatusTone(status),
+                              label: _memberStatusLabel(context, status),
+                            ),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            tooltip: const S(
+                              'More actions',
+                              'إجراءات إضافية',
+                            ).of(context),
+                            onSelected: (value) {
+                              final bloc = context.read<ParentsBloc>();
+                              if (value == 'approve') {
+                                bloc.add(ParentApproved(schoolId, doc.id));
+                              } else if (value == 'suspend') {
+                                bloc.add(ParentSuspended(schoolId, doc.id));
+                              } else if (value == 'reject') {
+                                bloc.add(ParentRejected(schoolId, doc.id));
+                              }
+                            },
+                            itemBuilder: (menuContext) => [
+                              PopupMenuItem(
+                                value: 'approve',
+                                child: _MemberActionMenuRow(
+                                  icon: Icons.check_circle_outline,
+                                  color: menuContext.appColors.success,
+                                  label: const S('Approve', 'موافقة').of(
+                                    menuContext,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'suspend',
+                                child: _MemberActionMenuRow(
+                                  icon: Icons.pause_circle_outline,
+                                  color: menuContext.appColors.warning,
+                                  label: const S('Suspend', 'إيقاف').of(
+                                    menuContext,
+                                  ),
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'reject',
+                                child: _MemberActionMenuRow(
+                                  icon: Icons.cancel_outlined,
+                                  color: menuContext.appColors.error,
+                                  label: const S('Reject', 'رفض').of(
+                                    menuContext,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: docs.length + (hasMore ? 1 : 0),
-            itemBuilder: (_, index) {
-              if (index == docs.length) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                    child: OutlinedButton(
-                      onPressed: () => context
-                          .read<ParentsBloc>()
-                          .add(ParentsLoadMoreRequested()),
-                      child: Text(const S('Load more', 'حمّل المزيد').of(context)),
-                    ),
-                  ),
-                );
-              }
-              final doc = docs[index];
-              final data = doc.data();
-              final status = data['status']?.toString() ?? 'pending';
-
-              return Card(
-                child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(
-                    data['displayName']?.toString() ??
-                        data['name']?.toString() ??
-                        doc.id,
-                  ),
-                  subtitle: Text(
-                    S('Status: $status', 'الحالة: $status').of(context),
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      final bloc = context.read<ParentsBloc>();
-                      if (value == 'approve') {
-                        bloc.add(ParentApproved(schoolId, doc.id));
-                      } else if (value == 'suspend') {
-                        bloc.add(ParentSuspended(schoolId, doc.id));
-                      } else if (value == 'reject') {
-                        bloc.add(ParentRejected(schoolId, doc.id));
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'approve',
-                        child: Text(const S('Approve', 'موافقة').of(context)),
-                      ),
-                      PopupMenuItem(
-                        value: 'suspend',
-                        child: Text(const S('Suspend', 'إيقاف').of(context)),
-                      ),
-                      PopupMenuItem(
-                        value: 'reject',
-                        child: Text(const S('Reject', 'رفض').of(context)),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          return AnimatedSwitcher(
+            duration: reduceMotion ? Duration.zero : AppDurations.stateSwitch,
+            child: body,
           );
         },
       ),
+    );
+  }
+}
+
+/// One row inside the approve/suspend/reject [PopupMenuButton] used by both
+/// the Drivers and Parents tabs — an icon plus a label tinted to match the
+/// action's outcome (success/warning/error), so the menu itself communicates
+/// meaning instead of three visually-identical text rows.
+class _MemberActionMenuRow extends StatelessWidget {
+  const _MemberActionMenuRow({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: AppSpacing.sm),
+        Text(label, style: TextStyle(color: color)),
+      ],
     );
   }
 }
@@ -1014,10 +1342,14 @@ class _BusesTab extends StatelessWidget {
       child: BlocBuilder<BusesBloc, BusesState>(
         builder: (context, state) {
           if (state is BusesLoading || state is BusesInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (_, _) => const AppSkeletonListTile(),
+            );
           }
           if (state is BusesFailure) {
-            return Center(child: Text(state.message));
+            return ErrorStateView(message: state.message);
           }
 
           final snapshot = state is BusesLoaded ? state.snapshot : null;
@@ -1030,33 +1362,121 @@ class _BusesTab extends StatelessWidget {
               label: Text(const S('Bus', 'أتوبيس').of(context)),
             ),
             body: docs.isEmpty
-                ? Center(
-                    child: Text(
-                      const S('No buses yet.', 'مفيش أتوبيسات لسه.').of(context),
-                    ),
+                ? EmptyStateView(
+                    icon: Icons.directions_bus_outlined,
+                    title: const S(
+                      'No buses yet.',
+                      'مفيش أتوبيسات لسه.',
+                    ).of(context),
+                    message: const S(
+                      'Add your first bus to start assigning it to trips.',
+                      'ضيف أول أتوبيس عشان تقدر تحدده لرحلة.',
+                    ).of(context),
+                    actionLabel: const S('Add bus', 'إضافة أتوبيس').of(context),
+                    onAction: () => _createBus(context),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                : ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
                     itemCount: docs.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (_, index) {
                       final doc = docs[index];
                       final data = doc.data();
+                      final isActive = data['isActive'] == true;
+                      final colors = context.appColors;
 
-                      return ListTile(
-                        leading: const Icon(Icons.directions_bus),
-                        title: Text(data['name']?.toString() ?? ''),
-                        subtitle: Text(data['plateNumber']?.toString() ?? ''),
-                        trailing: Switch(
-                          value: data['isActive'] == true,
-                          onChanged: (value) {
-                            context.read<BusesBloc>().add(
-                              BusStatusChanged(
-                                schoolId: schoolId,
-                                busId: doc.id,
-                                active: value,
+                      return Container(
+                        key: ValueKey(doc.id),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color:
+                                    (isActive ? colors.success : colors.textMuted)
+                                        .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
                               ),
-                            );
-                          },
+                              child: Icon(
+                                Icons.directions_bus,
+                                color: isActive ? colors.success : colors.textMuted,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data['name']?.toString() ?? '',
+                                    style: Theme.of(context).textTheme.titleSmall
+                                        ?.copyWith(color: colors.textPrimary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.confirmation_number_outlined,
+                                        size: 14,
+                                        color: colors.textMuted,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          data['plateNumber']?.toString() ?? '',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: colors.textMuted),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                StatusBadge(
+                                  label: isActive
+                                      ? const S('Active', 'نشطة').of(context)
+                                      : const S(
+                                          'Inactive',
+                                          'غير نشطة',
+                                        ).of(context),
+                                  tone: isActive
+                                      ? StatusTone.success
+                                      : StatusTone.neutral,
+                                ),
+                                Switch(
+                                  value: isActive,
+                                  onChanged: (value) {
+                                    context.read<BusesBloc>().add(
+                                      BusStatusChanged(
+                                        schoolId: schoolId,
+                                        busId: doc.id,
+                                        active: value,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -1085,6 +1505,7 @@ class _BusesTab extends StatelessWidget {
                 labelText: const S('Name', 'الاسم').of(dialogContext),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: plate,
               decoration: InputDecoration(
@@ -1094,6 +1515,7 @@ class _BusesTab extends StatelessWidget {
                 ).of(dialogContext),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: capacity,
               keyboardType: TextInputType.number,
@@ -1147,10 +1569,14 @@ class _RoutesTab extends StatelessWidget {
       child: BlocBuilder<RoutesBloc, RoutesState>(
         builder: (context, state) {
           if (state is RoutesLoading || state is RoutesInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (_, _) => const AppSkeletonListTile(),
+            );
           }
           if (state is RoutesFailure) {
-            return Center(child: Text(state.message));
+            return ErrorStateView(message: state.message);
           }
 
           final snapshot = state is RoutesLoaded ? state.snapshot : null;
@@ -1163,21 +1589,99 @@ class _RoutesTab extends StatelessWidget {
               label: Text(const S('Route', 'خط سير').of(context)),
             ),
             body: docs.isEmpty
-                ? Center(
-                    child: Text(
-                      const S('No routes yet.', 'مفيش خطوط سير لسه.').of(context),
-                    ),
+                ? EmptyStateView(
+                    icon: Icons.route_outlined,
+                    title: const S(
+                      'No routes yet.',
+                      'مفيش خطوط سير لسه.',
+                    ).of(context),
+                    message: const S(
+                      'Add your first route so it can be picked when you '
+                          'schedule a trip.',
+                      'ضيف أول خط سير عشان تقدر تختاره لما تجدول رحلة.',
+                    ).of(context),
+                    actionLabel: const S(
+                      'Add route',
+                      'إضافة خط سير',
+                    ).of(context),
+                    onAction: () => _createRoute(context),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                : ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
                     itemCount: docs.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (_, index) {
-                      final data = docs[index].data();
+                      final doc = docs[index];
+                      final data = doc.data();
+                      final isActive = data['isActive'] == true;
+                      final description = data['description']?.toString();
+                      final colors = context.appColors;
 
-                      return ListTile(
-                        leading: const Icon(Icons.route),
-                        title: Text(data['name']?.toString() ?? ''),
-                        subtitle: Text(data['description']?.toString() ?? ''),
+                      return Container(
+                        key: ValueKey(doc.id),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: colors.info.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              child: Icon(
+                                Icons.route,
+                                color: colors.info,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    data['name']?.toString() ?? '',
+                                    style: Theme.of(context).textTheme.titleSmall
+                                        ?.copyWith(color: colors.textPrimary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    description == null || description.isEmpty
+                                        ? const S(
+                                            'No description',
+                                            'من غير وصف',
+                                          ).of(context)
+                                        : description,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: colors.textMuted),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            StatusBadge(
+                              label: isActive
+                                  ? const S('Active', 'نشطة').of(context)
+                                  : const S('Inactive', 'غير نشطة').of(context),
+                              tone: isActive
+                                  ? StatusTone.success
+                                  : StatusTone.neutral,
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -1204,6 +1708,7 @@ class _RoutesTab extends StatelessWidget {
                 labelText: const S('Name', 'الاسم').of(dialogContext),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(
               controller: description,
               decoration: InputDecoration(
@@ -1246,6 +1751,53 @@ class _RoutesTab extends StatelessWidget {
   }
 }
 
+/// The one dot+label pattern (`StatusBadge`) is reused for every trip
+/// status, so the tone here is the single source of truth for what each
+/// status means at a glance — the same tone mapping the driver app uses for
+/// its own trip cards. `info` covers both "starting" and "active" (en
+/// route) per design-system/MASTER.md §2; `error` is deliberately never
+/// used here — it's reserved for genuine failures, not normal trip states,
+/// even terminal ones like `cancelled`.
+StatusTone _tripStatusTone(TripStatus status) => switch (status) {
+  TripStatus.scheduled => StatusTone.neutral,
+  TripStatus.starting => StatusTone.info,
+  TripStatus.active => StatusTone.info,
+  TripStatus.paused => StatusTone.warning,
+  TripStatus.completed => StatusTone.success,
+  TripStatus.cancelled => StatusTone.neutral,
+  TripStatus.emergency => StatusTone.emergency,
+};
+
+String _tripStatusLabel(TripStatus status, BuildContext context) =>
+    switch (status) {
+      TripStatus.scheduled => const S('Scheduled', 'مجدولة').of(context),
+      TripStatus.starting => const S('Starting', 'جاري البدء').of(context),
+      TripStatus.active => const S('En route', 'في الطريق').of(context),
+      TripStatus.paused => const S('Paused', 'متوقفة مؤقتاً').of(context),
+      TripStatus.completed => const S('Completed', 'مكتملة').of(context),
+      TripStatus.cancelled => const S('Cancelled', 'ملغاة').of(context),
+      TripStatus.emergency => const S('Emergency', 'حالة طوارئ').of(context),
+    };
+
+/// Maps a [StatusTone] onto its token color — used to tint a trip's leading
+/// icon the same color as its [StatusBadge], so the two visually agree.
+Color _toneColor(AppColorTokens colors, StatusTone tone) {
+  switch (tone) {
+    case StatusTone.success:
+      return colors.success;
+    case StatusTone.warning:
+      return colors.warning;
+    case StatusTone.error:
+      return colors.error;
+    case StatusTone.info:
+      return colors.info;
+    case StatusTone.emergency:
+      return colors.emergency;
+    case StatusTone.neutral:
+      return colors.textMuted;
+  }
+}
+
 class _TripsTab extends StatelessWidget {
   const _TripsTab({required this.schoolId});
 
@@ -1258,10 +1810,14 @@ class _TripsTab extends StatelessWidget {
       child: BlocBuilder<TripsBloc, TripsState>(
         builder: (context, state) {
           if (state is TripsLoading || state is TripsInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              itemCount: 4,
+              itemBuilder: (_, _) => const AppSkeletonListTile(),
+            );
           }
           if (state is TripsFailure) {
-            return Center(child: Text(state.message));
+            return ErrorStateView(message: state.message);
           }
 
           final snapshot = state is TripsLoaded ? state.snapshot : null;
@@ -1275,27 +1831,41 @@ class _TripsTab extends StatelessWidget {
               label: Text(const S('Trip', 'رحلة').of(context)),
             ),
             body: docs.isEmpty
-                ? Center(
-                    child: Text(
-                      const S(
-                        'No trips scheduled yet.',
-                        'مفيش رحلات متجدولة لسه.',
-                      ).of(context),
-                    ),
+                ? EmptyStateView(
+                    icon: Icons.event_busy_outlined,
+                    title: const S(
+                      'No trips scheduled yet.',
+                      'مفيش رحلات متجدولة لسه.',
+                    ).of(context),
+                    message: const S(
+                      'Schedule your first trip by picking a route, a bus '
+                          'and a driver.',
+                      'جدول أول رحلة باختيار خط وأتوبيس وسائق.',
+                    ).of(context),
+                    actionLabel: const S('Add trip', 'إضافة رحلة').of(context),
+                    onAction: () => _createTrip(context),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                : ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
                     itemCount: docs.length + (hasMore ? 1 : 0),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (_, index) {
                       if (index == docs.length) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
                           child: Center(
-                            child: OutlinedButton(
+                            child: AppButton.secondary(
+                              label: const S(
+                                'Load more',
+                                'حمّل المزيد',
+                              ).of(context),
+                              icon: Icons.expand_more,
                               onPressed: () => context
                                   .read<TripsBloc>()
                                   .add(TripsLoadMoreRequested()),
-                              child: Text(const S('Load more', 'حمّل المزيد').of(context)),
                             ),
                           ),
                         );
@@ -1305,38 +1875,140 @@ class _TripsTab extends StatelessWidget {
                       final canCancel = trip.status == TripStatus.scheduled ||
                           trip.status == TripStatus.starting ||
                           trip.status == TripStatus.paused;
+                      final colors = context.appColors;
+                      final tone = _tripStatusTone(trip.status);
+                      final toneColor = _toneColor(colors, tone);
 
-                      return Card(
-                        child: ListTile(
-                          leading: Icon(_tripStatusIcon(trip.status)),
-                          title: Text(
-                            trip.routeName.isEmpty
-                                ? 'Route ${trip.routeId}'
-                                : trip.routeName,
-                          ),
-                          subtitle: Text(
-                            '${trip.busName} (${trip.busPlateNumber}) · '
-                            '${trip.driverName}\n'
-                            '${DateFormat.yMMMd().add_jm().format(trip.scheduledAt)}',
-                          ),
-                          isThreeLine: true,
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Chip(label: Text(trip.status.name)),
-                              if (canCancel)
-                                IconButton(
-                                  tooltip: 'Cancel trip',
-                                  icon: const Icon(Icons.cancel_outlined),
-                                  onPressed: () => context.read<TripsBloc>().add(
-                                    TripCancelled(
-                                      schoolId: schoolId,
-                                      tripId: trip.id,
-                                    ),
+                      return Container(
+                        key: ValueKey(trip.id),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(color: colors.border),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: toneColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              child: Icon(
+                                _tripStatusIcon(trip.status),
+                                color: toneColor,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          trip.routeName.isEmpty
+                                              ? S(
+                                                  'Route ${trip.routeId}',
+                                                  'الخط ${trip.routeId}',
+                                                ).of(context)
+                                              : trip.routeName,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                color: colors.textPrimary,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      StatusBadge(
+                                        label: _tripStatusLabel(
+                                          trip.status,
+                                          context,
+                                        ),
+                                        tone: tone,
+                                      ),
+                                    ],
                                   ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.directions_bus_outlined,
+                                        size: 14,
+                                        color: colors.textMuted,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          '${trip.busName} '
+                                          '(${trip.busPlateNumber}) · '
+                                          '${trip.driverName}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: colors.textMuted,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.schedule_outlined,
+                                        size: 14,
+                                        color: colors.textMuted,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          DateFormat.yMMMd()
+                                              .add_jm()
+                                              .format(trip.scheduledAt),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: colors.textMuted,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (canCancel) ...[
+                              const SizedBox(width: AppSpacing.sm),
+                              IconButton(
+                                tooltip: const S(
+                                  'Cancel trip',
+                                  'إلغاء الرحلة',
+                                ).of(context),
+                                icon: Icon(
+                                  Icons.cancel_outlined,
+                                  color: colors.error,
                                 ),
+                                onPressed: () => _confirmCancel(
+                                  context,
+                                  schoolId: schoolId,
+                                  tripId: trip.id,
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                       );
                     },
@@ -1356,6 +2028,29 @@ class _TripsTab extends StatelessWidget {
     TripStatus.cancelled => Icons.cancel_outlined,
     TripStatus.emergency => Icons.warning_amber_rounded,
   };
+
+  Future<void> _confirmCancel(
+    BuildContext context, {
+    required String schoolId,
+    required String tripId,
+  }) async {
+    final bloc = context.read<TripsBloc>();
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: const S('Cancel this trip?', 'تلغي الرحلة دي؟').of(context),
+      message: const S(
+        'The driver and any linked parents will see this trip as '
+            'cancelled. This cannot be undone.',
+        'السائق وأولياء الأمور المرتبطين هيشوفوا الرحلة دي ملغاة. '
+            'الإجراء ده مينفعش يتراجع فيه.',
+      ).of(context),
+      confirmLabel: const S('Cancel trip', 'إلغاء الرحلة').of(context),
+      destructive: true,
+    );
+    if (confirmed != true) return;
+
+    bloc.add(TripCancelled(schoolId: schoolId, tripId: tripId));
+  }
 
   Future<void> _createTrip(BuildContext context) async {
     final bloc = context.read<TripsBloc>();
@@ -1520,13 +2215,39 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   );
                 },
               ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event),
-                title: Text(DateFormat.yMMMd().add_jm().format(_scheduledAt)),
-                trailing: const Icon(Icons.edit),
+              const SizedBox(height: AppSpacing.lg),
+              InkWell(
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 onTap: _pickScheduledAt,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: context.appColors.border),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.event_outlined),
+                    title: Text(
+                      const S(
+                        'Scheduled time',
+                        'موعد الرحلة',
+                      ).of(context),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: context.appColors.textMuted,
+                      ),
+                    ),
+                    subtitle: Text(
+                      DateFormat.yMMMd().add_jm().format(_scheduledAt),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.appColors.textPrimary,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.edit_outlined),
+                  ),
+                ),
               ),
             ],
           ),
