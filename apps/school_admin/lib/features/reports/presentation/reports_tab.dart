@@ -229,51 +229,55 @@ class _ReportsBody extends StatelessWidget {
         SectionHeader(
           title: const S('Trip performance', 'أداء الرحلات').of(context),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: MetricStatCard(
-                icon: Icons.task_alt,
-                tone: colors.success,
-                label: const S('Completion rate', 'نسبة الإنجاز').of(context),
-                value: completionRate == null
-                    ? '—'
-                    : '${(completionRate * 100).round()}%',
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MetricStatCard(
+                  icon: Icons.task_alt,
+                  tone: colors.success,
+                  label: const S('Completion rate', 'نسبة الإنجاز').of(context),
+                  value: completionRate == null
+                      ? '—'
+                      : '${(completionRate * 100).round()}%',
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: MetricStatCard(
-                icon: Icons.schedule,
-                tone: colors.info,
-                label: const S('On-time rate', 'نسبة الالتزام بالمعاد').of(context),
-                value: onTimeRate == null ? '—' : '${(onTimeRate * 100).round()}%',
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: MetricStatCard(
+                  icon: Icons.schedule,
+                  tone: colors.info,
+                  label: const S('On-time rate', 'نسبة الالتزام بالمعاد').of(context),
+                  value: onTimeRate == null ? '—' : '${(onTimeRate * 100).round()}%',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: MetricStatCard(
-                icon: Icons.timer_outlined,
-                label: const S('Avg. trip duration', 'متوسط مدة الرحلة').of(context),
-                value: avgDuration == null ? '—' : _formatDuration(avgDuration),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: MetricStatCard(
+                  icon: Icons.timer_outlined,
+                  label: const S('Avg. trip duration', 'متوسط مدة الرحلة').of(context),
+                  value: avgDuration == null ? '—' : _formatDuration(avgDuration),
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: MetricStatCard(
-                icon: Icons.warning_amber_rounded,
-                tone: colors.emergency,
-                label: const S('Emergencies', 'حالات الطوارئ').of(context),
-                value: '$emergencies',
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: MetricStatCard(
+                  icon: Icons.warning_amber_rounded,
+                  tone: colors.emergency,
+                  label: const S('Emergencies', 'حالات الطوارئ').of(context),
+                  value: '$emergencies',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.xl3),
         SectionHeader(

@@ -122,7 +122,8 @@ class _DashboardTab extends StatelessWidget {
                   if (isLoading)
                     const _MetricsSkeletonRow()
                   else
-                    Row(
+                    IntrinsicHeight(
+                      child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
@@ -160,6 +161,7 @@ class _DashboardTab extends StatelessWidget {
                           ),
                         ),
                       ],
+                      ),
                     ),
                 ],
               );
@@ -197,15 +199,17 @@ class _MetricsSkeletonRow extends StatelessWidget {
         ),
       ),
     );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        card(),
-        const SizedBox(width: AppSpacing.md),
-        card(),
-        const SizedBox(width: AppSpacing.md),
-        card(),
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          card(),
+          const SizedBox(width: AppSpacing.md),
+          card(),
+          const SizedBox(width: AppSpacing.md),
+          card(),
+        ],
+      ),
     );
   }
 }
