@@ -6,7 +6,12 @@ plugins {
 
 android {
     namespace = "com.jammam.schoolbus.school_super_admin"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android (a transitive dependency) requires
+    // compileSdk 37+; flutter.compileSdkVersion (Flutter's own default)
+    // hasn't caught up to that yet as of this Flutter version. maxOf keeps
+    // tracking Flutter's default once it does, rather than pinning a
+    // number that would need bumping again later.
+    compileSdk = maxOf(flutter.compileSdkVersion, 37)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
