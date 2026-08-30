@@ -69,11 +69,16 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
     }
     final trip = _attachTrip ? _contextTrip : null;
 
+    final subject = student == null
+        ? const S('General question', 'سؤال عام').of(context)
+        : S('About ${student.name}', 'بخصوص ${student.name}').of(context);
+
     setState(() => _sending = true);
     try {
       await ParentRequestsRepository().submitRequest(
         schoolId: widget.user.schoolId,
         parentUid: widget.user.uid,
+        subject: subject,
         message: message,
         studentId: student?.id,
         studentName: student?.name,

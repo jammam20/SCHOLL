@@ -13,6 +13,7 @@ class Student {
     this.longitude,
     this.approved = true,
     this.absentOn,
+    this.scheduledAbsenceDates = const [],
     this.pickupPointId,
     this.authorizedPickupPersons = const [],
   });
@@ -57,9 +58,25 @@ class Student {
   // see isAbsentOn in the parent/driver apps.
   final String? absentOn;
 
+  // Future (or today's) absence dates a parent has scheduled ahead of time
+  // (Feature: Student Ridership — "mark my child absent on a future date"),
+  // each a 'yyyy-MM-dd' string like [absentOn]. Kept as a separate field
+  // rather than replacing [absentOn] so nothing reading the older
+  // single-date field needs to change — [isAbsentToday]/[isAbsentOn] are
+  // the single source of truth that already check both. A driver/admin
+  // marking today absent still writes [absentOn]; a parent scheduling a
+  // date ahead of time writes it into this list instead, and it's expected
+  // to be pruned (a date removed once it's in the past) by whoever manages
+  // the list — see StudentsRepository.setScheduledAbsences in the parent
+  // app, which does that pruning on every write.
+  final List<String> scheduledAbsenceDates;
+
   bool get hasLocation => latitude != null && longitude != null;
 
-  bool get isAbsentToday => absentOn != null && absentOn == todayIsoDate();
+  bool get isAbsentToday => isAbsentOn(todayIsoDate());
+
+  bool isAbsentOn(String isoDate) =>
+      absentOn == isoDate || scheduledAbsenceDates.contains(isoDate);
 
   factory Student.fromMap(
       String id,
@@ -78,6 +95,9 @@ class Student {
       longitude: (data['longitude'] as num?)?.toDouble(),
       approved: data['approved'] != false,
       absentOn: data['absentOn'] as String?,
+      scheduledAbsenceDates: List<String>.from(
+        data['scheduledAbsenceDates'] ?? const [],
+      ),
       pickupPointId: data['pickupPointId'] as String?,
       authorizedPickupPersons: (data['authorizedPickupPersons'] as List?)
               ?.map((e) => AuthorizedPickupPerson.fromMap(

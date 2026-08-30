@@ -101,6 +101,31 @@ class StudentsRepository {
     });
   }
 
+  /// Replaces the whole `scheduledAbsenceDates` list on a student — future
+  /// dates a parent has scheduled ahead of time (Feature: Student
+  /// Ridership). Same whole-list-replacement shape as
+  /// [setAuthorizedPickupPersons], for the same reason: firestore.rules
+  /// allow-lists the field, not the operation, so a full replacement is
+  /// what makes removing a date expressible at all.
+  ///
+  /// Prunes any date strictly before today before writing — a scheduled
+  /// absence that's already in the past is just clutter for the parent to
+  /// scroll past, and Student.isAbsentOn only ever checks a specific date
+  /// anyway, so keeping past dates around serves no purpose.
+  Future<void> setScheduledAbsences({
+    required String schoolId,
+    required String studentId,
+    required List<String> dates,
+  }) {
+    final today = todayIsoDate();
+    final pruned = dates.where((date) => date.compareTo(today) >= 0).toSet().toList()
+      ..sort();
+    return _students(schoolId).doc(studentId).update({
+      'scheduledAbsenceDates': pruned,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// A collision-free id for a newly added [AuthorizedPickupPerson].
   /// Firestore's own client-side id generator, taken from a document
   /// reference that is never written — cheaper and safer than hashing a

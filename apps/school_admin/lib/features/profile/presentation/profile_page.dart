@@ -8,11 +8,34 @@ import '../../legal/presentation/legal_page.dart';
 import '../../schools/data/schools_repository.dart';
 import '../data/profile_repository.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.user, required this.onSignOut});
 
   final AppUser user;
   final VoidCallback onSignOut;
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  // See the parent app's ProfilePage for why this exists: without it, an
+  // edited name only showed up on every *other* screen (each reads a fresh
+  // live stream of its own) — this exact page had to wait for the auth
+  // stream to round-trip back down through a rebuild from above, which
+  // previously only actually happened after an app restart.
+  late String _displayName = widget.user.name;
+
+  @override
+  void didUpdateWidget(covariant ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user.name != oldWidget.user.name) {
+      _displayName = widget.user.name;
+    }
+  }
+
+  AppUser get user => widget.user;
+  VoidCallback get onSignOut => widget.onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +70,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                    _displayName.isEmpty ? '?' : _displayName[0].toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -60,7 +83,7 @@ class ProfilePage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      user.name,
+                      _displayName,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(width: AppSpacing.xs),
@@ -165,7 +188,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   Future<void> _editName(BuildContext context) async {
-    final controller = TextEditingController(text: user.name);
+    final controller = TextEditingController(text: _displayName);
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -184,8 +207,22 @@ class ProfilePage extends StatelessWidget {
       ),
     );
     controller.dispose();
-    if (name == null || name.trim().isEmpty) return;
-    await ProfileRepository().updateName(schoolId: user.schoolId, name: name);
+    final trimmed = name?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+
+    try {
+      await ProfileRepository().updateName(schoolId: user.schoolId, name: trimmed);
+      if (mounted) setState(() => _displayName = trimmed);
+    } catch (_) {
+      if (!context.mounted) return;
+      AppSnackbar.error(
+        context,
+        const S(
+          "Couldn't save your name — try again.",
+          'معرفناش نحفظ اسمك — جرب تاني.',
+        ).of(context),
+      );
+    }
   }
 }
 

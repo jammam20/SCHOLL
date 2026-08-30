@@ -36,6 +36,13 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
   );
   bool _savingPickupPersons = false;
 
+  /// Future absence dates, held and rolled back the same optimistic way as
+  /// [_pickupPersons] — see StudentsRepository.setScheduledAbsences.
+  late List<String> _scheduledDates = List.of(
+    widget.student.scheduledAbsenceDates,
+  )..sort();
+  bool _savingScheduledDates = false;
+
   Future<void> _toggleAbsent(bool value) async {
     final previous = _absentToday;
     setState(() {
@@ -97,6 +104,55 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     } finally {
       if (mounted) setState(() => _savingPickupPersons = false);
     }
+  }
+
+  Future<void> _saveScheduledDates(List<String> next) async {
+    final previous = _scheduledDates;
+    final sorted = List.of(next)..sort();
+    setState(() {
+      _scheduledDates = sorted;
+      _savingScheduledDates = true;
+    });
+    try {
+      await StudentsRepository().setScheduledAbsences(
+        schoolId: widget.user.schoolId,
+        studentId: widget.student.id,
+        dates: sorted,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => _scheduledDates = previous);
+        AppSnackbar.error(
+          context,
+          const S(
+            "Couldn't save that — try again.",
+            'معرفناش نحفظ ده — جرب تاني.',
+          ).of(context),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingScheduledDates = false);
+    }
+  }
+
+  Future<void> _addScheduledDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    final iso = isoDateOnly(picked);
+    if (_scheduledDates.contains(iso)) return;
+    await _saveScheduledDates([..._scheduledDates, iso]);
+  }
+
+  Future<void> _removeScheduledDate(String date) async {
+    await _saveScheduledDates(
+      _scheduledDates.where((d) => d != date).toList(),
+    );
   }
 
   Future<void> _addPickupPerson() async {
@@ -186,6 +242,54 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               value: _absentToday,
               onChanged: _saving ? null : _toggleAbsent,
             ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  const S(
+                    'Planning ahead? Schedule a future absence date '
+                        "instead of remembering to switch this on the day.",
+                    'بتخطط قدام؟ حدد يوم غياب مستقبلي بدل ما تفتكر تشغّل ده '
+                        'في يومه.',
+                  ).of(context),
+                  style: TextStyle(color: colors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (_scheduledDates.isNotEmpty)
+            Card(
+              child: Column(
+                children: [
+                  for (var i = 0; i < _scheduledDates.length; i++) ...[
+                    if (i > 0) const Divider(height: 1),
+                    ListTile(
+                      leading: Icon(Icons.event_busy, color: colors.warning),
+                      title: Text(_scheduledDates[i]),
+                      trailing: IconButton(
+                        tooltip: const S('Remove', 'شيل').of(context),
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: _savingScheduledDates
+                            ? null
+                            : () => _removeScheduledDate(_scheduledDates[i]),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          AppButton.secondary(
+            label: const S(
+              'Schedule an absence date',
+              'حدد يوم غياب',
+            ).of(context),
+            icon: Icons.event_available_outlined,
+            loading: _savingScheduledDates,
+            onPressed: _addScheduledDate,
           ),
           const SizedBox(height: AppSpacing.xl3),
           SectionHeader(

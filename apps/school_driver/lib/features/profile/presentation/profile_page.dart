@@ -4,11 +4,34 @@ import 'package:school_shared/school_shared.dart';
 import '../../legal/presentation/legal_page.dart';
 import '../data/profile_repository.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.user, required this.onSignOut});
 
   final AppUser user;
   final VoidCallback onSignOut;
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  // See parent app's ProfilePage for why this exists: an edit here
+  // previously only showed up on every *other* screen, since those read a
+  // fresh live stream of their own — this exact page had to wait for the
+  // auth stream to round-trip back down through a rebuild from above,
+  // which only actually happened after an app restart.
+  late String _displayName = widget.user.name;
+
+  @override
+  void didUpdateWidget(covariant ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user.name != oldWidget.user.name) {
+      _displayName = widget.user.name;
+    }
+  }
+
+  AppUser get user => widget.user;
+  VoidCallback get onSignOut => widget.onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +60,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                    _displayName.isEmpty ? '?' : _displayName[0].toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -50,7 +73,7 @@ class ProfilePage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      user.name,
+                      _displayName,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -141,7 +164,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   Future<void> _editName(BuildContext context) async {
-    final controller = TextEditingController(text: user.name);
+    final controller = TextEditingController(text: _displayName);
     var isSaving = false;
 
     final saved = await showDialog<bool>(
@@ -196,8 +219,10 @@ class ProfilePage extends StatelessWidget {
       ),
     );
 
+    final savedName = controller.text.trim();
     controller.dispose();
     if (saved == true && context.mounted) {
+      setState(() => _displayName = savedName);
       AppSnackbar.success(
         context,
         const S('Name updated', 'تم تحديث الاسم').of(context),

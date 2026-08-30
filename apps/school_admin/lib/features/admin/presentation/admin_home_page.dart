@@ -16,6 +16,8 @@ import '../../driver_management/presentation/driver_management_page.dart';
 import '../../drivers/data/drivers_repository.dart';
 import '../../drivers/presentation/bloc/drivers_bloc.dart';
 import '../../incidents/presentation/incidents_page.dart';
+import '../../messages/data/parent_messages_repository.dart';
+import '../../messages/presentation/parent_messages_page.dart';
 import '../../ops/presentation/live_ops_tab.dart';
 import '../../pickup_points/presentation/pickup_points_page.dart';
 import '../../parents/data/parents_repository.dart';
@@ -108,6 +110,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
         tabRequest: _operationsTabRequest,
       ),
       ReportsTab(schoolId: schoolId),
+      ParentMessagesPage(schoolId: schoolId),
       ProfilePage(user: widget.user, onSignOut: widget.onSignOut),
     ];
 
@@ -149,6 +152,17 @@ class _AdminHomePageState extends State<AdminHomePage> {
               label: const S('Reports', 'التقارير').of(context),
             ),
             NavigationDestination(
+              icon: _MessagesIcon(
+                schoolId: schoolId,
+                selected: false,
+              ),
+              selectedIcon: _MessagesIcon(
+                schoolId: schoolId,
+                selected: true,
+              ),
+              label: const S('Messages', 'الرسايل').of(context),
+            ),
+            NavigationDestination(
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person),
               label: const S('Profile', 'حسابي').of(context),
@@ -156,6 +170,30 @@ class _AdminHomePageState extends State<AdminHomePage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A nav-bar icon with a live unread-count badge for the parent-messages
+/// inbox — the same "don't disagree with what's inside" pattern the parent
+/// app's own notification bell uses.
+class _MessagesIcon extends StatelessWidget {
+  const _MessagesIcon({required this.schoolId, required this.selected});
+
+  final String schoolId;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: ParentMessagesRepository().watchUnreadCount(schoolId),
+      builder: (context, snapshot) {
+        final unread = snapshot.data ?? 0;
+        final icon = Icon(
+          selected ? Icons.forum : Icons.forum_outlined,
+        );
+        return unread > 0 ? Badge.count(count: unread, child: icon) : icon;
+      },
     );
   }
 }
@@ -2251,6 +2289,17 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
   String _driverName = '';
   DateTime _scheduledAt = DateTime.now().add(const Duration(minutes: 30));
 
+  // Feature: recurring trips — an admin running the same route every school
+  // day doesn't want to open this dialog and re-enter the same route/bus/
+  // driver every morning. Repeating creates one real SchoolTrip document
+  // per day (same time-of-day as _scheduledAt) up to and including
+  // _repeatUntil, by dispatching the exact same TripCreated event this
+  // dialog already uses once per day — no new creation path, so every
+  // generated trip goes through the identical validation TripsBloc/
+  // TripsRepository already apply to a single trip.
+  bool _repeatDaily = false;
+  DateTime? _repeatUntil;
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -2401,6 +2450,68 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _repeatDaily,
+                onChanged: (value) => setState(() {
+                  _repeatDaily = value ?? false;
+                  _repeatUntil ??= _scheduledAt.add(const Duration(days: 6));
+                }),
+                title: Text(
+                  const S('Repeat every day', 'تكرار كل يوم').of(context),
+                ),
+                subtitle: Text(
+                  const S(
+                    'Creates one trip per day at the same time, up to the '
+                        'end date below.',
+                    'بينشئ رحلة كل يوم في نفس الميعاد، لحد تاريخ النهاية '
+                        'تحت.',
+                  ).of(context),
+                ),
+              ),
+              if (_repeatDaily)
+                InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  onTap: _pickRepeatUntil,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: context.appColors.border),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.event_repeat_outlined),
+                      title: Text(
+                        const S('Repeat until', 'يتكرر لحد').of(context),
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                      subtitle: Text(
+                        DateFormat.yMMMd().format(
+                          _repeatUntil ?? _scheduledAt,
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.appColors.textPrimary,
+                        ),
+                      ),
+                      trailing: Text(
+                        S(
+                          '${_dayCount()} trips',
+                          '${_dayCount()} رحلة',
+                        ).of(context),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: context.appColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -2414,25 +2525,57 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
           onPressed: _routeId == null || _busId == null || _driverId == null
               ? null
               : () {
-                  widget.onCreate(
-                    TripCreated(
-                      schoolId: widget.schoolId,
-                      routeId: _routeId!,
-                      routeName: _routeName,
-                      busId: _busId!,
-                      busName: _busName,
-                      busPlateNumber: _busPlateNumber,
-                      driverId: _driverId!,
-                      driverName: _driverName,
-                      scheduledAt: _scheduledAt,
-                    ),
-                  );
+                  for (final date in _scheduledDates()) {
+                    widget.onCreate(
+                      TripCreated(
+                        schoolId: widget.schoolId,
+                        routeId: _routeId!,
+                        routeName: _routeName,
+                        busId: _busId!,
+                        busName: _busName,
+                        busPlateNumber: _busPlateNumber,
+                        driverId: _driverId!,
+                        driverName: _driverName,
+                        scheduledAt: date,
+                      ),
+                    );
+                  }
                   Navigator.pop(context);
                 },
           child: Text(const S('Save', 'حفظ').of(context)),
         ),
       ],
     );
+  }
+
+  /// One entry for a single trip, or one per day (inclusive) up to
+  /// [_repeatUntil] when repeating — always at least one, and repeating
+  /// with an end date before the start date still yields exactly the
+  /// original single trip rather than creating none.
+  List<DateTime> _scheduledDates() {
+    if (!_repeatDaily) return [_scheduledAt];
+    final until = _repeatUntil ?? _scheduledAt;
+    final days = until
+        .difference(DateTime(_scheduledAt.year, _scheduledAt.month, _scheduledAt.day))
+        .inDays;
+    if (days <= 0) return [_scheduledAt];
+    return [
+      for (var i = 0; i <= days; i++)
+        _scheduledAt.add(Duration(days: i)),
+    ];
+  }
+
+  int _dayCount() => _scheduledDates().length;
+
+  Future<void> _pickRepeatUntil() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _repeatUntil ?? _scheduledAt.add(const Duration(days: 6)),
+      firstDate: _scheduledAt,
+      lastDate: _scheduledAt.add(const Duration(days: 90)),
+    );
+    if (picked == null) return;
+    setState(() => _repeatUntil = picked);
   }
 
   Future<void> _pickScheduledAt() async {

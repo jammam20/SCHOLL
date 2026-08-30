@@ -1191,6 +1191,68 @@ export const registerFcmToken = onCall(async (request) => {
   return { success: true };
 });
 
+/// Keeps a parent<->school message thread's summary fields (lastMessageAt/
+/// lastMessagePreview/unreadByAdmin/unreadByParent) in sync with its
+/// `messages` subcollection, and notifies whichever side didn't just send
+/// the message — Feature: Parent-Driver communication, upgraded from a
+/// one-shot message to a real continuing thread. Mirrors onSchoolMessageCreated's
+/// create-only trigger shape.
+export const onParentMessageCreated = onDocumentWritten(
+  "schools/{schoolId}/parentRequests/{requestId}/messages/{messageId}",
+  async (event) => {
+    if (!event.data?.after.exists || event.data.before.exists) return; // create-only
+
+    const { schoolId, requestId } = event.params;
+    const message = event.data.after.data()!;
+    const senderRole = String(message.senderRole ?? "");
+    const text = String(message.text ?? "");
+    if (!text) return;
+
+    const threadRef = db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("parentRequests")
+      .doc(requestId);
+    const threadSnap = await threadRef.get();
+    if (!threadSnap.exists) return;
+    const thread = threadSnap.data()!;
+
+    const preview = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+    const isFromParent = senderRole === "parent";
+
+    await threadRef.update({
+      lastMessageAt: FieldValue.serverTimestamp(),
+      lastMessagePreview: preview,
+      unreadByAdmin: isFromParent,
+      unreadByParent: !isFromParent,
+    });
+
+    const subject = String(thread.subject ?? "your message");
+    if (isFromParent) {
+      const adminUids = await schoolAdminUids(schoolId);
+      const tokens = await fcmTokensForSchoolAdmins(schoolId);
+      const body = `💬 New message about ${subject}: ${preview}`;
+      await sendPushNotification(tokens, "School Bus", body, {
+        type: "parent_message",
+        schoolId,
+        tripId: requestId,
+      });
+      await writeNotificationRecords(adminUids, schoolId, "parent_message", "School Bus", body);
+    } else {
+      const parentUid = String(thread.parentUid ?? "");
+      if (!parentUid) return;
+      const { tokens } = await tokensAndPrefsForUser(parentUid);
+      const body = `💬 Your school replied: ${preview}`;
+      await sendPushNotification(tokens, "School Bus", body, {
+        type: "parent_message",
+        schoolId,
+        tripId: requestId,
+      });
+      await writeNotificationRecords([parentUid], schoolId, "parent_message", "School Bus", body);
+    }
+  },
+);
+
 // ---------------------------------------------------------------------------
 // One-time migration
 // ---------------------------------------------------------------------------

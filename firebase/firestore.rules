@@ -37,6 +37,18 @@ service cloud.firestore {
           membership(schoolId).data.role == 'staff';
     }
 
+    // A driver needs their route's full student roster (pickup points,
+    // absence flags) the moment a trip starts, to build the stop order and
+    // manifest (StopOrderRepository.computeInitialOrder, StopOrderView) —
+    // rules can't cheaply check "is this driver assigned to *this specific*
+    // student's route" without a query, so this trusts any approved, active
+    // driver of the school with its whole roster, the same trust level
+    // isSchoolStaff already gets. Scoped to this one school only.
+    function isSchoolDriver(schoolId) {
+      return isActiveMember(schoolId) &&
+          membership(schoolId).data.role == 'driver';
+    }
+
     function isSelf(uid) {
       return signedIn() && request.auth.uid == uid;
     }
@@ -210,6 +222,7 @@ service cloud.firestore {
         // assigned routeId and follow that route's trips), but nothing
         // else about students in the school.
         allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+            isSchoolDriver(schoolId) ||
             (isActiveMember(schoolId) &&
                 ('parentIds' in resource.data) &&
                 request.auth.uid in resource.data.parentIds);
@@ -233,6 +246,17 @@ service cloud.firestore {
             request.auth.uid in resource.data.parentIds &&
             request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly(['absentOn', 'updatedAt']);
+        // A parent schedules future absence dates for their own
+        // (already-approved) child — kept as its own rule for the same
+        // reason authorizedPickupPersons is: so scheduling a future date
+        // can never also smuggle in a same-day absentOn change or vice
+        // versa.
+        allow update: if isActiveMember(schoolId) &&
+            resource.data.approved == true &&
+            ('parentIds' in resource.data) &&
+            request.auth.uid in resource.data.parentIds &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['scheduledAbsenceDates', 'updatedAt']);
         // A parent maintains the list of people they've authorized to
         // collect their own (already-approved) child — see
         // StudentsRepository.setAuthorizedPickupPersons in the parent app
@@ -288,10 +312,40 @@ service cloud.firestore {
             request.resource.data.schoolId == schoolId &&
             request.resource.data.parentUid == request.auth.uid &&
             request.resource.data.status == 'open';
+        // An admin triages a thread (status/readBy/readAt) OR the two
+        // sides keep the "who has unread messages here" flags in sync as
+        // the conversation continues (see the messages subcollection
+        // below, which is what onParentMessageCreated — functions/src/
+        // index.ts — actually flips these from server-side on every new
+        // message; a client only ever clears its *own* unread flag when
+        // it opens the thread).
         allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
             request.resource.data.diff(resource.data).affectedKeys()
-                .hasOnly(['status', 'readBy', 'readAt']);
+                .hasOnly(['status', 'readBy', 'readAt', 'unreadByAdmin']);
+        allow update: if isActiveMember(schoolId) &&
+            resource.data.parentUid == request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['unreadByParent']);
         allow delete: if false;
+
+        // A real back-and-forth conversation on top of the thread above —
+        // Feature: Parent-Driver communication, upgraded from one-shot
+        // messages to a continuing thread per the school's own request.
+        // Never routed to a driver directly (see the thread doc's own
+        // comment) — only the parent who owns this thread and this
+        // school's admin/system-admin can read or post into it.
+        match /messages/{messageId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() ||
+              (isActiveMember(schoolId) &&
+                  get(/databases/$(database)/documents/schools/$(schoolId)/parentRequests/$(requestId)).data.parentUid == request.auth.uid);
+          allow create: if isActiveMember(schoolId) &&
+              request.resource.data.senderUid == request.auth.uid &&
+              ((request.resource.data.senderRole == 'parent' &&
+                  get(/databases/$(database)/documents/schools/$(schoolId)/parentRequests/$(requestId)).data.parentUid == request.auth.uid) ||
+                  (request.resource.data.senderRole == 'admin' &&
+                      (isSchoolAdmin(schoolId) || isSystemAdmin())));
+          allow update, delete: if false;
+        }
       }
 
       match /buses/{busId} {

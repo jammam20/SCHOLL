@@ -4,10 +4,10 @@ import 'package:school_shared/school_shared.dart';
 
 import '../data/parent_requests_repository.dart';
 import 'contact_school_page.dart';
+import 'parent_thread_page.dart';
 
-/// A parent's own outbox: every request they've sent the school, and where
-/// each one stands. Read-only by design — once sent, only the school can
-/// move a request on, which is what the status here reflects.
+/// A parent's own conversations with the school — each one a real,
+/// continuing thread (see [ParentThreadPage]), not a one-shot message.
 class ParentRequestsPage extends StatelessWidget {
   const ParentRequestsPage({super.key, required this.user});
 
@@ -84,15 +84,24 @@ class ParentRequestsPage extends StatelessWidget {
             itemBuilder: (context, index) {
               if (index == 0) {
                 return SectionHeader(
-                  title: const S('Your messages', 'رسايلك').of(context),
+                  title: const S('Your conversations', 'محادثاتك').of(context),
                   subtitle: const S(
-                    'Sent to the school office. They pass anything the '
+                    'With the school office. They pass anything the '
                         'driver needs on to them.',
-                    'بتتبعت لإدارة المدرسة. وهم بيبلغوا السواق باللي يهمه.',
+                    'مع إدارة المدرسة. وهم بيبلغوا السواق باللي يهمه.',
                   ).of(context),
                 );
               }
-              return _RequestCard(request: requests[index - 1]);
+              final request = requests[index - 1];
+              return _ThreadCard(
+                request: request,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ParentThreadPage(user: user, request: request),
+                  ),
+                ),
+              );
             },
           );
         },
@@ -101,74 +110,80 @@ class ParentRequestsPage extends StatelessWidget {
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  const _RequestCard({required this.request});
+class _ThreadCard extends StatelessWidget {
+  const _ThreadCard({required this.request, required this.onTap});
 
   final ParentRequest request;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
+    final lastActivity = request.lastMessageAt ?? request.createdAt;
+    final unread = request.unreadByParent;
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    request.studentName == null || request.studentName!.isEmpty
-                        ? const S(
-                            'General question',
-                            'سؤال عام',
-                          ).of(context)
-                        : S(
-                            'About ${request.studentName}',
-                            'بخصوص ${request.studentName}',
-                          ).of(context),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colors.textPrimary,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (unread)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: colors.info,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      request.subject.isEmpty
+                          ? const S('General question', 'سؤال عام').of(context)
+                          : request.subject,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
+                        color: colors.textPrimary,
+                      ),
                     ),
                   ),
-                ),
-                StatusBadge(
-                  label: _statusLabel(request.status).of(context),
-                  tone: _statusTone(request.status),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              request.message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.textSecondary,
+                  StatusBadge(
+                    label: _statusLabel(request.status).of(context),
+                    tone: _statusTone(request.status),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '${DateFormat.MMMd().format(request.createdAt)} · '
-              '${DateFormat.jm().format(request.createdAt)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.textMuted,
-              ),
-            ),
-            if (request.tripId != null)
+              const SizedBox(height: AppSpacing.sm),
               Text(
-                const S(
-                  "Today's trip was attached",
-                  'رحلة اليوم كانت مرفقة',
-                ).of(context),
+                request.lastMessagePreview ?? request.message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: unread ? colors.textPrimary : colors.textSecondary,
+                  fontWeight: unread ? FontWeight.w600 : null,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '${DateFormat.MMMd().format(lastActivity)} · '
+                '${DateFormat.jm().format(lastActivity)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.textMuted,
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

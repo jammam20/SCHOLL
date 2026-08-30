@@ -6,11 +6,37 @@ import '../../messages/presentation/parent_requests_page.dart';
 import '../../settings/presentation/notification_settings_page.dart';
 import '../data/profile_repository.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, required this.user, required this.onSignOut});
 
   final AppUser user;
   final VoidCallback onSignOut;
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  // Mirrors widget.user.name, but updated immediately on a successful save
+  // instead of waiting for this page's own rebuild from the auth stream —
+  // that round-trip is what previously left an edited name showing stale
+  // on this exact screen (every other screen reads a fresh live stream of
+  // its own and updated fine) until the app restarted. Re-synced whenever
+  // a genuinely new user object arrives (e.g. the background stream catches
+  // up, or a different account signs in), so this never permanently
+  // diverges from the real record.
+  late String _displayName = widget.user.name;
+
+  @override
+  void didUpdateWidget(covariant ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user.name != oldWidget.user.name) {
+      _displayName = widget.user.name;
+    }
+  }
+
+  AppUser get user => widget.user;
+  VoidCallback get onSignOut => widget.onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +74,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                    _displayName.isEmpty ? '?' : _displayName[0].toUpperCase(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 32,
@@ -61,7 +87,7 @@ class ProfilePage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      user.name,
+                      _displayName,
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: colors.textPrimary,
@@ -209,7 +235,7 @@ class ProfilePage extends StatelessWidget {
   }
 
   Future<void> _editName(BuildContext context) async {
-    final controller = TextEditingController(text: user.name);
+    final controller = TextEditingController(text: _displayName);
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -228,7 +254,8 @@ class ProfilePage extends StatelessWidget {
       ),
     );
     controller.dispose();
-    if (name == null || name.trim().isEmpty) return;
+    final trimmed = name?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
 
     // The write can fail (offline, a rules rejection, a transient Firestore
     // error) — previously nothing told the parent when that happened, so
@@ -236,7 +263,11 @@ class ProfilePage extends StatelessWidget {
     // explanation. Surface it the same way every other in-app save failure
     // is surfaced.
     try {
-      await ProfileRepository().updateName(schoolId: user.schoolId, name: name);
+      await ProfileRepository().updateName(schoolId: user.schoolId, name: trimmed);
+      // Update this screen's own display immediately rather than waiting
+      // for widget.user to catch up via the auth stream + a rebuild from
+      // above — see _displayName's doc comment.
+      if (mounted) setState(() => _displayName = trimmed);
     } catch (_) {
       if (!context.mounted) return;
       AppSnackbar.error(

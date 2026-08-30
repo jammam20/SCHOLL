@@ -1,6 +1,6 @@
 import '../enums/parent_request_status.dart';
 
-/// One message/request a parent sent to their school, at
+/// One conversation thread between a parent and their school, at
 /// `schools/{schoolId}/parentRequests/{id}` (Feature: Parent–Driver
 /// communication).
 ///
@@ -12,15 +12,19 @@ import '../enums/parent_request_status.dart';
 /// "through the school" rule is enforced by the data model rather than by
 /// convention.
 ///
-/// Self-attested on create (`parentUid` must equal the caller's uid) and
-/// append-only from the parent's side — only a school admin may later flip
-/// `status`/`readBy`/`readAt`, exactly like the `absenceLog` collection
-/// this one is modeled on.
+/// This is a real, continuing thread, not a one-shot message: the actual
+/// back-and-forth lives in the `messages` subcollection
+/// ([ParentThreadMessage]); this document is the thread's own summary
+/// (subject, who it's about, when it last moved, who still has something
+/// unread) so an inbox list never needs to read every message just to
+/// render itself. `message`/`createdAt` are the thread's original opening
+/// message, kept on the thread doc itself for a cheap first-line preview.
 class ParentRequest {
   const ParentRequest({
     required this.id,
     required this.schoolId,
     required this.parentUid,
+    required this.subject,
     required this.message,
     required this.createdAt,
     required this.status,
@@ -29,11 +33,19 @@ class ParentRequest {
     this.tripId,
     this.readBy,
     this.readAt,
+    this.lastMessageAt,
+    this.lastMessagePreview,
+    this.unreadByAdmin = true,
+    this.unreadByParent = false,
   });
 
   final String id;
   final String schoolId;
   final String parentUid;
+
+  /// A short title for the thread — shown in the admin inbox list and the
+  /// parent's own thread list, distinct from the full message body.
+  final String subject;
   final String message;
   final DateTime createdAt;
   final ParentRequestStatus status;
@@ -54,11 +66,24 @@ class ParentRequest {
   final String? readBy;
   final DateTime? readAt;
 
+  /// Kept in sync by the onParentMessageCreated Cloud Function on every new
+  /// message, from either side — see functions/src/index.ts.
+  final DateTime? lastMessageAt;
+  final String? lastMessagePreview;
+
+  /// Whether the admin/parent side has a message here they haven't seen
+  /// yet. Flipped server-side (onParentMessageCreated) whenever the other
+  /// side sends a message; a client only ever clears its own flag, on
+  /// opening the thread.
+  final bool unreadByAdmin;
+  final bool unreadByParent;
+
   factory ParentRequest.fromMap(String id, Map<String, dynamic> data) {
     return ParentRequest(
       id: id,
       schoolId: data['schoolId'] as String? ?? '',
       parentUid: data['parentUid'] as String? ?? '',
+      subject: data['subject'] as String? ?? '',
       message: data['message'] as String? ?? '',
       createdAt: _asDateTime(data['createdAt']) ?? DateTime.now(),
       status:
@@ -69,6 +94,54 @@ class ParentRequest {
       tripId: data['tripId'] as String?,
       readBy: data['readBy'] as String?,
       readAt: _asDateTime(data['readAt']),
+      lastMessageAt: _asDateTime(data['lastMessageAt']),
+      lastMessagePreview: data['lastMessagePreview'] as String?,
+      unreadByAdmin: data['unreadByAdmin'] != false,
+      unreadByParent: data['unreadByParent'] == true,
+    );
+  }
+
+  static DateTime? _asDateTime(Object? value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    try {
+      final dynamic dynamicValue = value;
+      final result = dynamicValue.toDate();
+      return result is DateTime ? result : null;
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+/// One message in a [ParentRequest] thread's `messages` subcollection.
+class ParentThreadMessage {
+  const ParentThreadMessage({
+    required this.id,
+    required this.senderUid,
+    required this.senderRole,
+    required this.text,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String senderUid;
+
+  /// 'parent' or 'admin' — a plain string (not a shared UserRole value)
+  /// since only these two roles can ever appear in this thread by rule.
+  final String senderRole;
+  final String text;
+  final DateTime createdAt;
+
+  bool get isFromParent => senderRole == 'parent';
+
+  factory ParentThreadMessage.fromMap(String id, Map<String, dynamic> data) {
+    return ParentThreadMessage(
+      id: id,
+      senderUid: data['senderUid'] as String? ?? '',
+      senderRole: data['senderRole'] as String? ?? '',
+      text: data['text'] as String? ?? '',
+      createdAt: _asDateTime(data['createdAt']) ?? DateTime.now(),
     );
   }
 
