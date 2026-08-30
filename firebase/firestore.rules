@@ -139,6 +139,19 @@ service cloud.firestore {
               resource.data.driverId == request.auth.uid);
     }
 
+    // Same collection-group requirement as `emergencies` above —
+    // PickupVerificationsRepository.watchVerifications (admin analytics)
+    // reads across every trip in the school via `collectionGroup
+    // ('pickupVerifications')`, which Firestore treats as a distinct read
+    // surface from the nested `trips/{tripId}/pickupVerifications/{id}`
+    // rule below (that one still governs create). Admin/staff-only here —
+    // the narrower per-driver/per-parent case is exactly what the nested
+    // rule (and single-trip reads) already cover.
+    match /{path=**}/pickupVerifications/{verificationId} {
+      allow read: if isSchoolAdmin(resource.data.schoolId) || isSystemAdmin() ||
+          isSchoolStaff(resource.data.schoolId);
+    }
+
     // Codes aren't secret-sensitive (worst case of a guessed code is a
     // pending, unapproved membership request — see isSelfServeRole above),
     // so any signed-in user can look one up to self-register. Only a system
