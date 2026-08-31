@@ -217,6 +217,11 @@ class _HomeTabState extends State<_HomeTab> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        // The shell keeps every destination mounted at once (IndexedStack),
+        // so Home's FAB and Messages' FAB exist in the tree simultaneously
+        // — without distinct tags they collide on Flutter's default shared
+        // Hero tag and throw "multiple heroes share the same tag".
+        heroTag: 'home-add-child-fab',
         onPressed: () => _addChild(context),
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: Text(const S('Add child', 'إضافة طفل').of(context)),

@@ -29,6 +29,10 @@ class ParentRequestsPage extends StatelessWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        // See Home's FAB for why this needs its own tag: the shell keeps
+        // every destination mounted at once (IndexedStack), so both FABs
+        // exist in the tree simultaneously.
+        heroTag: 'messages-new-thread-fab',
         onPressed: () => _openNewMessage(context),
         icon: const Icon(Icons.edit_outlined),
         label: Text(const S('New message', 'رسالة جديدة').of(context)),
