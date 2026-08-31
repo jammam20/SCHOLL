@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../widgets/parent_ui.dart';
 import '../../legal/presentation/legal_page.dart';
 import '../../messages/presentation/parent_requests_page.dart';
 import '../../settings/presentation/notification_settings_page.dart';
@@ -40,7 +41,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final colors = context.appColors;
 
     return Scaffold(
@@ -55,174 +55,151 @@ class _ProfilePageState extends State<ProfilePage> {
           AppSpacing.xl3,
         ),
         children: [
-          Center(
-            child: Column(
-              children: [
-                Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.tertiary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _displayName.isEmpty ? '?' : _displayName[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _displayName,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: const S('Edit name', 'تعديل الاسم').of(context),
-                      onPressed: () => _editName(context),
-                    ),
-                  ],
-                ),
-                if (user.email.isNotEmpty)
-                  Text(
-                    user.email,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Text(
-                    const S('Parent', 'ولي أمر').of(context),
-                    style: TextStyle(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _ProfileHeader(
+            name: _displayName,
+            email: user.email,
+            onEdit: () => _editName(context),
           ),
           const SizedBox(height: AppSpacing.xl3),
+
           SectionHeader(
             title: const S('Your school', 'مدرستك').of(context),
           ),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.forum_outlined),
-              title: Text(
-                const S('Messages to school', 'رسايل للمدرسة').of(context),
-              ),
-              subtitle: Text(
-                const S(
+          AppListCard(
+            children: [
+              SettingsTile(
+                icon: Icons.forum_outlined,
+                title: const S(
+                  'Messages to school',
+                  'رسايل للمدرسة',
+                ).of(context),
+                subtitle: const S(
                   'Ask about a trip or a pickup change — the school passes '
                       'anything the driver needs on to them.',
                   'اسأل عن رحلة أو تغيير في الاستلام — المدرسة بتبلغ السواق '
                       'باللي يهمه.',
                 ).of(context),
-              ),
-              isThreeLine: true,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ParentRequestsPage(user: user),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.textMuted,
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ParentRequestsPage(user: user),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xl3),
+
           SectionHeader(
             title: const S('App settings', 'إعدادات التطبيق').of(context),
           ),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.translate),
-                  title: Text(const S('Language', 'اللغة').of(context)),
-                  subtitle: ValueListenableBuilder<Locale>(
-                    valueListenable: AppSettings.locale,
-                    builder: (context, locale, _) => Text(
-                      locale.languageCode == 'ar' ? 'العربية' : 'English',
+          AppListCard(
+            children: [
+              ValueListenableBuilder<Locale>(
+                valueListenable: AppSettings.locale,
+                builder: (context, locale, _) => SettingsTile(
+                  icon: Icons.translate_rounded,
+                  tone: colors.info,
+                  title: const S('Language', 'اللغة').of(context),
+                  subtitle: locale.languageCode == 'ar'
+                      ? 'العربية'
+                      : 'English',
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      border: Border.all(color: colors.border),
+                    ),
+                    child: Text(
+                      // Names the language a tap would switch *to*, so the
+                      // control says what it does rather than what is
+                      // already true.
+                      locale.languageCode == 'ar' ? 'English' : 'العربية',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
                   onTap: AppSettings.toggleLocale,
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.dark_mode_outlined),
-                  title: Text(const S('Dark mode', 'الوضع الليلي').of(context)),
-                  trailing: ValueListenableBuilder<ThemeMode>(
-                    valueListenable: AppSettings.themeMode,
-                    builder: (context, mode, _) => Switch(
-                      value: mode == ThemeMode.dark,
+              ),
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: AppSettings.themeMode,
+                builder: (context, mode, _) {
+                  final isDark = mode == ThemeMode.dark;
+                  return SettingsTile(
+                    icon: isDark
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    tone: colors.warning,
+                    title: const S('Dark mode', 'الوضع الليلي').of(context),
+                    subtitle: isDark
+                        ? const S('On', 'مفعّل').of(context)
+                        : const S('Off', 'متوقف').of(context),
+                    trailing: Switch(
+                      value: isDark,
                       onChanged: (_) => AppSettings.toggleTheme(),
                     ),
+                    onTap: AppSettings.toggleTheme,
+                  );
+                },
+              ),
+              SettingsTile(
+                icon: Icons.notifications_outlined,
+                tone: colors.success,
+                title: const S(
+                  'Notification settings',
+                  'إعدادات الإشعارات',
+                ).of(context),
+                subtitle: const S(
+                  'Choose which trip alerts reach your phone.',
+                  'اختار تنبيهات الرحلة اللي توصل موبايلك.',
+                ).of(context),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.textMuted,
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationSettingsPage(),
                   ),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: Text(
-                    const S(
-                      'Notification settings',
-                      'إعدادات الإشعارات',
-                    ).of(context),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationSettingsPage(),
-                    ),
-                  ),
+              ),
+              SettingsTile(
+                icon: Icons.privacy_tip_outlined,
+                tone: colors.textSecondary,
+                title: const S(
+                  'Privacy & Terms',
+                  'الخصوصية والشروط',
+                ).of(context),
+                subtitle: const S(
+                  'What this app stores, and who can see it.',
+                  'التطبيق بيخزن إيه، ومين يقدر يشوفه.',
+                ).of(context),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.textMuted,
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip_outlined),
-                  title: Text(
-                    const S('Privacy & Terms', 'الخصوصية والشروط').of(context),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LegalPage()),
-                  ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LegalPage()),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xl3),
+
           SectionHeader(title: const S('Account', 'الحساب').of(context)),
           AppButton.secondary(
             label: const S('Sign out', 'تسجيل الخروج').of(context),
@@ -240,7 +217,15 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(const S('Edit name', 'تعديل الاسم').of(dialogContext)),
-        content: TextField(controller: controller, autofocus: true),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: const S('Your name', 'اسمك').of(dialogContext),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -278,5 +263,115 @@ class _ProfilePageState extends State<ProfilePage> {
         ).of(context),
       );
     }
+  }
+}
+
+/// The identity card at the top of the hub: monogram, name, email, and the
+/// one role this app ever has.
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({
+    required this.name,
+    required this.email,
+    required this.onEdit,
+  });
+
+  final String name;
+  final String email;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 84,
+            height: 84,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.tertiary,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              name.trim().isEmpty
+                  ? '?'
+                  : name.trim().characters.first.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                tooltip: const S('Edit name', 'تعديل الاسم').of(context),
+                onPressed: onEdit,
+              ),
+            ],
+          ),
+          if (email.isNotEmpty)
+            Text(
+              email,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            child: Text(
+              const S('Parent', 'ولي أمر').of(context),
+              style: TextStyle(
+                color: theme.colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

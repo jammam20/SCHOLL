@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../widgets/parent_ui.dart';
 import '../../messages/presentation/contact_school_page.dart';
 import '../data/students_repository.dart';
 
@@ -56,6 +58,23 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
         studentName: widget.student.name,
         absentOn: value ? todayIsoDate() : null,
       );
+      // The switch flipping is not, by itself, proof the school heard about
+      // it. Confirm the write landed — this is the one action on this screen
+      // that changes what the driver's app does today.
+      if (mounted) {
+        AppSnackbar.success(
+          context,
+          value
+              ? S(
+                  '${widget.student.name} is marked absent today.',
+                  'تم تحديد ${widget.student.name} غايب النهاردة.',
+                ).of(context)
+              : S(
+                  '${widget.student.name} is riding today.',
+                  '${widget.student.name} هيركب النهاردة.',
+                ).of(context),
+        );
+      }
     } catch (_) {
       // The optimistic toggle above already flipped the switch; if the
       // write actually failed (offline, a rules rejection, a transient
@@ -137,21 +156,57 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
 
   Future<void> _addScheduledDate() async {
     final now = DateTime.now();
+    final lastDate = now.add(const Duration(days: 365));
+
+    // showDatePicker asserts that initialDate itself passes
+    // selectableDayPredicate, so open on the first day that isn't already
+    // scheduled rather than on tomorrow unconditionally — otherwise a parent
+    // whose next free day is taken would crash the picker.
+    var initialDate = now.add(const Duration(days: 1));
+    while (initialDate.isBefore(lastDate) &&
+        _scheduledDates.contains(isoDateOnly(initialDate))) {
+      initialDate = initialDate.add(const Duration(days: 1));
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: now.add(const Duration(days: 1)),
+      initialDate: initialDate,
       firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
+      lastDate: lastDate,
+      helpText: const S(
+        'Pick an absence date',
+        'اختار يوم الغياب',
+      ).of(context),
+      // A day that's already scheduled is shown as unavailable rather than
+      // silently doing nothing when tapped.
+      selectableDayPredicate: (day) =>
+          !_scheduledDates.contains(isoDateOnly(day)),
     );
     if (picked == null) return;
     final iso = isoDateOnly(picked);
     if (_scheduledDates.contains(iso)) return;
     await _saveScheduledDates([..._scheduledDates, iso]);
+    if (!mounted) return;
+    AppSnackbar.success(
+      context,
+      S(
+        'Absence scheduled for ${_absenceDateLabel(context, iso)}.',
+        'تم تحديد غياب يوم ${_absenceDateLabel(context, iso)}.',
+      ).of(context),
+    );
   }
 
   Future<void> _removeScheduledDate(String date) async {
     await _saveScheduledDates(
       _scheduledDates.where((d) => d != date).toList(),
+    );
+    if (!mounted) return;
+    AppSnackbar.info(
+      context,
+      S(
+        'Absence on ${_absenceDateLabel(context, date)} removed.',
+        'اتشال غياب يوم ${_absenceDateLabel(context, date)}.',
+      ).of(context),
     );
   }
 
@@ -164,6 +219,14 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     );
     if (person == null) return;
     await _savePickupPersons([..._pickupPersons, person]);
+    if (!mounted) return;
+    AppSnackbar.success(
+      context,
+      S(
+        '${person.name} can now collect ${widget.student.name}.',
+        '${person.name} بقى مصرّح له يستلم ${widget.student.name}.',
+      ).of(context),
+    );
   }
 
   Future<void> _removePickupPerson(AuthorizedPickupPerson person) async {
@@ -193,23 +256,43 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     final student = widget.student;
     final colors = context.appColors;
     final hasRoute = student.routeId != null && student.routeId!.isNotEmpty;
+    // `absentOn` and `scheduledAbsenceDates` are two independent fields and
+    // either can cover today (see Student.isAbsentOn). When it's the
+    // scheduled list that covers today, the switch below can't clear it —
+    // that date has to be removed from the list — so say so plainly instead
+    // of leaving a switch that appears not to work.
+    final todayIsScheduled = _scheduledDates.contains(todayIsoDate());
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          S(
-            '${student.name} · Settings',
-            '${student.name} · الإعدادات',
-          ).of(context),
-        ),
+        title: Text(const S('Child settings', 'إعدادات الطفل').of(context)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.lg,
+          AppSpacing.xl,
+          AppSpacing.xl3,
+        ),
         children: [
+          _ChildHeader(
+            name: student.name,
+            absentToday: _absentToday,
+          ),
+          const SizedBox(height: AppSpacing.xl2),
+
+          // ---- Attendance -------------------------------------------------
           SectionHeader(
             title: const S('Attendance', 'الحضور').of(context),
+            subtitle: const S(
+              "Tell the driver when your child isn't riding, so the bus "
+                  "doesn't detour for a stop nobody is waiting at.",
+              'قول للسواق لما ابنك مش هيركب، عشان الأتوبيس ما يلفش على محطة '
+                  'محدش مستنيه فيها.',
+            ).of(context),
           ),
-          Container(
+          AnimatedContainer(
+            duration: AppDurations.stateSwitch,
             decoration: BoxDecoration(
               color: _absentToday
                   ? colors.warning.withValues(alpha: 0.08)
@@ -217,71 +300,105 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(
                 color: _absentToday
-                    ? colors.warning.withValues(alpha: 0.3)
+                    ? colors.warning.withValues(alpha: 0.35)
                     : colors.border,
               ),
             ),
-            child: SwitchListTile(
-              title: Text(const S('Absent today', 'غايب النهاردة').of(context)),
-              subtitle: Text(
-                _absentToday
-                    ? S(
-                        "The bus won't stop at ${student.name}'s pickup point "
-                            'today.',
-                        'الأتوبيس مش هيقف عند نقطة استلام ${student.name} '
-                            'النهاردة.',
-                      ).of(context)
-                    : S(
-                        "Turn this on if ${student.name} isn't riding the "
-                            'bus today.',
-                        'شغّل ده لو ${student.name} مش هيركب الأتوبيس '
-                            'النهاردة.',
-                      ).of(context),
-                style: TextStyle(color: colors.textSecondary),
-              ),
-              value: _absentToday,
-              onChanged: _saving ? null : _toggleAbsent,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  const S(
-                    'Planning ahead? Schedule a future absence date '
-                        "instead of remembering to switch this on the day.",
-                    'بتخطط قدام؟ حدد يوم غياب مستقبلي بدل ما تفتكر تشغّل ده '
-                        'في يومه.',
-                  ).of(context),
-                  style: TextStyle(color: colors.textSecondary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (_scheduledDates.isNotEmpty)
-            Card(
-              child: Column(
-                children: [
-                  for (var i = 0; i < _scheduledDates.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    ListTile(
-                      leading: Icon(Icons.event_busy, color: colors.warning),
-                      title: Text(_scheduledDates[i]),
-                      trailing: IconButton(
-                        tooltip: const S('Remove', 'شيل').of(context),
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: _savingScheduledDates
-                            ? null
-                            : () => _removeScheduledDate(_scheduledDates[i]),
-                      ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.xs,
+                  ),
+                  title: Text(
+                    const S('Absent today', 'غايب النهاردة').of(context),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                  subtitle: Text(
+                    _absentToday
+                        ? S(
+                            "The bus won't stop at ${student.name}'s pickup "
+                                'point today.',
+                            'الأتوبيس مش هيقف عند نقطة استلام ${student.name} '
+                                'النهاردة.',
+                          ).of(context)
+                        : S(
+                            "Turn this on if ${student.name} isn't riding the "
+                                'bus today.',
+                            'شغّل ده لو ${student.name} مش هيركب الأتوبيس '
+                                'النهاردة.',
+                          ).of(context),
+                    style: TextStyle(color: colors.textSecondary),
+                  ),
+                  value: _absentToday,
+                  onChanged: _saving ? null : _toggleAbsent,
+                ),
+                // The resulting state, spelled out with the actual date, so
+                // "did that save?" never needs a second guess.
+                if (_absentToday)
+                  _ResultBanner(
+                    tone: StatusTone.warning,
+                    icon: Icons.event_busy_rounded,
+                    text: S(
+                      'Marked absent for today, '
+                          '${DateFormat('EEE, d MMM').format(DateTime.now())}. '
+                          'Your school and the driver can see this.',
+                      'متحدد غايب النهاردة '
+                          '${DateFormat('EEE, d MMM').format(DateTime.now())}. '
+                          'المدرسة والسواق شايفين ده.',
+                    ).of(context),
+                  ),
+                if (todayIsScheduled)
+                  _ResultBanner(
+                    tone: StatusTone.info,
+                    icon: Icons.event_repeat_rounded,
+                    text: const S(
+                      "Today is also on the scheduled list below — remove it "
+                          'there to have your child ride today.',
+                      'النهاردة كمان موجود في المواعيد المحددة تحت — شيله من '
+                          'هناك لو عايز ابنك يركب النهاردة.',
+                    ).of(context),
+                  ),
+              ],
             ),
-          const SizedBox(height: AppSpacing.sm),
+          ),
+          const SizedBox(height: AppSpacing.xl2),
+
+          // ---- Scheduled absences ----------------------------------------
+          SectionHeader(
+            title: const S(
+              'Scheduled absences',
+              'غياب محدد مقدمًا',
+            ).of(context),
+            subtitle: const S(
+              'Plan ahead instead of remembering to switch the toggle on '
+                  'the day.',
+              'خطط قدام بدل ما تفتكر تشغّل المفتاح في يومه.',
+            ).of(context),
+          ),
+          if (_scheduledDates.isEmpty)
+            _EmptyPanel(
+              icon: Icons.event_available_outlined,
+              text: const S(
+                'No dates scheduled.',
+                'مفيش أيام محددة.',
+              ).of(context),
+            )
+          else
+            AppListCard(
+              children: [
+                for (final date in _scheduledDates)
+                  _ScheduledDateRow(
+                    iso: date,
+                    enabled: !_savingScheduledDates,
+                    onRemove: () => _removeScheduledDate(date),
+                  ),
+              ],
+            ),
+          const SizedBox(height: AppSpacing.md),
           AppButton.secondary(
             label: const S(
               'Schedule an absence date',
@@ -292,6 +409,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
             onPressed: _addScheduledDate,
           ),
           const SizedBox(height: AppSpacing.xl3),
+
+          // ---- Authorized pickup ------------------------------------------
           SectionHeader(
             title: const S('Who can collect', 'مين يقدر يستلمه').of(context),
             subtitle: S(
@@ -304,89 +423,38 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
           // expect — there is no ID document check, no photo, and no
           // identity verification of any kind behind it, and claiming
           // otherwise would be worse than saying nothing.
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: colors.info.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: colors.info.withValues(alpha: 0.24)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline, color: colors.info, size: 20),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    const S(
-                      'This list tells the school and the driver who you '
-                          'have authorized. The driver checks the name '
-                          "against it — the app doesn't verify anyone's "
-                          'identity, and no one on this list gets an account '
-                          'or access to your data.',
-                      'القايمة دي بتقول للمدرسة والسواق مين اللي انت مصرّح '
-                          'له. السواق بيراجع الاسم عليها — التطبيق مش '
-                          'بيتحقق من هوية حد، ومحدش في القايمة دي بياخد '
-                          'حساب أو وصول لبياناتك.',
-                    ).of(context),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          InfoNotice(
+            message: const S(
+              'This list tells the school and the driver who you have '
+                  'authorized. The driver checks the name against it — the '
+                  "app doesn't verify anyone's identity, and no one on this "
+                  'list gets an account or access to your data.',
+              'القايمة دي بتقول للمدرسة والسواق مين اللي انت مصرّح له. السواق '
+                  'بيراجع الاسم عليها — التطبيق مش بيتحقق من هوية حد، ومحدش '
+                  'في القايمة دي بياخد حساب أو وصول لبياناتك.',
+            ).of(context),
           ),
           const SizedBox(height: AppSpacing.md),
           if (_pickupPersons.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.lg,
-                  horizontal: AppSpacing.md,
-                ),
-                child: Text(
-                  S(
-                    'No one added yet — only the parents linked to '
-                        '${student.name} are on record.',
-                    'محدش متضاف لسه — أولياء أمور ${student.name} بس هما '
-                        'المسجلين.',
-                  ).of(context),
-                  style: TextStyle(color: colors.textSecondary),
-                ),
-              ),
+            _EmptyPanel(
+              icon: Icons.person_outline_rounded,
+              text: S(
+                'No one added yet — only the parents linked to '
+                    '${student.name} are on record.',
+                'محدش متضاف لسه — أولياء أمور ${student.name} بس هما '
+                    'المسجلين.',
+              ).of(context),
             )
           else
-            Card(
-              child: Column(
-                children: [
-                  for (var i = 0; i < _pickupPersons.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: colors.info.withValues(alpha: 0.12),
-                        child: Icon(
-                          Icons.person_outline,
-                          color: colors.info,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(_pickupPersons[i].name),
-                      subtitle: Text(
-                        _pickupPersonSubtitle(context, _pickupPersons[i]),
-                        style: TextStyle(color: colors.textSecondary),
-                      ),
-                      trailing: IconButton(
-                        tooltip: const S('Remove', 'شيل').of(context),
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: _savingPickupPersons
-                            ? null
-                            : () => _removePickupPerson(_pickupPersons[i]),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+            AppListCard(
+              children: [
+                for (final person in _pickupPersons)
+                  _PickupPersonRow(
+                    person: person,
+                    enabled: !_savingPickupPersons,
+                    onRemove: () => _removePickupPerson(person),
+                  ),
+              ],
             ),
           const SizedBox(height: AppSpacing.md),
           AppButton.secondary(
@@ -399,6 +467,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
             onPressed: _addPickupPerson,
           ),
           const SizedBox(height: AppSpacing.xl3),
+
+          // ---- Route & pickup ---------------------------------------------
           SectionHeader(
             title: const S('Route & pickup', 'الخط ونقطة الاستلام').of(context),
             subtitle: const S(
@@ -406,58 +476,57 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               'بيحددها المدرسة — للعرض بس هنا.',
             ).of(context),
           ),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.route),
-                  title: Text(const S('Route', 'الخط').of(context)),
-                  subtitle: Text(
-                    hasRoute
-                        ? const S('Assigned', 'متحدد').of(context)
-                        : const S(
-                            'Not assigned yet — contact your school.',
-                            'لسه مش متحدد — كلم مدرستك.',
-                          ).of(context),
-                  ),
-                  trailing: StatusBadge(
-                    label: hasRoute
-                        ? const S('Assigned', 'متحدد').of(context)
-                        : const S('Missing', 'ناقص').of(context),
-                    tone: hasRoute ? StatusTone.success : StatusTone.warning,
-                  ),
+          AppListCard(
+            children: [
+              SettingsTile(
+                icon: Icons.route_rounded,
+                tone: hasRoute ? colors.success : colors.warning,
+                title: const S('Route', 'الخط').of(context),
+                subtitle: hasRoute
+                    ? const S('Assigned', 'متحدد').of(context)
+                    : const S(
+                        'Not assigned yet — contact your school.',
+                        'لسه مش متحدد — كلم مدرستك.',
+                      ).of(context),
+                trailing: StatusBadge(
+                  label: hasRoute
+                      ? const S('Assigned', 'متحدد').of(context)
+                      : const S('Missing', 'ناقص').of(context),
+                  tone: hasRoute ? StatusTone.success : StatusTone.warning,
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.location_on),
-                  title: Text(const S('Pickup point', 'نقطة الاستلام').of(context)),
-                  subtitle: Text(
-                    student.hasLocation
-                        ? const S('Set by the school', 'محددة من المدرسة').of(
-                            context,
-                          )
-                        : const S(
-                            'Not set yet — contact your school.',
-                            'لسه مش متحددة — كلم مدرستك.',
-                          ).of(context),
-                  ),
-                  trailing: StatusBadge(
-                    label: student.hasLocation
-                        ? const S('Set', 'محددة').of(context)
-                        : const S('Missing', 'ناقص').of(context),
-                    tone: student.hasLocation
-                        ? StatusTone.success
-                        : StatusTone.warning,
-                  ),
+              ),
+              SettingsTile(
+                icon: Icons.location_on_rounded,
+                tone: student.hasLocation ? colors.success : colors.warning,
+                title: const S('Pickup point', 'نقطة الاستلام').of(context),
+                subtitle: student.hasLocation
+                    ? const S(
+                        'Set by the school',
+                        'محددة من المدرسة',
+                      ).of(context)
+                    : const S(
+                        'Not set yet — contact your school.',
+                        'لسه مش متحددة — كلم مدرستك.',
+                      ).of(context),
+                trailing: StatusBadge(
+                  label: student.hasLocation
+                      ? const S('Set', 'محددة').of(context)
+                      : const S('Missing', 'ناقص').of(context),
+                  tone: student.hasLocation
+                      ? StatusTone.success
+                      : StatusTone.warning,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xl3),
+
+          // ---- Contact the school -----------------------------------------
           SectionHeader(
-            title: const S('Need something changed?', 'محتاج تغيّر حاجة؟').of(
-              context,
-            ),
+            title: const S(
+              'Need something changed?',
+              'محتاج تغيّر حاجة؟',
+            ).of(context),
             subtitle: const S(
               'Route, pickup point and bus assignments are set by the '
                   'school — send them a message and they will pass anything '
@@ -486,6 +555,294 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       ),
     );
   }
+}
+
+/// Who this screen is about, and the one fact that matters most today.
+class _ChildHeader extends StatelessWidget {
+  const _ChildHeader({required this.name, required this.absentToday});
+
+  final String name;
+  final bool absentToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          InitialAvatar(name: name, size: 52),
+          const SizedBox(width: AppSpacing.lg),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                StatusBadge(
+                  label: absentToday
+                      ? const S('Absent today', 'غايب النهاردة').of(context)
+                      : const S('Riding today', 'هيركب النهاردة').of(context),
+                  tone: absentToday ? StatusTone.warning : StatusTone.success,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The "here's what that did" strip under an action that changed something.
+class _ResultBanner extends StatelessWidget {
+  const _ResultBanner({
+    required this.tone,
+    required this.icon,
+    required this.text,
+  });
+
+  final StatusTone tone;
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final accent = toneColor(colors, tone);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: accent.withValues(alpha: 0.24))),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 17, color: accent),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A quiet "nothing here yet" panel for a list that has a real add action
+/// directly beneath it — lighter than a full [EmptyStateView], which would
+/// out-shout the button that fixes it.
+class _EmptyPanel extends StatelessWidget {
+  const _EmptyPanel({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colors.textMuted),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduledDateRow extends StatelessWidget {
+  const _ScheduledDateRow({
+    required this.iso,
+    required this.enabled,
+    required this.onRemove,
+  });
+
+  final String iso;
+  final bool enabled;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final relative = _absenceRelativeLabel(context, iso);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.warning.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md - 2),
+            ),
+            child: Icon(
+              Icons.event_busy_rounded,
+              size: 19,
+              color: colors.warning,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _absenceDateLabel(context, iso),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                if (relative != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    relative,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: const S('Remove', 'شيل').of(context),
+            icon: const Icon(Icons.close_rounded),
+            color: colors.textMuted,
+            onPressed: enabled ? onRemove : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickupPersonRow extends StatelessWidget {
+  const _PickupPersonRow({
+    required this.person,
+    required this.enabled,
+    required this.onRemove,
+  });
+
+  final AuthorizedPickupPerson person;
+  final bool enabled;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Row(
+        children: [
+          InitialAvatar(name: person.name, size: 38, color: colors.info),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  person.name,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _pickupPersonSubtitle(context, person),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: const S('Remove', 'شيل').of(context),
+            icon: const Icon(Icons.delete_outline_rounded),
+            color: colors.textMuted,
+            onPressed: enabled ? onRemove : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A stored `yyyy-MM-dd` absence date, rendered the way a person reads a
+/// date. Falls back to the raw stored string if it somehow isn't parseable,
+/// rather than hiding a date that really is set on the record.
+String _absenceDateLabel(BuildContext context, String iso) {
+  final parsed = DateTime.tryParse(iso);
+  if (parsed == null) return iso;
+  return friendlyDay(context, parsed);
+}
+
+/// "In 4 days" under the date itself — null when the date already reads as
+/// relative ("Today", "Tomorrow"), where repeating it would be noise.
+String? _absenceRelativeLabel(BuildContext context, String iso) {
+  final parsed = DateTime.tryParse(iso);
+  if (parsed == null) return null;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final target = DateTime(parsed.year, parsed.month, parsed.day);
+  final days = target.difference(today).inDays;
+  if (days <= 1) return null;
+  return S('In $days days', 'بعد $days أيام').of(context);
 }
 
 String _pickupPersonSubtitle(
@@ -558,6 +915,18 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Text(
+              const S(
+                'The driver will check this name at the door. Nobody added '
+                    'here gets an account or access to your data.',
+                'السواق هيراجع الاسم ده عند الباب. محدش بيتضاف هنا بياخد حساب '
+                    'أو وصول لبياناتك.',
+              ).of(context),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: context.appColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
             TextField(
               controller: _nameController,
               autofocus: true,

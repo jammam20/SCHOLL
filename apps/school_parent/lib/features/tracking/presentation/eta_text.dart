@@ -41,3 +41,21 @@ String formatEtaDuration(BuildContext context, Duration eta) {
   if (minutes == 1) return const S('1 min', 'دقيقة واحدة').of(context);
   return S('$minutes min', '$minutes د').of(context);
 }
+
+/// A straight-line distance as "340 m" / "1.4 km".
+///
+/// Rounded deliberately coarsely: this is a great-circle distance between
+/// a GPS fix and a stop, not a road distance (see [computeTripEta]'s own
+/// note on why this project has no road-routing dependency), so quoting it
+/// to the metre would imply a precision the number doesn't have.
+String formatDistanceMeters(BuildContext context, double meters) {
+  if (meters < 950) {
+    final rounded = (meters / 10).round() * 10;
+    return S('$rounded m', '$rounded م').of(context);
+  }
+  final km = (meters / 100).round() / 10;
+  final text = km == km.roundToDouble()
+      ? '${km.round()}'
+      : km.toStringAsFixed(1);
+  return S('$text km', '$text كم').of(context);
+}

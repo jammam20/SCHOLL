@@ -1,15 +1,54 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/notification_routing.dart';
+import '../../messages/presentation/parent_requests_page.dart';
 import '../../notifications/data/notifications_repository.dart';
 import '../../notifications/presentation/notifications_inbox_page.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../students/data/students_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import 'child_journey_card.dart';
+import 'child_switcher.dart';
 
+/// Above this width the bottom bar becomes a side rail: on a desktop
+/// browser a 68px bar pinned to the bottom of a 1400px window is a long way
+/// from the content it navigates, and the shared theme already ships a
+/// `navigationRailTheme` for exactly this.
+const _railBreakpoint = 1000.0;
+
+/// The widest the home content is allowed to get. Past this, extra width
+/// goes to margins rather than to 1200px-long lines of text — except inside
+/// a focused child's card, which spends it on the live map (see
+/// `_twoPaneBreakpoint` in child_journey_card.dart).
+const _maxContentWidth = 980.0;
+
+/// The parent app shell.
+///
+/// **Three destinations: Home, Messages, Profile.**
+///
+/// *Home* absorbs tracking rather than tracking getting a destination of
+/// its own. There is exactly one trip per route per day in this system, so
+/// a permanent "Tracking" tab would be an empty room for most of the
+/// twenty-four hours — a nav item that is disabled or apologetic most of
+/// the time trains people to stop looking at it, which is the opposite of
+/// what a safety app wants. Instead the live map *becomes* the centerpiece
+/// of Home the moment a bus is actually out for a child, and a full-screen
+/// tracking page is one tap from there (see [LiveTripMapPage]) — offered
+/// only when there is something live to open.
+///
+/// *Messages* is promoted out of Profile, where it used to sit as a
+/// ListTile. It is the app's only two-way channel with the school: a parent
+/// starts threads there and comes back for replies, and burying a
+/// conversation two taps deep under "Profile" is the wrong shape for that.
+///
+/// *Notifications* deliberately stays as the app-bar bell with a live
+/// unread badge instead of taking a fourth slot. It is a read-only history
+/// — one that already announces itself through push and through the badge —
+/// and a badge on a bell is exactly as discoverable as a nav item without
+/// spending a permanent slot on a log.
 class ParentHomePage extends StatefulWidget {
   const ParentHomePage({super.key, required this.user, required this.onSignOut});
 
@@ -21,13 +60,14 @@ class ParentHomePage extends StatefulWidget {
 }
 
 class _ParentHomePageState extends State<ParentHomePage> {
-  int _index = 0;
+  static const _homeIndex = 0;
+  static const _messagesIndex = 1;
+
+  int _index = _homeIndex;
 
   @override
   void initState() {
     super.initState();
-    // Every notification this app receives (trip status or emergency) is
-    // about a child's trip — that lives on the Children tab.
     NotificationRouting.pendingTarget.addListener(_onNotificationTapped);
     _onNotificationTapped();
   }
@@ -38,65 +78,129 @@ class _ParentHomePageState extends State<ParentHomePage> {
     super.dispose();
   }
 
+  /// Sends a tapped push to the destination that actually holds it. The
+  /// `type` strings are the ones functions/src/index.ts really sends —
+  /// message traffic belongs on Messages now that it has its own
+  /// destination; everything else (trip, emergency, boarding, deviation,
+  /// bus change) is about a child's journey, which lives on Home.
   void _onNotificationTapped() {
-    if (NotificationRouting.pendingTarget.value == null) return;
+    final type = NotificationRouting.pendingTarget.value;
+    if (type == null) return;
     NotificationRouting.pendingTarget.value = null;
-    setState(() => _index = 0);
+    final target = (type == 'school_message' || type == 'parent_message')
+        ? _messagesIndex
+        : _homeIndex;
+    setState(() => _index = target);
   }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      _ChildrenTab(user: widget.user),
+      _HomeTab(user: widget.user),
+      ParentRequestsPage(user: widget.user),
       ProfilePage(user: widget.user, onSignOut: widget.onSignOut),
     ];
 
-    return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.family_restroom_outlined),
-            selectedIcon: const Icon(Icons.family_restroom),
-            label: const S('Children', 'الأبناء').of(context),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: const S('Profile', 'حسابي').of(context),
-          ),
-        ],
+    final destinations = <_Destination>[
+      _Destination(
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home_rounded,
+        label: const S('Home', 'الرئيسية').of(context),
       ),
+      _Destination(
+        icon: Icons.chat_bubble_outline_rounded,
+        selectedIcon: Icons.chat_bubble_rounded,
+        label: const S('Messages', 'الرسايل').of(context),
+      ),
+      _Destination(
+        icon: Icons.person_outline,
+        selectedIcon: Icons.person,
+        label: const S('Profile', 'حسابي').of(context),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final body = IndexedStack(index: _index, children: pages);
+        if (constraints.maxWidth < _railBreakpoint) {
+          return Scaffold(
+            body: body,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: (value) => setState(() => _index = value),
+              destinations: [
+                for (final destination in destinations)
+                  NavigationDestination(
+                    icon: Icon(destination.icon),
+                    selectedIcon: Icon(destination.selectedIcon),
+                    label: destination.label,
+                  ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          body: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _index,
+                onDestinationSelected: (value) =>
+                    setState(() => _index = value),
+                labelType: NavigationRailLabelType.all,
+                destinations: [
+                  for (final destination in destinations)
+                    NavigationRailDestination(
+                      icon: Icon(destination.icon),
+                      selectedIcon: Icon(destination.selectedIcon),
+                      label: Text(destination.label),
+                    ),
+                ],
+              ),
+              VerticalDivider(width: 1, color: context.appColors.border),
+              Expanded(child: body),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-/// The children tab, with a switcher above the list so a parent with more
-/// than one child can put a single child on screen on their own.
+/// One destination, described once and rendered by both the bar and the
+/// rail so the two can't drift apart.
+class _Destination {
+  const _Destination({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+}
+
+/// The home tab: who you are, which child you're looking at, and what is
+/// happening to them right now.
 ///
-/// "All children" stays the default and is always reachable: for a parent
-/// of two, seeing both at once is genuinely the better view — that's the
-/// whole question they opened the app to answer. The focused view earns its
-/// place when there are three or four cards, or when one child's bus is the
-/// only thing that matters right now, so it's offered rather than imposed.
-/// Nothing is shared between the per-child views: each [ChildJourneyCard]
-/// takes only its own [Student] and opens its own streams keyed by that
-/// child's route and trip, so a sibling's boarding state or ETA can't leak
-/// into another's.
-class _ChildrenTab extends StatefulWidget {
-  const _ChildrenTab({required this.user});
+/// The switcher's "All children" default stays: for a parent of two, seeing
+/// both at once is genuinely the better answer. Selecting one child swaps
+/// the whole tab into that child's full view — including the live map, if a
+/// bus is out for them — and every card in the "all" view carries its own
+/// way into that focused view, so choosing to see everything never means
+/// losing access to the detail.
+class _HomeTab extends StatefulWidget {
+  const _HomeTab({required this.user});
 
   final AppUser user;
 
   @override
-  State<_ChildrenTab> createState() => _ChildrenTabState();
+  State<_HomeTab> createState() => _HomeTabState();
 }
 
-class _ChildrenTabState extends State<_ChildrenTab> {
-  /// Null means "All children" — the default, matching how this tab has
-  /// always behaved.
+class _HomeTabState extends State<_HomeTab> {
+  /// Null means "All children" — the default.
   String? _selectedStudentId;
 
   AppUser get user => widget.user;
@@ -104,15 +208,17 @@ class _ChildrenTabState extends State<_ChildrenTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text(
-          S('Welcome, ${user.name}', 'أهلاً بيك، ${user.name}').of(context),
-        ),
-        actions: [_NotificationsBell(uid: user.uid)],
+        title: Text(_greeting(context)),
+        actions: [
+          _NotificationsBell(uid: user.uid),
+          const SizedBox(width: AppSpacing.xs),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addChild(context),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.person_add_alt_1_rounded),
         label: Text(const S('Add child', 'إضافة طفل').of(context)),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -122,13 +228,17 @@ class _ChildrenTabState extends State<_ChildrenTab> {
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: const [
-                AppSkeletonListTile(),
-                AppSkeletonListTile(),
-                AppSkeletonListTile(),
-              ],
+            return _centered(
+              ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: const [
+                  AppSkeleton(width: 220, height: 18),
+                  SizedBox(height: AppSpacing.xl),
+                  AppSkeletonListTile(),
+                  AppSkeletonListTile(),
+                  AppSkeletonListTile(),
+                ],
+              ),
             );
           }
           if (snapshot.hasError) {
@@ -168,65 +278,92 @@ class _ChildrenTabState extends State<_ChildrenTab> {
           final selectedId = students.any((s) => s.id == _selectedStudentId)
               ? _selectedStudentId
               : null;
-          final visible = selectedId == null
-              ? students
-              : students.where((s) => s.id == selectedId).toList();
 
-          return Column(
-            children: [
-              // One child means there is nothing to switch between.
-              if (students.length > 1)
-                _ChildSwitcher(
-                  students: students,
-                  selectedStudentId: selectedId,
-                  onSelected: (id) => setState(() => _selectedStudentId = id),
-                ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                    88,
+          // One child is always their own focus — there is nothing to
+          // switch between, and no reason to make them tap to see the map.
+          final focused = students.length == 1 ? students.single.id : selectedId;
+          final visible = focused == null
+              ? students
+              : students.where((s) => s.id == focused).toList();
+
+          return _centered(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (students.length > 1)
+                  ChildSwitcher(
+                    students: students,
+                    selectedStudentId: selectedId,
+                    onSelected: (id) =>
+                        setState(() => _selectedStudentId = id),
                   ),
-                  itemCount: visible.length + 1,
-                  itemBuilder: (_, index) {
-                    if (index == 0) {
-                      return SectionHeader(
-                        title: selectedId == null
-                            ? const S('Your children', 'أبناؤك').of(context)
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      96,
+                    ),
+                    children: [
+                      _TodayStrip(
+                        childCount: students.length,
+                        focusedName: focused == null
+                            ? null
                             : visible.first.name,
-                        subtitle: selectedId == null
-                            ? S(
-                                '${students.length} '
-                                    '${students.length == 1 ? 'child' : 'children'} '
-                                    'linked',
-                                '${students.length} من الأبناء مرتبطين',
-                              ).of(context)
-                            : const S(
-                                'Showing this child only',
-                                'بنعرض الطفل ده بس',
-                              ).of(context),
-                      );
-                    }
-                    return ChildJourneyCard(
-                      // Keyed by student id so switching filters rebuilds
-                      // each card against its own child rather than
-                      // recycling the element (and its stream
-                      // subscriptions) from whichever sibling sat at that
-                      // index before.
-                      key: ValueKey(visible[index - 1].id),
-                      user: user,
-                      student: visible[index - 1],
-                    );
-                  },
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      for (final student in visible)
+                        ChildJourneyCard(
+                          // Keyed by student id so switching filters
+                          // rebuilds each card against its own child
+                          // rather than recycling the element (and its
+                          // stream subscriptions) from whichever sibling
+                          // sat at that index before.
+                          key: ValueKey('${student.id}|${focused != null}'),
+                          user: user,
+                          student: student,
+                          expanded: focused != null,
+                          onFocusRequested: focused != null
+                              ? null
+                              : () => setState(
+                                  () => _selectedStudentId = student.id,
+                                ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
     );
+  }
+
+  /// Keeps a desktop browser from stretching the content to the full window
+  /// width, without changing anything about the narrow layout.
+  Widget _centered(Widget child) => Align(
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+      child: child,
+    ),
+  );
+
+  /// Time of day comes from the device clock — the one thing here that
+  /// isn't read from Firestore, and the only thing it's used for is how to
+  /// say hello.
+  String _greeting(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final name = user.name;
+    if (hour < 12) {
+      return S('Good morning, $name', 'صباح الخير يا $name').of(context);
+    }
+    if (hour < 17) {
+      return S('Good afternoon, $name', 'مساء الخير يا $name').of(context);
+    }
+    return S('Good evening, $name', 'مساء الخير يا $name').of(context);
   }
 
   Future<void> _addChild(BuildContext context) async {
@@ -265,49 +402,47 @@ class _ChildrenTabState extends State<_ChildrenTab> {
   }
 }
 
-/// A horizontal row of the parent's children, plus an "All" option — the
-/// focus control for the tab below it. Scrollable rather than wrapped so a
-/// parent of five children gets the same layout as a parent of two.
-class _ChildSwitcher extends StatelessWidget {
-  const _ChildSwitcher({
-    required this.students,
-    required this.selectedStudentId,
-    required this.onSelected,
-  });
+/// The one line of context above the cards: today's date, and either how
+/// many children are linked or which one is currently in focus. Both are
+/// facts already on screen elsewhere — this is orientation, not new data,
+/// which is why it stays one muted line rather than a hero panel.
+class _TodayStrip extends StatelessWidget {
+  const _TodayStrip({required this.childCount, required this.focusedName});
 
-  final List<Student> students;
-  final String? selectedStudentId;
-  final ValueChanged<String?> onSelected;
+  final int childCount;
+  final String? focusedName;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-            child: ChoiceChip(
-              label: Text(
-                const S('All children', 'كل الأبناء').of(context),
-              ),
-              selected: selectedStudentId == null,
-              onSelected: (_) => onSelected(null),
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final name = focusedName;
+
+    return Row(
+      children: [
+        Icon(Icons.calendar_today_rounded, size: 14, color: colors.textMuted),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            DateFormat.MMMMEEEEd().format(DateTime.now()),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.textSecondary,
+              fontWeight: FontWeight.w600,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          for (final student in students)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
-              child: ChoiceChip(
-                label: Text(student.name),
-                selected: selectedStudentId == student.id,
-                onSelected: (_) => onSelected(student.id),
-              ),
-            ),
-        ],
-      ),
+        ),
+        Text(
+          name != null
+              ? S('Showing $name', 'بنعرض $name').of(context)
+              : S(
+                  '$childCount ${childCount == 1 ? 'child' : 'children'}',
+                  '$childCount من الأبناء',
+                ).of(context),
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
+        ),
+      ],
     );
   }
 }
@@ -347,4 +482,3 @@ class _NotificationsBell extends StatelessWidget {
     );
   }
 }
-

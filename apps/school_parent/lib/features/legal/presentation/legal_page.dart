@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../widgets/parent_ui.dart';
+
 /// Privacy policy and terms of use — required by app stores, and by basic
 /// fairness given this app handles children's location and contact data.
 /// Written to describe exactly what this app actually does (see the repos
@@ -21,14 +23,34 @@ class LegalPage extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        children: isArabic ? _arabicSections(context) : _englishSections(context),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.lg,
+          AppSpacing.xl,
+          AppSpacing.xl3,
+        ),
+        children: [
+          InfoNotice(
+            icon: Icons.shield_outlined,
+            message: const S(
+              'Your school runs this service and owns the data in it. '
+                  "Anything you want reviewed, corrected or deleted goes "
+                  "through your school's administrator.",
+              'مدرستك هي اللي بتشغّل الخدمة دي وهي مالكة البيانات. أي حاجة '
+                  'عايز تراجعها أو تصححها أو تمسحها بتتم عن طريق أدمن '
+                  'مدرستك.',
+            ).of(context),
+          ),
+          const SizedBox(height: AppSpacing.xl2),
+          ...isArabic ? _arabicSections(context) : _englishSections(context),
+        ],
       ),
     );
   }
 
   List<Widget> _englishSections(BuildContext context) => [
     _Section(
+      icon: Icons.lock_outline_rounded,
       title: 'Privacy Policy',
       body:
           'This app is used by one school to run its own bus service. The '
@@ -48,8 +70,9 @@ class LegalPage extends StatelessWidget {
           'request directly, since the school (not this app) is the owner '
           'of that data.',
     ),
-    const SizedBox(height: AppSpacing.xl3),
+    const SizedBox(height: AppSpacing.lg),
     _Section(
+      icon: Icons.gavel_rounded,
       title: 'Terms of Use',
       body:
           'Accounts are approved by your school and may be suspended or '
@@ -67,6 +90,7 @@ class LegalPage extends StatelessWidget {
 
   List<Widget> _arabicSections(BuildContext context) => [
     _Section(
+      icon: Icons.lock_outline_rounded,
       title: 'سياسة الخصوصية',
       body:
           'التطبيق ده بتستخدمه مدرسة واحدة عشان تدير خدمة الأتوبيس بتاعتها. '
@@ -83,8 +107,9 @@ class LegalPage extends StatelessWidget {
           'بيدير حسابك ويقدر ينفذ الطلب مباشرة، لأن المدرسة (مش التطبيق) '
           'هي مالكة البيانات دي.',
     ),
-    const SizedBox(height: AppSpacing.xl3),
+    const SizedBox(height: AppSpacing.lg),
     _Section(
+      icon: Icons.gavel_rounded,
       title: 'شروط الاستخدام',
       body:
           'الحسابات بتتوافق عليها مدرستك وممكن تتوقف أو تتشال حسب تقدير '
@@ -99,8 +124,13 @@ class LegalPage extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.body});
+  const _Section({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
 
+  final IconData icon;
   final String title;
   final String body;
 
@@ -108,19 +138,54 @@ class _Section extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.titleLarge?.copyWith(color: colors.textPrimary),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          body,
-          style: theme.textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
-        ),
-      ],
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.md - 2),
+                ),
+                child: Icon(
+                  icon,
+                  size: 17,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            body,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.textSecondary,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

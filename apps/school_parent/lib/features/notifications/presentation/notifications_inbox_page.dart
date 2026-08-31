@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../widgets/parent_ui.dart';
 import '../data/notifications_repository.dart';
+import 'notification_type_visuals.dart';
 
 /// The durable history behind the pushes this app already sends: every
 /// trip/emergency/boarding/school-message event a parent was notified
@@ -68,20 +70,24 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              const S('Notifications', 'الإشعارات').of(context),
-            ),
+            title: Text(const S('Notifications', 'الإشعارات').of(context)),
             actions: [
               if (unread.isNotEmpty)
-                TextButton(
-                  onPressed: () => _markAllRead(unread),
-                  child: Text(
-                    const S('Mark all read', 'علّم الكل كمقروء').of(context),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    end: AppSpacing.sm,
+                  ),
+                  child: TextButton.icon(
+                    onPressed: () => _markAllRead(unread),
+                    icon: const Icon(Icons.done_all_rounded, size: 18),
+                    label: Text(
+                      const S('Mark all read', 'علّم الكل كمقروء').of(context),
+                    ),
                   ),
                 ),
             ],
           ),
-          body: _buildBody(context, snapshot, notifications),
+          body: _buildBody(context, snapshot, notifications, unread.length),
         );
       },
     );
@@ -91,6 +97,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
     BuildContext context,
     AsyncSnapshot<List<AppNotification>> snapshot,
     List<AppNotification> notifications,
+    int unreadCount,
   ) {
     if (snapshot.connectionState == ConnectionState.waiting) {
       return ListView(
@@ -126,23 +133,100 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      itemCount: notifications.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final notification = notifications[index];
-        return _NotificationTile(
+    // The stream is already newest-first, so walking it in order and
+    // emitting a header whenever the calendar day changes groups it without
+    // re-sorting or bucketing anything.
+    final rows = <Widget>[];
+    if (unreadCount > 0) {
+      rows.add(_UnreadSummary(count: unreadCount));
+    }
+    for (var i = 0; i < notifications.length; i++) {
+      final notification = notifications[i];
+      final previous = i == 0 ? null : notifications[i - 1];
+      if (previous == null ||
+          !isSameDay(previous.createdAt, notification.createdAt)) {
+        rows.add(_DayHeading(date: notification.createdAt));
+      }
+      rows.add(
+        _NotificationCard(
           notification: notification,
           onTap: () => _markRead(notification),
-        );
-      },
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.xl3,
+      ),
+      children: rows,
     );
   }
 }
 
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.notification, required this.onTap});
+/// How many entries are still unread — the same count the app bar's badge is
+/// driven by, restated where the list itself begins.
+class _UnreadSummary extends StatelessWidget {
+  const _UnreadSummary({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        children: [
+          Icon(
+            Icons.mark_email_unread_outlined,
+            size: 18,
+            color: colors.info,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            count == 1
+                ? const S('1 unread', 'واحد مش مقروء').of(context)
+                : S('$count unread', '$count مش مقروءين').of(context),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colors.info,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayHeading extends StatelessWidget {
+  const _DayHeading({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        bottom: AppSpacing.sm,
+      ),
+      child: Text(
+        friendlyDay(context, date),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: context.appColors.textMuted,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  const _NotificationCard({required this.notification, required this.onTap});
 
   final AppNotification notification;
   final VoidCallback onTap;
@@ -151,123 +235,144 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    final tone = _typeTone(notification.type);
-    final toneColor = _toneColor(colors, tone);
+    final tone = notificationTypeTone(notification.type);
+    final accent = toneColor(colors, tone);
     final isUnread = !notification.read;
+    final isEmergency = tone == StatusTone.emergency;
 
-    return ListTile(
-      onTap: onTap,
-      // Unread rows carry a faint tint of their own tone as well as the
-      // dot and the heavier title — one cue is easy to miss on a phone
-      // held at arm's length.
-      tileColor: isUnread ? toneColor.withValues(alpha: 0.06) : null,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: toneColor.withValues(alpha: 0.12),
-          shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        // Unread rows carry a faint tint of their own tone as well as the
+        // dot and the heavier title — one cue is easy to miss on a phone
+        // held at arm's length. An emergency keeps its tint even once read:
+        // it stays the most serious thing on the screen.
+        color: isUnread || isEmergency
+            ? accent.withValues(alpha: isEmergency ? 0.10 : 0.06)
+            : colors.surface,
+        clipBehavior: Clip.antiAlias,
+        // Material asserts that `shape` and `borderRadius` are never both
+        // set — the rounded border lives on the shape alone.
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(
+            color: isEmergency
+                ? accent.withValues(alpha: 0.55)
+                : (isUnread ? accent.withValues(alpha: 0.32) : colors.border),
+            width: isEmergency ? 1.4 : 1,
+          ),
         ),
-        child: Icon(_typeIcon(notification.type), color: toneColor, size: 20),
-      ),
-      title: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              notification.title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: colors.textPrimary,
-                fontWeight: isUnread ? FontWeight.w800 : FontWeight.w500,
-              ),
-            ),
-          ),
-          if (isUnread) ...[
-            const SizedBox(width: AppSpacing.sm),
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: toneColor,
-                  shape: BoxShape.circle,
+        child: InkWell(
+          onTap: onTap,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // An accent rail on the leading edge, so the tone of an
+                // entry is legible before a single word is read.
+                Container(width: isEmergency ? 4 : 3, color: accent),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.md - 2,
+                            ),
+                          ),
+                          child: Icon(
+                            notificationTypeIcon(notification.type),
+                            color: accent,
+                            size: 19,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      notification.title,
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                            color: colors.textPrimary,
+                                            fontWeight: isUnread
+                                                ? FontWeight.w800
+                                                : FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                  if (isUnread) ...[
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Container(
+                                        width: 9,
+                                        height: 9,
+                                        decoration: BoxDecoration(
+                                          color: accent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                notification.body,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colors.textSecondary,
+                                  height: 1.45,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Row(
+                                children: [
+                                  StatusBadge(
+                                    label: notificationTypeLabel(
+                                      notification.type,
+                                    ).of(context),
+                                    tone: tone,
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    DateFormat.jm().format(
+                                      notification.createdAt,
+                                    ),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colors.textMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            notification.body,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.textSecondary,
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            _formatTimestamp(context, notification.createdAt),
-            style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Same event-type strings the Cloud Functions stamp on each entry (and on
-/// the matching FCM payload's `data.type`) — see `AppNotification.type`.
-/// An unrecognized type still renders, neutrally, rather than being hidden:
-/// a notification a parent was pushed should never silently vanish from the
-/// inbox just because this app is older than the server that wrote it.
-IconData _typeIcon(String type) => switch (type) {
-  'trip' => Icons.directions_bus,
-  'emergency' => Icons.warning_amber_rounded,
-  'student_boarded' => Icons.how_to_reg,
-  'student_dropped_off' => Icons.waving_hand_outlined,
-  'bus_changed' => Icons.swap_horiz,
-  'route_deviation' => Icons.alt_route,
-  'school_message' => Icons.campaign_outlined,
-  _ => Icons.notifications_none,
-};
-
-StatusTone _typeTone(String type) => switch (type) {
-  'trip' => StatusTone.info,
-  'emergency' => StatusTone.emergency,
-  'student_boarded' => StatusTone.success,
-  'student_dropped_off' => StatusTone.success,
-  'bus_changed' => StatusTone.warning,
-  'route_deviation' => StatusTone.warning,
-  'school_message' => StatusTone.info,
-  _ => StatusTone.neutral,
-};
-
-Color _toneColor(AppColorTokens colors, StatusTone tone) => switch (tone) {
-  StatusTone.success => colors.success,
-  StatusTone.warning => colors.warning,
-  StatusTone.error => colors.error,
-  StatusTone.info => colors.info,
-  StatusTone.emergency => colors.emergency,
-  StatusTone.neutral => colors.textMuted,
-};
-
-String _formatTimestamp(BuildContext context, DateTime createdAt) {
-  final now = DateTime.now();
-  final isToday =
-      createdAt.year == now.year &&
-      createdAt.month == now.month &&
-      createdAt.day == now.day;
-  final time = DateFormat.jm().format(createdAt);
-  if (isToday) {
-    return S('Today $time', 'النهاردة $time').of(context);
-  }
-  return '${DateFormat.MMMd().format(createdAt)} · $time';
-}
+// The per-type icon/tone/label mapping lives in
+// notification_type_visuals.dart, so it can be tested directly against the
+// set of event types functions/src/index.ts actually writes.

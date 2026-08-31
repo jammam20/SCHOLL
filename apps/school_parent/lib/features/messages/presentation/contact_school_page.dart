@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../widgets/parent_ui.dart';
 import '../../trips/data/trips_repository.dart';
 import '../data/parent_requests_repository.dart';
 
@@ -38,6 +39,10 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
   bool _attachTrip = true;
   bool _sending = false;
 
+  /// Whether there's anything to send yet — drives the primary button's
+  /// enabled state.
+  bool _hasMessage = false;
+
   /// The trip currently offered as context, resolved by the stream below.
   /// Assigned during build rather than through setState because nothing on
   /// this screen re-renders from it — it's only read at submit time, and
@@ -45,9 +50,23 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
   SchoolTrip? _contextTrip;
 
   @override
+  void initState() {
+    super.initState();
+    // Drives the send button's enabled state — the parent shouldn't have to
+    // tap a live-looking button to be told the message is empty.
+    _messageController.addListener(_onMessageChanged);
+  }
+
+  @override
   void dispose() {
+    _messageController.removeListener(_onMessageChanged);
     _messageController.dispose();
     super.dispose();
+  }
+
+  void _onMessageChanged() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    if (hasText != _hasMessage) setState(() => _hasMessage = hasText);
   }
 
   Future<void> _submit(List<Student> students) async {
@@ -126,10 +145,12 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: const [
+                AppSkeleton(height: 72, borderRadius: AppRadius.md),
+                SizedBox(height: AppSpacing.xl2),
                 AppSkeleton(width: 220, height: 16),
                 SizedBox(height: AppSpacing.lg),
                 AppSkeleton(height: 56, borderRadius: AppRadius.md),
-                SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.xl2),
                 AppSkeleton(height: 140, borderRadius: AppRadius.md),
               ],
             );
@@ -149,9 +170,8 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
               .toList();
 
           // A child who was unlinked while this screen was open shouldn't
-          // stay selected in a dropdown that no longer lists them.
-          final selectedId =
-              students.any((s) => s.id == _selectedStudentId)
+          // stay selected in a picker that no longer lists them.
+          final selectedId = students.any((s) => s.id == _selectedStudentId)
               ? _selectedStudentId
               : null;
           final selected = selectedId == null
@@ -166,51 +186,44 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
               AppSpacing.xl3,
             ),
             children: [
-              const _RoutingNotice(),
+              InfoNotice(
+                icon: Icons.school_outlined,
+                title: const S(
+                  'This goes to the school office',
+                  'الرسالة دي بتروح لإدارة المدرسة',
+                ).of(context),
+                message: const S(
+                  'If the driver needs to know something, the school passes '
+                      "it on — drivers can't be messaged directly.",
+                  'لو في حاجة لازم السواق يعرفها، المدرسة هي اللي بتبلغه — '
+                      'مفيش تواصل مباشر مع السواقين.',
+                ).of(context),
+              ),
               const SizedBox(height: AppSpacing.xl2),
               SectionHeader(
-                title: const S('What is this about?', 'الرسالة بخصوص إيه؟').of(
-                  context,
-                ),
+                title: const S(
+                  'What is this about?',
+                  'الرسالة بخصوص إيه؟',
+                ).of(context),
+                subtitle: const S(
+                  'Naming a child helps the office answer faster.',
+                  'لما تحدد الطفل، الإدارة بترد أسرع.',
+                ).of(context),
               ),
-              // A plain DropdownButton driven entirely by _selectedStudentId
-              // rather than DropdownButtonFormField: the selection has to
-              // stay valid against a *live* list of children, and a form
-              // field keeps its own copy of the value that wouldn't follow
-              // the `selectedId` sanitizing just above.
-              InputDecorator(
-                decoration: InputDecoration(
-                  labelText: const S('Child', 'الطفل').of(context),
-                  border: const OutlineInputBorder(),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String?>(
-                    value: selectedId,
-                    isExpanded: true,
-                    items: [
-                      DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text(
-                          const S(
-                            'A general question',
-                            'سؤال عام',
-                          ).of(context),
-                        ),
-                      ),
-                      for (final student in students)
-                        DropdownMenuItem<String?>(
-                          value: student.id,
-                          child: Text(student.name),
-                        ),
-                    ],
-                    onChanged: _sending
-                        ? null
-                        : (value) => setState(() {
-                            _selectedStudentId = value;
-                            _contextTrip = null;
-                          }),
-                  ),
-                ),
+              // Selectable chips rather than a dropdown: a parent has a
+              // handful of children, and every option being visible at once
+              // is both faster and clearer than a menu. The selection is
+              // still driven entirely by _selectedStudentId against the
+              // *live* list above, which is what keeps an unlinked child
+              // from staying selected.
+              _ChildPicker(
+                students: students,
+                selectedId: selectedId,
+                enabled: !_sending,
+                onChanged: (value) => setState(() {
+                  _selectedStudentId = value;
+                  _contextTrip = null;
+                }),
               ),
               if (selected != null &&
                   selected.routeId != null &&
@@ -237,7 +250,25 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                 maxLength: 1000,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: colors.surface,
+                  alignLabelWithHint: true,
+                  contentPadding: const EdgeInsets.all(AppSpacing.lg),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: BorderSide(color: colors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 1.6,
+                    ),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderSide: BorderSide(color: colors.border),
+                  ),
                   hintText: const S(
                     'e.g. My son will be picked up by his grandmother '
                         'tomorrow — can you let the driver know?',
@@ -245,16 +276,18 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                   ).of(context),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.sm),
               AppButton.primary(
                 label: const S('Send to school', 'ابعت للمدرسة').of(context),
-                icon: Icons.send,
+                icon: Icons.send_rounded,
                 loading: _sending,
-                onPressed: () => _submit(students),
+                onPressed: _hasMessage ? () => _submit(students) : null,
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                const S(
+              const SizedBox(height: AppSpacing.lg),
+              InfoNotice(
+                tone: StatusTone.warning,
+                icon: Icons.phone_in_talk_outlined,
+                message: const S(
                   'For anything urgent while the bus is moving, call your '
                       'school directly — this goes to their message queue, '
                       'not to an alert.',
@@ -262,9 +295,6 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                       'على طول — الرسالة دي بتروح لقائمة رسايلهم، مش تنبيه '
                       'عاجل.',
                 ).of(context),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colors.textMuted,
-                ),
               ),
             ],
           );
@@ -274,42 +304,132 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
   }
 }
 
-/// Says exactly where the message goes. A parent who thinks they're
-/// texting the driver would wait for a reply that structurally cannot
-/// arrive — the driver has no read access to this collection at all.
-class _RoutingNotice extends StatelessWidget {
-  const _RoutingNotice();
+/// The "who is this about" picker: one chip per linked child plus a general
+/// option. Purely a presentation of `students` — it adds no child of its own
+/// and offers nothing that isn't in the live list.
+class _ChildPicker extends StatelessWidget {
+  const _ChildPicker({
+    required this.students,
+    required this.selectedId,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final List<Student> students;
+  final String? selectedId;
+  final bool enabled;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.info.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: colors.info.withValues(alpha: 0.24)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    // A parent with no linked children still has a real reason to write —
+    // "my child isn't showing up in the app" being the obvious one — so the
+    // form stays usable and simply says there's nobody to attach.
+    if (students.isEmpty) {
+      return InfoNotice(
+        tone: StatusTone.neutral,
+        icon: Icons.child_care_outlined,
+        message: const S(
+          "You don't have a child linked yet, so this will be sent as a "
+              'general question.',
+          'مفيش طفل مرتبط بحسابك لسه، فالرسالة هتتبعت كسؤال عام.',
+        ).of(context),
+      );
+    }
+
+    // Keeps the group's own label available to screen readers now that the
+    // dropdown's `labelText` is gone.
+    return Semantics(
+      label: const S('Child', 'الطفل').of(context),
+      container: true,
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
         children: [
-          Icon(Icons.school_outlined, color: colors.info, size: 22),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              const S(
-                'Your message goes to the school office. If the driver needs '
-                    'to know something, the school passes it on — drivers '
-                    "can't be messaged directly.",
-                'رسالتك بتروح لإدارة المدرسة. لو في حاجة لازم السواق يعرفها، '
-                    'المدرسة هي اللي بتبلغه — مفيش تواصل مباشر مع السواقين.',
-              ).of(context),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.textSecondary,
-              ),
+          _PickerChip(
+            label: const S('A general question', 'سؤال عام').of(context),
+            icon: Icons.help_outline_rounded,
+            selected: selectedId == null,
+            enabled: enabled,
+            onTap: () => onChanged(null),
+          ),
+          for (final student in students)
+            _PickerChip(
+              label: student.name,
+              icon: Icons.child_care_outlined,
+              selected: selectedId == student.id,
+              enabled: enabled,
+              onTap: () => onChanged(student.id),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PickerChip extends StatelessWidget {
+  const _PickerChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final accent = theme.colorScheme.primary;
+
+    return Material(
+      color: selected ? accent.withValues(alpha: 0.12) : colors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        onTap: enabled ? onTap : null,
+        child: AnimatedContainer(
+          duration: AppDurations.stateSwitch,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg - 2,
+            vertical: AppSpacing.md - 2,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: selected ? accent : colors.border,
+              width: selected ? 1.6 : 1,
             ),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                selected ? Icons.check_rounded : icon,
+                size: 16,
+                color: selected
+                    ? accent
+                    : (enabled ? colors.textMuted : colors.disabled),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected
+                      ? accent
+                      : (enabled ? colors.textPrimary : colors.disabled),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -338,6 +458,8 @@ class _TripContextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: TripsRepository().watchLatestTripForRoute(
         schoolId: schoolId,
@@ -363,20 +485,36 @@ class _TripContextField extends StatelessWidget {
             ? DateFormat.jm().format(trip.scheduledAt)
             : '${trip.routeName} · ${DateFormat.jm().format(trip.scheduledAt)}';
 
-        return CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          value: attach,
-          onChanged: enabled ? (value) => onChanged(value ?? false) : null,
-          title: Text(
-            const S(
-              "Include today's trip",
-              'أرفق رحلة النهاردة',
-            ).of(context),
+        return Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: colors.border),
           ),
-          subtitle: Text(
-            label,
-            style: TextStyle(color: context.appColors.textSecondary),
+          child: CheckboxListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            controlAffinity: ListTileControlAffinity.leading,
+            value: attach,
+            onChanged: enabled ? (value) => onChanged(value ?? false) : null,
+            title: Text(
+              const S(
+                "Include today's trip",
+                'أرفق رحلة النهاردة',
+              ).of(context),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(
+              label,
+              style: TextStyle(color: colors.textSecondary),
+            ),
           ),
         );
       },
