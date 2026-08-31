@@ -59,7 +59,19 @@ class AppButton extends StatelessWidget {
                 Icon(icon, size: 18),
                 const SizedBox(width: 8),
               ],
-              Text(label),
+              // Flexible + ellipsis rather than a bare Text: this button is
+              // routinely squeezed into a narrow Expanded slot (two buttons
+              // side by side on a small phone, a longer Arabic label than
+              // its English counterpart) — without this, a label that
+              // doesn't fit throws a RenderFlex overflow instead of
+              // truncating gracefully.
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
             ],
           );
 

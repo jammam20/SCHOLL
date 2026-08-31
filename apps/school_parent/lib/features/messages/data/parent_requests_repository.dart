@@ -33,8 +33,16 @@ class ParentRequestsRepository {
   }) async {
     final trimmed = message.trim();
     final ref = _requests(schoolId).doc();
-    final batch = _firestore.batch();
-    batch.set(ref, {
+
+    // Deliberately two sequential writes, not one batch: the message's
+    // create rule reads the parent thread doc back via get() to confirm
+    // `parentUid` matches the caller, and a batched write gives security
+    // rules no guarantee of seeing a sibling write from the *same* batch
+    // (only a transaction does) — batching this always denied the first
+    // message of every brand-new conversation with permission-denied.
+    // Writing the thread first and waiting for it to actually commit
+    // means the message's rule reads a thread that genuinely exists.
+    await ref.set({
       'schoolId': schoolId,
       'parentUid': parentUid,
       'subject': subject,
@@ -49,13 +57,12 @@ class ParentRequestsRepository {
       'studentName': ?studentName,
       'tripId': ?tripId,
     });
-    batch.set(ref.collection('messages').doc(), {
+    await ref.collection('messages').doc().set({
       'senderUid': parentUid,
       'senderRole': 'parent',
       'text': trimmed,
       'createdAt': FieldValue.serverTimestamp(),
     });
-    await batch.commit();
     return ref.id;
   }
 
