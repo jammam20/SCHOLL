@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/notification_routing.dart';
-import '../../common/presentation/domain_labels.dart';
 import '../../dashboard/presentation/control_center_tab.dart';
 import '../../incidents/presentation/incidents_page.dart';
 import '../../ops/presentation/live_ops_tab.dart';
@@ -81,6 +80,12 @@ class _StaffHomePageState extends State<StaffHomePage> {
                 RouteDeviationsPage(schoolId: widget.user.schoolId),
           ),
         );
+      case DashboardJumpTarget.people:
+      case DashboardJumpTarget.operations:
+        // Staff's dashboard never shows the quick-actions row that raises
+        // these (ControlCenterTab hides it when readOnly), and staff has
+        // no People/manage-fleet destination of its own to jump to.
+        break;
     }
   }
 

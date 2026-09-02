@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../widgets/parent_ui.dart';
 import '../data/notification_prefs_repository.dart';
 
 /// Lets a parent turn each kind of push notification on or off, and tune

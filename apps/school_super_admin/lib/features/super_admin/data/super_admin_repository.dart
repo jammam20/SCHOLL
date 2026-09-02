@@ -66,6 +66,7 @@ class SuperAdminRepository {
     required String schoolId,
     required String uid,
     required String status,
+    String? reason,
   }) {
     return _firestore
         .collection('schools')
@@ -76,6 +77,7 @@ class SuperAdminRepository {
           'status': status,
           'isActive': status == 'approved',
           'updatedAt': FieldValue.serverTimestamp(),
+          if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
         });
   }
 
@@ -83,7 +85,16 @@ class SuperAdminRepository {
     return _setAdminStatus(schoolId: schoolId, uid: uid, status: 'approved');
   }
 
-  Future<void> rejectAdmin({required String schoolId, required String uid}) {
-    return _setAdminStatus(schoolId: schoolId, uid: uid, status: 'rejected');
+  Future<void> rejectAdmin({
+    required String schoolId,
+    required String uid,
+    String? reason,
+  }) {
+    return _setAdminStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'rejected',
+      reason: reason,
+    );
   }
 }

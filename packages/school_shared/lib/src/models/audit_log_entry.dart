@@ -98,6 +98,9 @@ abstract final class AuditActions {
   static const inspectionCompleted = 'inspection_completed';
   static const inspectionFailed = 'inspection_failed';
   // Feature: Parent can add child location.
+  static const studentLocationRequestSubmitted = 'student_location_request_submitted';
   static const studentLocationRequestAccepted = 'student_location_request_accepted';
   static const studentLocationRequestRejected = 'student_location_request_rejected';
+  // Feature: unified accept/reject UI.
+  static const studentRequestRejected = 'student_request_rejected';
 }

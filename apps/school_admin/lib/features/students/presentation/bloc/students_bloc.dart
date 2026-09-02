@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
 
+import '../../../audit/data/audit_log_repository.dart';
 import '../../data/students_repository.dart';
 
 abstract class StudentsEvent {}
@@ -100,9 +102,16 @@ class StudentApproved extends StudentsEvent {
 }
 
 class StudentRejected extends StudentsEvent {
-  StudentRejected({required this.schoolId, required this.studentId});
+  StudentRejected({
+    required this.schoolId,
+    required this.studentId,
+    this.studentName,
+    this.reason,
+  });
   final String schoolId;
   final String studentId;
+  final String? studentName;
+  final String? reason;
 }
 
 class StudentParentLinked extends StudentsEvent {
@@ -162,7 +171,9 @@ class StudentsFailure extends StudentsState {
 }
 
 class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
-  StudentsBloc(this._repository) : super(StudentsInitial()) {
+  StudentsBloc(this._repository, {AuditLogRepository? auditLog})
+    : _auditLog = auditLog ?? AuditLogRepository(),
+      super(StudentsInitial()) {
     on<StudentsStarted>(_onStarted);
     on<StudentsLoadMoreRequested>(_onLoadMoreRequested);
     on<_StudentsSnapshotReceived>(_onSnapshotReceived);
@@ -182,6 +193,7 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
   static const pageSize = 30;
 
   final StudentsRepository _repository;
+  final AuditLogRepository _auditLog;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
   String _schoolId = '';
@@ -343,6 +355,24 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     Emitter<StudentsState> emit,
   ) async {
     try {
+      // Feature: unified accept/reject UI — the audit entry is the only
+      // durable record of *why*, since rejecting an unapproved student
+      // still means deleting its (never-visible-to-anyone-but-its-parent)
+      // request outright rather than leaving a permanently-rejected
+      // document around (see StudentsRepository.deleteStudent). Written
+      // before the delete so a delete that succeeds always has its reason
+      // on record even if the audit write itself is best-effort.
+      await _auditLog.recordSafely(
+        schoolId: event.schoolId,
+        action: AuditActions.studentRequestRejected,
+        entityType: 'student',
+        entityId: event.studentId,
+        studentId: event.studentId,
+        metadata: {
+          if (event.studentName != null) 'studentName': event.studentName,
+          if (event.reason != null) 'reason': event.reason,
+        },
+      );
       await _repository.deleteStudent(
         schoolId: event.schoolId,
         studentId: event.studentId,

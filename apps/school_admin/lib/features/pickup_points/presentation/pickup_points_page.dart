@@ -117,6 +117,10 @@ class _PickupPointsView extends StatelessWidget {
               ),
             ),
             floatingActionButton: FloatingActionButton.extended(
+              // The Operations tab host keeps every sub-tab mounted at
+              // once it's been visited (TabBarView) — see the same fix on
+              // the other Operations/People tab FABs in admin_home_page.dart.
+              heroTag: 'pickup-points-add-fab',
               onPressed: () => _createPoint(context, schoolId),
               icon: const Icon(Icons.add_location_alt_outlined),
               label: Text(const S('Pickup point', 'نقطة استلام').of(context)),

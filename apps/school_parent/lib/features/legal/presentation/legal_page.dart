@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../widgets/parent_ui.dart';
-
 /// Privacy policy and terms of use — required by app stores, and by basic
 /// fairness given this app handles children's location and contact data.
 /// Written to describe exactly what this app actually does (see the repos

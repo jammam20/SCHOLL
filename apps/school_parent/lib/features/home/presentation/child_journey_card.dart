@@ -532,6 +532,7 @@ class _ActiveJourney extends StatelessWidget {
         }
         final progress = progressSnapshot.data ?? const TripStopProgress();
         final hasBoarded = progress.boardedStudents.contains(student.id);
+        final isDroppedOff = progress.droppedOffStudents.contains(student.id);
 
         // Live distance only matters while the trip is actually moving —
         // every other status resolves its stage from trip.status alone.
@@ -542,6 +543,7 @@ class _ActiveJourney extends StatelessWidget {
             student: student,
             hasBoarded: hasBoarded,
             distanceToPickupMeters: null,
+            isDroppedOff: isDroppedOff,
             eta: null,
             expanded: expanded,
             onFocusRequested: onFocusRequested,
@@ -597,12 +599,14 @@ class _ActiveJourney extends StatelessWidget {
                   hasBoarded: hasBoarded,
                   distanceToPickupMeters: distanceToPickup,
                   distanceToSchoolMeters: distanceToSchool,
+                  isDroppedOff: isDroppedOff,
                   eta: computeParentTripEta(
                     tripStatus: trip.status,
                     progress: progress,
                     student: student,
                     school: school,
                     busPosition: busPosition,
+                    direction: trip.direction,
                   ),
                   expanded: expanded,
                   onFocusRequested: onFocusRequested,
@@ -624,6 +628,7 @@ class _Body extends StatelessWidget {
     required this.hasBoarded,
     required this.distanceToPickupMeters,
     this.distanceToSchoolMeters,
+    this.isDroppedOff = false,
     required this.eta,
     required this.expanded,
     required this.onFocusRequested,
@@ -635,6 +640,10 @@ class _Body extends StatelessWidget {
   final bool hasBoarded;
   final double? distanceToPickupMeters;
   final double? distanceToSchoolMeters;
+
+  // Feature: two daily trips / unified child transportation status — only
+  // meaningful for a return trip (see JourneyInputs.isDroppedOff).
+  final bool isDroppedOff;
 
   /// The shared ETA engine's answer for this child on this trip, or null
   /// while the trip isn't active (no live estimate to make).
@@ -653,6 +662,8 @@ class _Body extends StatelessWidget {
         distanceToSchoolMeters: distanceToSchoolMeters,
         now: DateTime.now(),
         scheduledAt: trip.scheduledAt,
+        direction: trip.direction,
+        isDroppedOff: isDroppedOff,
       ),
     );
 
@@ -681,7 +692,11 @@ class _Body extends StatelessWidget {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
-                stageHeadline(stage, studentName: student.name).of(context),
+                stageHeadline(
+                  stage,
+                  studentName: student.name,
+                  direction: trip.direction,
+                ).of(context),
                 style: theme.textTheme.bodyLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colors.textPrimary,
@@ -696,7 +711,11 @@ class _Body extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        JourneyProgressRail(stage: stage, hasBoarded: hasBoarded),
+        JourneyProgressRail(
+          stage: stage,
+          hasBoarded: hasBoarded,
+          direction: trip.direction,
+        ),
         if (onFocusRequested != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Align(
@@ -735,6 +754,7 @@ class _Body extends StatelessWidget {
             JourneyTimeline(
               stage: stage,
               hasBoarded: hasBoarded,
+              direction: trip.direction,
               stopNumber: eta?.stopNumber,
               totalStops: eta?.totalStops,
             ),
@@ -831,7 +851,11 @@ class _Body extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                stageHeadline(stage, studentName: student.name).of(context),
+                stageHeadline(
+                  stage,
+                  studentName: student.name,
+                  direction: trip.direction,
+                ).of(context),
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: colors.textPrimary,
@@ -845,7 +869,8 @@ class _Body extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   StatusBadge(
-                    label: stageBadgeLabel(stage).of(context),
+                    label: stageBadgeLabel(stage, direction: trip.direction)
+                        .of(context),
                     tone: tone,
                   ),
                   if (etaDuration != null) _EtaChip(eta: etaDuration),

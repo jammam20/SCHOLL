@@ -88,6 +88,52 @@ void main() {
       expect(result.eta.hasEta, isTrue);
     });
 
+    test(
+      'a return trip treats the school as already-left the moment the trip '
+      'is active, not only once completed (it is the *origin*, not the '
+      'destination)',
+      () {
+        final result = computeParentTripEta(
+          tripStatus: TripStatus.active,
+          progress: const TripStopProgress(
+            // Return direction: school first, per
+            // StopOrderRepository.computeInitialOrder in the driver app.
+            stopOrder: [schoolStopId, 'student-1'],
+          ),
+          student: student,
+          school: school,
+          busPosition: busNearby,
+          now: now,
+          direction: TripDirection.returnTrip,
+        );
+
+        // The school must already read as behind us — the next (and only
+        // remaining) stop is the child's own drop-off point.
+        expect(result.eta.nextStopId, 'student-1');
+        expect(result.eta.stopsCompleted, 1);
+        expect(result.eta.stopsRemaining, 1);
+      },
+    );
+
+    test(
+      'the same still-scheduled return trip has NOT left the school yet',
+      () {
+        final result = computeParentTripEta(
+          tripStatus: TripStatus.scheduled,
+          progress: const TripStopProgress(
+            stopOrder: [schoolStopId, 'student-1'],
+          ),
+          student: student,
+          school: school,
+          now: now,
+          direction: TripDirection.returnTrip,
+        );
+
+        expect(result.eta.nextStopId, schoolStopId);
+        expect(result.eta.stopsCompleted, 0);
+      },
+    );
+
     test('treats a drop-off as a completed stop too', () {
       final result = computeParentTripEta(
         tripStatus: TripStatus.active,

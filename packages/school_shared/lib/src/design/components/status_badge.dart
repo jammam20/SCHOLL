@@ -8,6 +8,19 @@ import '../tokens.dart';
 /// appears. See `design-system/MASTER.md` §2 and §8.
 enum StatusTone { success, warning, error, info, emergency, neutral }
 
+/// Resolves a [StatusTone] to its concrete token color — the single
+/// definition every screen that tones an icon, a callout or a badge should
+/// use, so "warning" is never a slightly different orange in two different
+/// widgets. [StatusBadge] itself is built on this.
+Color toneColor(AppColorTokens tokens, StatusTone tone) => switch (tone) {
+  StatusTone.success => tokens.success,
+  StatusTone.warning => tokens.warning,
+  StatusTone.error => tokens.error,
+  StatusTone.info => tokens.info,
+  StatusTone.emergency => tokens.emergency,
+  StatusTone.neutral => tokens.textMuted,
+};
+
 /// The one dot+label pattern used everywhere a trip/bus/membership/
 /// emergency status appears, so a parent who only opens the app during a
 /// crisis still recognizes what they're looking at. Deliberately small and
@@ -18,26 +31,9 @@ class StatusBadge extends StatelessWidget {
   final String label;
   final StatusTone tone;
 
-  Color _color(AppColorTokens tokens) {
-    switch (tone) {
-      case StatusTone.success:
-        return tokens.success;
-      case StatusTone.warning:
-        return tokens.warning;
-      case StatusTone.error:
-        return tokens.error;
-      case StatusTone.info:
-        return tokens.info;
-      case StatusTone.emergency:
-        return tokens.emergency;
-      case StatusTone.neutral:
-        return tokens.textMuted;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final color = _color(context.appColors);
+    final color = toneColor(context.appColors, tone);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(

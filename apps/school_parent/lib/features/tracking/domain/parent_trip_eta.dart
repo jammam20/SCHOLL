@@ -62,11 +62,19 @@ ParentTripEta computeParentTripEta({
   School? school,
   LiveBusPosition? busPosition,
   DateTime? now,
+  TripDirection direction = TripDirection.outbound,
 }) {
   final studentReached = progress.isCompletedStop(student.id);
-  // The school is this trip's fixed final destination; it's only behind us
-  // once the trip itself is over.
-  final schoolReached = tripStatus == TripStatus.completed;
+  // The school is this trip's fixed *destination* for an outbound trip —
+  // reached only once the trip itself is over — but its fixed *origin* for
+  // a return trip (see StopOrderRepository.computeInitialOrder in the
+  // driver app, which puts the school first in stopOrder for a return
+  // leg): the bus has already left it the moment the trip is actually
+  // underway, well before it's `completed`. Getting this wrong would leave
+  // the school showing as an upcoming stop for an entire return trip.
+  final schoolReached = direction == TripDirection.returnTrip
+      ? tripStatus != TripStatus.scheduled && tripStatus != TripStatus.starting
+      : tripStatus == TripStatus.completed;
 
   TripStopPoint? studentStop() => student.hasLocation
       ? TripStopPoint(

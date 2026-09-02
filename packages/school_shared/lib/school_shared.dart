@@ -63,3 +63,4 @@ export 'src/design/components/metric_stat_card.dart';
 export 'src/design/components/app_skeleton.dart';
 export 'src/design/components/app_confirm_dialog.dart';
 export 'src/design/components/app_button.dart';
+export 'src/design/components/detail_list.dart';

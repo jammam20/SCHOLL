@@ -35,11 +35,13 @@ class ParentsRepository {
     required String schoolId,
     required String uid,
     required String status,
+    String? reason,
   }) {
     return _members(schoolId).doc(uid).update({
       'status': status,
       'isActive': status == 'approved',
       'updatedAt': FieldValue.serverTimestamp(),
+      if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
     });
   }
 
@@ -47,11 +49,29 @@ class ParentsRepository {
     return _setStatus(schoolId: schoolId, uid: uid, status: 'approved');
   }
 
-  Future<void> suspendParent({required String schoolId, required String uid}) {
-    return _setStatus(schoolId: schoolId, uid: uid, status: 'suspended');
+  Future<void> suspendParent({
+    required String schoolId,
+    required String uid,
+    String? reason,
+  }) {
+    return _setStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'suspended',
+      reason: reason,
+    );
   }
 
-  Future<void> rejectParent({required String schoolId, required String uid}) {
-    return _setStatus(schoolId: schoolId, uid: uid, status: 'rejected');
+  Future<void> rejectParent({
+    required String schoolId,
+    required String uid,
+    String? reason,
+  }) {
+    return _setStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'rejected',
+      reason: reason,
+    );
   }
 }

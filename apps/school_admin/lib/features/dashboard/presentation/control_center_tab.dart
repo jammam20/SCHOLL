@@ -8,8 +8,11 @@ import '../../audit/presentation/audit_trail_page.dart';
 import '../../buses/data/buses_repository.dart';
 import '../../common/presentation/domain_labels.dart';
 import '../../deviations/data/deviations_repository.dart';
+import '../../drivers/data/drivers_repository.dart';
 import '../../emergencies/data/emergencies_repository.dart';
 import '../../incidents/data/incidents_repository.dart';
+import '../../parents/data/parents_repository.dart';
+import '../../search/presentation/global_search_page.dart';
 import '../../students/data/students_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../../widgets/async_error_view.dart';
@@ -17,7 +20,7 @@ import '../../../widgets/async_error_view.dart';
 /// Where an alert in the feed sends the admin when tapped. Tab jumps go
 /// through the same index-based mechanism `NotificationRouting` already
 /// uses in admin_home_page.dart, rather than a second navigation concept.
-enum DashboardJumpTarget { liveOps, incidents, deviations }
+enum DashboardJumpTarget { liveOps, incidents, deviations, people, operations }
 
 /// The operations control centre: live fleet, student and route counts
 /// across the top, a single ranked alert feed underneath, and the existing
@@ -94,6 +97,23 @@ class ControlCenterTab extends StatelessWidget {
               ),
             ),
           ),
+          if (!readOnly)
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                      0,
+                    ),
+                    child: _QuickActionsRow(schoolId: schoolId, onJump: onJump),
+                  ),
+                ),
+              ),
+            ),
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
@@ -115,6 +135,174 @@ class ControlCenterTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Feature: dashboard quick actions. Compact, real-data shortcuts to the
+/// screens an admin reaches for most — never fake counts, and the pending-
+/// requests badge is the exact same "awaiting approval" set the People
+/// tab's own PendingApprovalCard rows show, just counted here for the
+/// dashboard.
+class _QuickActionsRow extends StatelessWidget {
+  const _QuickActionsRow({required this.schoolId, required this.onJump});
+
+  final String schoolId;
+  final void Function(DashboardJumpTarget target) onJump;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: const S('Quick actions', 'إجراءات سريعة').of(context),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            _QuickActionChip(
+              icon: Icons.search,
+              label: const S('Search', 'بحث').of(context),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GlobalSearchPage(schoolId: schoolId),
+                ),
+              ),
+            ),
+            _QuickActionChip(
+              icon: Icons.map_outlined,
+              label: const S('Live map', 'الخريطة المباشرة').of(context),
+              onTap: () => onJump(DashboardJumpTarget.liveOps),
+            ),
+            _PendingRequestsChip(schoolId: schoolId, onJump: onJump),
+            _QuickActionChip(
+              icon: Icons.groups_outlined,
+              label: const S('Add student / driver / parent', 'إضافة طالب / سائق / ولي أمر')
+                  .of(context),
+              onTap: () => onJump(DashboardJumpTarget.people),
+            ),
+            _QuickActionChip(
+              icon: Icons.directions_bus_outlined,
+              label: const S('Add bus / route', 'إضافة أتوبيس / خط').of(context),
+              onTap: () => onJump(DashboardJumpTarget.operations),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  const _QuickActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.badge,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final int? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(color: colors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: colors.textSecondary),
+              const SizedBox(width: AppSpacing.sm),
+              Text(label, style: Theme.of(context).textTheme.labelLarge),
+              if (badge != null && badge! > 0) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: colors.warning,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$badge',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Real pending count — every student awaiting approval plus every driver/
+/// parent with `status == 'pending'`, from the same repositories (and the
+/// same 200-row ceiling) the People tab's own lists already use.
+class _PendingRequestsChip extends StatelessWidget {
+  const _PendingRequestsChip({required this.schoolId, required this.onJump});
+
+  final String schoolId;
+  final void Function(DashboardJumpTarget target) onJump;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: StudentsRepository().watchStudents(schoolId, limit: 300),
+      builder: (context, studentsSnapshot) {
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: DriversRepository().watchDrivers(schoolId, limit: 200),
+          builder: (context, driversSnapshot) {
+            return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: ParentsRepository().watchParents(schoolId, limit: 200),
+              builder: (context, parentsSnapshot) {
+                final pendingStudents = (studentsSnapshot.data?.docs ?? const [])
+                    .where((doc) => doc.data()['approved'] == false)
+                    .length;
+                final pendingDrivers = (driversSnapshot.data?.docs ?? const [])
+                    .where((doc) => doc.data()['status'] == 'pending')
+                    .length;
+                final pendingParents = (parentsSnapshot.data?.docs ?? const [])
+                    .where((doc) => doc.data()['status'] == 'pending')
+                    .length;
+                final total = pendingStudents + pendingDrivers + pendingParents;
+
+                return _QuickActionChip(
+                  icon: Icons.pending_actions_outlined,
+                  label: const S('Pending requests', 'الطلبات المعلّقة')
+                      .of(context),
+                  badge: total,
+                  onTap: () => onJump(DashboardJumpTarget.people),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

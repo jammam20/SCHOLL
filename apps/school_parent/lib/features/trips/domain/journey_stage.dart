@@ -21,6 +21,12 @@ enum JourneyStage {
   boarded,
   continuingToSchool,
   arrivedAtSchool,
+  // Feature: two daily trips / unified child transportation status. A
+  // return trip's meaningful per-child milestone is being handed off at
+  // their own drop-off point, not a shared "arrived at school" moment —
+  // see computeJourneyStage's TripDirection.returnTrip branch. Never
+  // emitted for an outbound trip.
+  droppedOff,
   completed,
   paused,
   emergency,
@@ -41,6 +47,26 @@ const mainJourneyPath = [
   JourneyStage.continuingToSchool,
   JourneyStage.arrivedAtSchool,
   JourneyStage.completed,
+];
+
+/// The return-trip equivalent of [mainJourneyPath] (Feature: two daily
+/// trips). Deliberately shorter and in a different order than the outbound
+/// path — a return trip's students are already aboard when it leaves the
+/// school (there is no shared "arrived" moment to walk toward; each child's
+/// own drop-off is the destination), so "boarded" isn't a step worth
+/// showing here and [JourneyStage.droppedOff] replaces "arrived at
+/// school"/"completed" as the meaningful last step. Reuses the *same*
+/// enum values as the shared early positions (started/onTheWay/
+/// approachingPickup/arrivedAtPickup) since the underlying distance-based
+/// computation is identical — only the on-screen wording differs, per
+/// direction, in journey_stage_visuals.dart.
+const returnJourneyPath = [
+  JourneyStage.scheduled,
+  JourneyStage.started,
+  JourneyStage.onTheWay,
+  JourneyStage.approachingPickup,
+  JourneyStage.arrivedAtPickup,
+  JourneyStage.droppedOff,
 ];
 
 /// A bus is considered "at" a point once within this many meters — mirrors
@@ -69,6 +95,8 @@ class JourneyInputs {
     this.distanceToSchoolMeters,
     this.now,
     this.scheduledAt,
+    this.direction = TripDirection.outbound,
+    this.isDroppedOff = false,
   });
 
   final TripStatus? tripStatus;
@@ -77,6 +105,14 @@ class JourneyInputs {
   final double? distanceToSchoolMeters;
   final DateTime? now;
   final DateTime? scheduledAt;
+
+  // Feature: two daily trips / unified child transportation status.
+  final TripDirection direction;
+
+  // From TripStopProgress.isDroppedOff(studentId) — only meaningful for a
+  // return trip; ignored for outbound, where drop-off is the shared
+  // "arrived at school" moment instead of a per-child event.
+  final bool isDroppedOff;
 }
 
 /// The single source of truth for "where is this child's journey right
@@ -105,6 +141,27 @@ JourneyStage computeJourneyStage(JourneyInputs input) {
     case TripStatus.starting:
       return JourneyStage.started;
     case TripStatus.active:
+      if (input.direction == TripDirection.returnTrip) {
+        // A return trip's students board at the school before it departs —
+        // there is no live "approaching the pickup" moment for that, so
+        // boarding isn't rendered as a step (see returnJourneyPath). The
+        // one per-child event worth tracking is being dropped off at their
+        // own point, which distanceToPickupMeters already measures
+        // correctly (it's always "distance from the bus to this student's
+        // own location", pickup or drop-off alike).
+        if (input.isDroppedOff) return JourneyStage.droppedOff;
+
+        final toDropoff = input.distanceToPickupMeters;
+        if (toDropoff == null) return JourneyStage.started;
+        if (toDropoff <= arrivedProximityMeters) {
+          return JourneyStage.arrivedAtPickup;
+        }
+        if (toDropoff <= approachingProximityMeters) {
+          return JourneyStage.approachingPickup;
+        }
+        return JourneyStage.onTheWay;
+      }
+
       if (input.hasBoarded) {
         final toSchool = input.distanceToSchoolMeters;
         if (toSchool != null && toSchool <= arrivedProximityMeters) {
@@ -153,6 +210,8 @@ int reachedStepCount(JourneyStage stage, {required bool hasBoarded}) {
       return 7;
     case JourneyStage.arrivedAtSchool:
       return 8;
+    case JourneyStage.droppedOff:
+      return returnJourneyPath.length;
     case JourneyStage.completed:
       return 9;
     case JourneyStage.paused:

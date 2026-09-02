@@ -20,8 +20,10 @@ import '../../messages/data/parent_messages_repository.dart';
 import '../../messages/presentation/parent_messages_page.dart';
 import '../../ops/presentation/live_ops_tab.dart';
 import '../../pickup_points/presentation/pickup_points_page.dart';
+import '../../driver_management/presentation/driver_detail_page.dart';
 import '../../parents/data/parents_repository.dart';
 import '../../parents/presentation/bloc/parents_bloc.dart';
+import '../../parents/presentation/parent_detail_page.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../reports/presentation/reports_tab.dart';
 import '../../routes/data/routes_repository.dart';
@@ -30,11 +32,13 @@ import '../../routes/presentation/route_deviations_page.dart';
 import '../../schools/data/schools_repository.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/bloc/students_bloc.dart';
+import '../../students/presentation/student_detail_page.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
 import '../../trips/presentation/trip_reassignment_dialog.dart';
 import '../../vehicles/presentation/vehicle_management_page.dart';
 import '../../../widgets/async_error_view.dart';
+import '../../../widgets/pending_approval_card.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key, required this.user, required this.onSignOut});
@@ -97,6 +101,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 RouteDeviationsPage(schoolId: widget.user.schoolId),
           ),
         );
+      case DashboardJumpTarget.people:
+        setState(() => _index = 1);
+      case DashboardJumpTarget.operations:
+        setState(() => _index = 2);
     }
   }
 
@@ -413,6 +421,53 @@ String _memberStatusLabel(BuildContext context, String status) {
   }
 }
 
+/// Feature: unified accept/reject UI. Shared by the driver and parent
+/// directory rows' "more actions" menu — a suspend/reject on an already-
+/// approved member now asks for confirmation (and, for reject, a reason)
+/// the same way the fresh-pending PendingApprovalCard does, instead of
+/// firing straight off a menu tap.
+Future<void> _handleMemberAction(
+  BuildContext context, {
+  required String value,
+  required String name,
+  required void Function(String? reason) onSuspend,
+  required void Function(String? reason) onReject,
+}) async {
+  if (value != 'suspend' && value != 'reject') return;
+  final isReject = value == 'reject';
+  final reasonController = TextEditingController();
+  final confirmed = await showAppConfirmDialog(
+    context,
+    title: isReject
+        ? S('Reject $name?', 'رفض $name؟').of(context)
+        : S('Suspend $name?', 'إيقاف $name؟').of(context),
+    message: isReject
+        ? const S(
+            'They will lose access immediately.',
+            'هيفقد الوصول فوراً.',
+          ).of(context)
+        : const S(
+            'They can be re-approved later.',
+            'ممكن تتوافق عليه تاني بعدين.',
+          ).of(context),
+    confirmLabel: isReject
+        ? const S('Reject', 'رفض').of(context)
+        : const S('Suspend', 'إيقاف').of(context),
+    destructive: true,
+    reasonController: reasonController,
+    reasonHint: const S('Reason (visible in the audit log)', 'السبب (يظهر في سجل التدقيق)')
+        .of(context),
+  );
+  final reason = reasonController.text.trim();
+  reasonController.dispose();
+  if (confirmed != true) return;
+  if (isReject) {
+    onReject(reason.isEmpty ? null : reason);
+  } else {
+    onSuspend(reason.isEmpty ? null : reason);
+  }
+}
+
 class _StudentsTab extends StatelessWidget {
   const _StudentsTab({required this.schoolId});
 
@@ -511,85 +566,55 @@ class _StudentsTab extends StatelessWidget {
                           'ar';
 
                       if (!approved) {
-                        return Card(
+                        final studentName = data['name']?.toString() ?? '';
+                        final bloc = context.read<StudentsBloc>();
+                        return Padding(
                           key: ValueKey(doc.id),
-                          color: colors.warning.withValues(alpha: 0.08),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.sm,
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: colors.warning.withValues(
-                                    alpha: 0.16,
-                                  ),
-                                  child: Icon(
-                                    Icons.hourglass_top,
-                                    color: colors.warning,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.md),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        data['name']?.toString() ?? '',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleSmall,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      StatusBadge(
-                                        tone: StatusTone.warning,
-                                        label: const S(
-                                          'Awaiting approval',
-                                          'في انتظار الموافقة',
-                                        ).of(context),
-                                      ),
-                                    ],
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: PendingApprovalCard(
+                            icon: Icons.hourglass_top,
+                            title: studentName,
+                            subtitle: const S(
+                              'Awaiting approval',
+                              'في انتظار الموافقة',
+                            ).of(context),
+                            actions: [
+                              ApprovalAction(
+                                label: const S('Approve', 'موافقة').of(context),
+                                icon: Icons.check_circle_outline,
+                                onConfirmed: (_) async => bloc.add(
+                                  StudentApproved(
+                                    schoolId: schoolId,
+                                    studentId: doc.id,
                                   ),
                                 ),
-                                IconButton(
-                                  tooltip: const S(
-                                    'Approve',
-                                    'موافقة',
-                                  ).of(context),
-                                  icon: Icon(
-                                    Icons.check_circle,
-                                    color: colors.success,
+                              ),
+                              ApprovalAction(
+                                label: const S('Reject', 'رفض').of(context),
+                                icon: Icons.cancel_outlined,
+                                destructive: true,
+                                requiresReason: true,
+                                confirmTitle: const S(
+                                  'Reject this student?',
+                                  'رفض الطالب ده؟',
+                                ).of(context),
+                                confirmMessage: const S(
+                                  "This removes the parent's request — it "
+                                      'was never visible to anyone but '
+                                      'them.',
+                                  'ده هيمسح طلب ولي الأمر — كان مش ظاهر لحد '
+                                      'غيره.',
+                                ).of(context),
+                                onConfirmed: (reason) async => bloc.add(
+                                  StudentRejected(
+                                    schoolId: schoolId,
+                                    studentId: doc.id,
+                                    studentName: studentName,
+                                    reason: reason,
                                   ),
-                                  onPressed: () => context
-                                      .read<StudentsBloc>()
-                                      .add(
-                                        StudentApproved(
-                                          schoolId: schoolId,
-                                          studentId: doc.id,
-                                        ),
-                                      ),
                                 ),
-                                IconButton(
-                                  tooltip: const S('Reject', 'رفض').of(
-                                    context,
-                                  ),
-                                  icon: Icon(
-                                    Icons.cancel,
-                                    color: colors.error,
-                                  ),
-                                  onPressed: () => context
-                                      .read<StudentsBloc>()
-                                      .add(
-                                        StudentRejected(
-                                          schoolId: schoolId,
-                                          studentId: doc.id,
-                                        ),
-                                      ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         );
                       }
@@ -598,7 +623,21 @@ class _StudentsTab extends StatelessWidget {
 
                       return Card(
                         key: ValueKey(doc.id),
-                        child: Padding(
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          // Feature: card -> details -> management — tapping
+                          // anywhere on the row (not just the manage icon)
+                          // opens the unified student profile.
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentDetailPage(
+                                schoolId: schoolId,
+                                studentId: doc.id,
+                              ),
+                            ),
+                          ),
+                          child: Padding(
                           padding: const EdgeInsetsDirectional.fromSTEB(
                             AppSpacing.lg,
                             AppSpacing.sm,
@@ -701,6 +740,7 @@ class _StudentsTab extends StatelessWidget {
                             ],
                           ),
                         ),
+                        ),
                       );
                     },
                   );
@@ -708,6 +748,13 @@ class _StudentsTab extends StatelessWidget {
 
           return Scaffold(
             floatingActionButton: FloatingActionButton.extended(
+              // The People/Operations tab hosts keep every sub-tab mounted
+              // at once (TabBarView, like the parent app's IndexedStack
+              // shell — see that fix's own comment), so each of this
+              // section's FABs needs its own tag or they collide on
+              // Flutter's shared default the moment more than one tab has
+              // ever been visited.
+              heroTag: 'students-add-fab',
               onPressed: () => _createStudent(context),
               icon: const Icon(Icons.add),
               label: Text(const S('Student', 'طالب').of(context)),
@@ -910,30 +957,10 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
       widget.pendingLatitude != null && widget.pendingLongitude != null;
   String? _parentToAdd;
 
+  // The confirm dialog itself is now PendingApprovalCard's job (see the
+  // ApprovalAction list below) — this only performs the actual accept/
+  // reject once that's already been confirmed.
   Future<void> _resolveLocationRequest({required bool accept}) async {
-    final confirmed = await showAppConfirmDialog(
-      context,
-      title: accept
-          ? const S('Accept this location?', 'قبول الموقع ده؟').of(context)
-          : const S('Reject this suggestion?', 'رفض الاقتراح ده؟').of(context),
-      message: accept
-          ? const S(
-              "This becomes the student's official pickup point.",
-              'ده هيبقى نقطة الاستلام الرسمية للطالب.',
-            ).of(context)
-          : const S(
-              "The parent's suggested location will be dismissed — the "
-                  'official pickup point (if any) stays unchanged.',
-              'الموقع المقترح من ولي الأمر هيتشال — نقطة الاستلام الرسمية '
-                  '(لو موجودة) هتفضل زي ما هي.',
-            ).of(context),
-      confirmLabel: accept
-          ? const S('Accept', 'قبول').of(context)
-          : const S('Reject', 'رفض').of(context),
-      destructive: !accept,
-    );
-    if (confirmed != true) return;
-
     if (accept) {
       widget.onLocationRequestAccepted?.call(
         widget.pendingLatitude!,
@@ -982,9 +1009,30 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                   if (snapshot.hasError) {
                     return const AsyncErrorView(compact: true);
                   }
-                  final routes = snapshot.data?.docs ?? const [];
+                  // Wait for the real route list before ever building the
+                  // dropdown: DropdownButtonFormField only reads
+                  // `initialValue` on its very first build (a later
+                  // rebuild with a *different* initialValue does NOT
+                  // retroactively update the shown selection — this is a
+                  // known Flutter quirk, not a bug in the widget below).
+                  // Building it once, before the stream has emitted, with
+                  // `_routeId` set to an id the (still-empty) items list
+                  // doesn't contain yet is exactly what threw "There
+                  // should be exactly one item with [DropdownButton]'s
+                  // value" — and building it a second time with the real
+                  // data wouldn't have fixed the already-locked-in
+                  // selection anyway.
+                  if (!snapshot.hasData) {
+                    return const LinearProgressIndicator();
+                  }
+                  final routes = snapshot.data!.docs;
+                  final routeIds = routes.map((doc) => doc.id).toSet();
                   return DropdownButtonFormField<String?>(
-                    initialValue: _routeId,
+                    // A student's routeId can point at a route that no
+                    // longer exists (deleted after assignment) — falling
+                    // back to null here is what the same assertion would
+                    // otherwise catch permanently, not just on first load.
+                    initialValue: routeIds.contains(_routeId) ? _routeId : null,
                     decoration: InputDecoration(
                       labelText: const S(
                         'Assigned route',
@@ -1022,60 +1070,57 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                   ).of(context),
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: context.appColors.info.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(
-                      color: context.appColors.info.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Directionality(
-                        textDirection: ui.TextDirection.ltr,
-                        child: Text(
-                          _latitude == null
-                              ? 'No current pickup point'
-                              : 'Current: ${_latitude!.toStringAsFixed(5)}, '
-                                    '${_longitude!.toStringAsFixed(5)}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Directionality(
-                        textDirection: ui.TextDirection.ltr,
-                        child: Text(
-                          'Requested: '
+                // Feature: unified accept/reject UI — the same
+                // PendingApprovalCard used for student/driver/parent
+                // approval.
+                Directionality(
+                  textDirection: ui.TextDirection.ltr,
+                  child: Builder(
+                    builder: (context) => PendingApprovalCard(
+                      icon: Icons.location_on_outlined,
+                      title: _latitude == null
+                          ? 'No current pickup point'
+                          : 'Current: ${_latitude!.toStringAsFixed(5)}, '
+                                '${_longitude!.toStringAsFixed(5)}',
+                      subtitle: 'Requested: '
                           '${widget.pendingLatitude!.toStringAsFixed(5)}, '
                           '${widget.pendingLongitude!.toStringAsFixed(5)}',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                      tone: StatusTone.info,
+                      actions: [
+                        ApprovalAction(
+                          label: const S('Reject', 'رفض').of(context),
+                          icon: Icons.cancel_outlined,
+                          destructive: true,
+                          confirmTitle: const S(
+                            'Reject this suggestion?',
+                            'رفض الاقتراح ده؟',
+                          ).of(context),
+                          confirmMessage: const S(
+                            "The parent's suggested location will be "
+                                'dismissed — the official pickup point (if '
+                                'any) stays unchanged.',
+                            'الموقع المقترح من ولي الأمر هيتشال — نقطة '
+                                'الاستلام الرسمية (لو موجودة) هتفضل زي ما '
+                                'هي.',
+                          ).of(context),
+                          onConfirmed: (_) => _resolveLocationRequest(accept: false),
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppButton.destructive(
-                              label: const S('Reject', 'رفض').of(context),
-                              onPressed: () =>
-                                  _resolveLocationRequest(accept: false),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: AppButton.primary(
-                              label: const S('Accept', 'قبول').of(context),
-                              onPressed: () =>
-                                  _resolveLocationRequest(accept: true),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ApprovalAction(
+                          label: const S('Accept', 'قبول').of(context),
+                          icon: Icons.check_circle_outline,
+                          confirmTitle: const S(
+                            'Accept this location?',
+                            'قبول الموقع ده؟',
+                          ).of(context),
+                          confirmMessage: const S(
+                            "This becomes the student's official pickup "
+                                'point.',
+                            'ده هيبقى نقطة الاستلام الرسمية للطالب.',
+                          ).of(context),
+                          onConfirmed: (_) => _resolveLocationRequest(accept: true),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -1336,16 +1381,74 @@ class _DriversTab extends StatelessWidget {
                       final doc = docs[index];
                       final data = doc.data();
                       final status = data['status']?.toString() ?? 'pending';
+                      final name = data['displayName']?.toString() ??
+                          data['name']?.toString() ??
+                          doc.id;
+
+                      // Feature: unified accept/reject UI — a driver
+                      // awaiting review gets the same PendingApprovalCard
+                      // shape (with a confirm dialog, and a required reason
+                      // on reject) that student approval and location
+                      // requests use, instead of a bare menu tap with no
+                      // confirmation at all.
+                      if (status == 'pending') {
+                        final bloc = context.read<DriversBloc>();
+                        return Padding(
+                          key: ValueKey(doc.id),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: PendingApprovalCard(
+                            icon: Icons.badge_outlined,
+                            title: name,
+                            subtitle: const S(
+                              'Awaiting approval to join as a driver',
+                              'في انتظار الموافقة على الانضمام كسائق',
+                            ).of(context),
+                            actions: [
+                              ApprovalAction(
+                                label: const S('Approve', 'موافقة').of(context),
+                                icon: Icons.check_circle_outline,
+                                onConfirmed: (_) async =>
+                                    bloc.add(DriverApproved(schoolId, doc.id)),
+                              ),
+                              ApprovalAction(
+                                label: const S('Reject', 'رفض').of(context),
+                                icon: Icons.cancel_outlined,
+                                destructive: true,
+                                requiresReason: true,
+                                confirmTitle: const S(
+                                  'Reject this driver?',
+                                  'رفض السائق ده؟',
+                                ).of(context),
+                                confirmMessage: const S(
+                                  'They will not be able to sign in as a '
+                                      'driver at your school.',
+                                  'مش هيقدر يسجل دخول كسائق في مدرستك.',
+                                ).of(context),
+                                onConfirmed: (reason) async => bloc.add(
+                                  DriverRejected(schoolId, doc.id, reason: reason),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
                       return Card(
                         key: ValueKey(doc.id),
                         child: ListTile(
-                          leading: const CircleAvatar(child: Icon(Icons.badge)),
-                          title: Text(
-                            data['displayName']?.toString() ??
-                                data['name']?.toString() ??
-                                doc.id,
+                          // Feature: card -> details -> management.
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DriverDetailPage(
+                                schoolId: schoolId,
+                                uid: doc.id,
+                                displayName: name,
+                              ),
+                            ),
                           ),
+                          leading: const CircleAvatar(child: Icon(Icons.badge)),
+                          title: Text(name),
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: StatusBadge(
@@ -1358,27 +1461,18 @@ class _DriversTab extends StatelessWidget {
                               'More actions',
                               'إجراءات إضافية',
                             ).of(context),
-                            onSelected: (value) {
-                              final bloc = context.read<DriversBloc>();
-                              if (value == 'approve') {
-                                bloc.add(DriverApproved(schoolId, doc.id));
-                              } else if (value == 'suspend') {
-                                bloc.add(DriverSuspended(schoolId, doc.id));
-                              } else if (value == 'reject') {
-                                bloc.add(DriverRejected(schoolId, doc.id));
-                              }
-                            },
+                            onSelected: (value) => _handleMemberAction(
+                              context,
+                              value: value,
+                              name: name,
+                              onSuspend: (reason) => context
+                                  .read<DriversBloc>()
+                                  .add(DriverSuspended(schoolId, doc.id, reason: reason)),
+                              onReject: (reason) => context
+                                  .read<DriversBloc>()
+                                  .add(DriverRejected(schoolId, doc.id, reason: reason)),
+                            ),
                             itemBuilder: (menuContext) => [
-                              PopupMenuItem(
-                                value: 'approve',
-                                child: _MemberActionMenuRow(
-                                  icon: Icons.check_circle_outline,
-                                  color: menuContext.appColors.success,
-                                  label: const S('Approve', 'موافقة').of(
-                                    menuContext,
-                                  ),
-                                ),
-                              ),
                               PopupMenuItem(
                                 value: 'suspend',
                                 child: _MemberActionMenuRow(
@@ -1489,16 +1583,69 @@ class _ParentsTab extends StatelessWidget {
                       final doc = docs[index];
                       final data = doc.data();
                       final status = data['status']?.toString() ?? 'pending';
+                      final name = data['displayName']?.toString() ??
+                          data['name']?.toString() ??
+                          doc.id;
+
+                      // Feature: unified accept/reject UI — see the same
+                      // treatment in _DriversTab above.
+                      if (status == 'pending') {
+                        final bloc = context.read<ParentsBloc>();
+                        return Padding(
+                          key: ValueKey(doc.id),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: PendingApprovalCard(
+                            icon: Icons.person_outline,
+                            title: name,
+                            subtitle: const S(
+                              'Awaiting approval to join as a parent',
+                              'في انتظار الموافقة على الانضمام كولي أمر',
+                            ).of(context),
+                            actions: [
+                              ApprovalAction(
+                                label: const S('Approve', 'موافقة').of(context),
+                                icon: Icons.check_circle_outline,
+                                onConfirmed: (_) async =>
+                                    bloc.add(ParentApproved(schoolId, doc.id)),
+                              ),
+                              ApprovalAction(
+                                label: const S('Reject', 'رفض').of(context),
+                                icon: Icons.cancel_outlined,
+                                destructive: true,
+                                requiresReason: true,
+                                confirmTitle: const S(
+                                  'Reject this parent?',
+                                  'رفض ولي الأمر ده؟',
+                                ).of(context),
+                                confirmMessage: const S(
+                                  'They will not be able to sign in at your '
+                                      'school.',
+                                  'مش هيقدر يسجل دخول في مدرستك.',
+                                ).of(context),
+                                onConfirmed: (reason) async => bloc.add(
+                                  ParentRejected(schoolId, doc.id, reason: reason),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
                       return Card(
                         key: ValueKey(doc.id),
                         child: ListTile(
-                          leading: const CircleAvatar(child: Icon(Icons.person)),
-                          title: Text(
-                            data['displayName']?.toString() ??
-                                data['name']?.toString() ??
-                                doc.id,
+                          // Feature: card -> details -> management.
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ParentDetailPage(
+                                schoolId: schoolId,
+                                uid: doc.id,
+                              ),
+                            ),
                           ),
+                          leading: const CircleAvatar(child: Icon(Icons.person)),
+                          title: Text(name),
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: StatusBadge(
@@ -1511,27 +1658,18 @@ class _ParentsTab extends StatelessWidget {
                               'More actions',
                               'إجراءات إضافية',
                             ).of(context),
-                            onSelected: (value) {
-                              final bloc = context.read<ParentsBloc>();
-                              if (value == 'approve') {
-                                bloc.add(ParentApproved(schoolId, doc.id));
-                              } else if (value == 'suspend') {
-                                bloc.add(ParentSuspended(schoolId, doc.id));
-                              } else if (value == 'reject') {
-                                bloc.add(ParentRejected(schoolId, doc.id));
-                              }
-                            },
+                            onSelected: (value) => _handleMemberAction(
+                              context,
+                              value: value,
+                              name: name,
+                              onSuspend: (reason) => context
+                                  .read<ParentsBloc>()
+                                  .add(ParentSuspended(schoolId, doc.id, reason: reason)),
+                              onReject: (reason) => context
+                                  .read<ParentsBloc>()
+                                  .add(ParentRejected(schoolId, doc.id, reason: reason)),
+                            ),
                             itemBuilder: (menuContext) => [
-                              PopupMenuItem(
-                                value: 'approve',
-                                child: _MemberActionMenuRow(
-                                  icon: Icons.check_circle_outline,
-                                  color: menuContext.appColors.success,
-                                  label: const S('Approve', 'موافقة').of(
-                                    menuContext,
-                                  ),
-                                ),
-                              ),
                               PopupMenuItem(
                                 value: 'suspend',
                                 child: _MemberActionMenuRow(
@@ -1704,6 +1842,7 @@ class _RoutesTabContent extends StatelessWidget {
 
           return Scaffold(
             floatingActionButton: FloatingActionButton.extended(
+              heroTag: 'routes-add-fab',
               onPressed: () => _createRoute(context),
               icon: const Icon(Icons.add),
               label: Text(const S('Route', 'خط سير').of(context)),
@@ -2299,6 +2438,7 @@ class _TripsTab extends StatelessWidget {
 
           return Scaffold(
             floatingActionButton: FloatingActionButton.extended(
+              heroTag: 'trips-add-fab',
               onPressed: () => _createTrip(context),
               icon: const Icon(Icons.add),
               label: Text(const S('Trip', 'رحلة').of(context)),

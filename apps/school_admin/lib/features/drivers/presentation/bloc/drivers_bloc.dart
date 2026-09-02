@@ -22,15 +22,17 @@ class DriverApproved extends DriversEvent {
 }
 
 class DriverSuspended extends DriversEvent {
-  DriverSuspended(this.schoolId, this.uid);
+  DriverSuspended(this.schoolId, this.uid, {this.reason});
   final String schoolId;
   final String uid;
+  final String? reason;
 }
 
 class DriverRejected extends DriversEvent {
-  DriverRejected(this.schoolId, this.uid);
+  DriverRejected(this.schoolId, this.uid, {this.reason});
   final String schoolId;
   final String uid;
+  final String? reason;
 }
 
 class _DriversSnapshotReceived extends DriversEvent {
@@ -134,7 +136,11 @@ class DriversBloc extends Bloc<DriversEvent, DriversState> {
     Emitter<DriversState> emit,
   ) async {
     try {
-      await _repository.suspendDriver(schoolId: event.schoolId, uid: event.uid);
+      await _repository.suspendDriver(
+        schoolId: event.schoolId,
+        uid: event.uid,
+        reason: event.reason,
+      );
     } catch (e) {
       emit(DriversFailure(e.toString()));
     }
@@ -145,7 +151,11 @@ class DriversBloc extends Bloc<DriversEvent, DriversState> {
     Emitter<DriversState> emit,
   ) async {
     try {
-      await _repository.rejectDriver(schoolId: event.schoolId, uid: event.uid);
+      await _repository.rejectDriver(
+        schoolId: event.schoolId,
+        uid: event.uid,
+        reason: event.reason,
+      );
     } catch (e) {
       emit(DriversFailure(e.toString()));
     }

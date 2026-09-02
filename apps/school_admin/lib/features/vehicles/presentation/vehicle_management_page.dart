@@ -128,6 +128,11 @@ class _VehicleManagementView extends StatelessWidget {
           floatingActionButton: readOnly
               ? null
               : FloatingActionButton.extended(
+                  // See admin_home_page.dart's Students/Routes/Trips FABs
+                  // for why this needs its own tag — the same
+                  // TabBarView-keeps-every-tab-mounted reasoning applies
+                  // here too.
+                  heroTag: 'vehicles-add-fab',
                   onPressed: () => _createBus(context),
                   icon: const Icon(Icons.add),
                   label: Text(const S('Bus', 'أتوبيس').of(context)),

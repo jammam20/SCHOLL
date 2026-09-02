@@ -30,6 +30,7 @@ StatusTone stageTone(JourneyStage stage) => switch (stage) {
   JourneyStage.boarded => StatusTone.success,
   JourneyStage.continuingToSchool => StatusTone.info,
   JourneyStage.arrivedAtSchool => StatusTone.success,
+  JourneyStage.droppedOff => StatusTone.success,
   JourneyStage.completed => StatusTone.success,
   JourneyStage.paused => StatusTone.warning,
   JourneyStage.emergency => StatusTone.emergency,
@@ -50,6 +51,7 @@ IconData stageIcon(JourneyStage stage) => switch (stage) {
   JourneyStage.boarded => Icons.check_circle_rounded,
   JourneyStage.continuingToSchool => Icons.directions_bus_rounded,
   JourneyStage.arrivedAtSchool => Icons.school_rounded,
+  JourneyStage.droppedOff => Icons.home_rounded,
   JourneyStage.completed => Icons.task_alt_rounded,
   JourneyStage.paused => Icons.pause_circle_rounded,
   JourneyStage.emergency => Icons.warning_amber_rounded,
@@ -59,85 +61,129 @@ IconData stageIcon(JourneyStage stage) => switch (stage) {
 /// The short dot+label tag shown via [StatusBadge] — a compact system-wide
 /// status word, distinct from the fuller reassuring sentence in
 /// [stageHeadline].
-S stageBadgeLabel(JourneyStage stage) => switch (stage) {
-  JourneyStage.noActiveTrip => const S('Idle', 'مفيش رحلة'),
-  JourneyStage.scheduled => const S('Scheduled', 'مجدولة'),
-  JourneyStage.delayed => const S('Delayed', 'متأخرة'),
-  JourneyStage.started => const S('Starting', 'بدأت'),
-  JourneyStage.onTheWay => const S('En route', 'في الطريق'),
-  JourneyStage.approachingPickup => const S('Approaching', 'قريب من محطتك'),
-  JourneyStage.arrivedAtPickup => const S('Arrived at stop', 'وصل المحطة'),
-  JourneyStage.boarded => const S('Boarded', 'ركب الأتوبيس'),
-  JourneyStage.continuingToSchool => const S(
-    'En route to school',
-    'متجه للمدرسة',
-  ),
-  JourneyStage.arrivedAtSchool => const S('At school', 'في المدرسة'),
-  JourneyStage.completed => const S('Completed', 'اكتملت'),
-  JourneyStage.paused => const S('Paused', 'متوقفة مؤقتًا'),
-  JourneyStage.emergency => const S('Emergency', 'طوارئ'),
-  JourneyStage.cancelled => const S('Cancelled', 'ملغاة'),
-};
+///
+/// [direction] only changes the wording for the handful of stages the two
+/// trip directions actually share (started/onTheWay/approachingPickup/
+/// arrivedAtPickup — see returnJourneyPath's doc comment for why they're
+/// shared); every other stage reads identically either way. Defaults to
+/// outbound so existing call sites that haven't been threaded a real
+/// direction yet keep their exact previous wording.
+S stageBadgeLabel(JourneyStage stage, {TripDirection direction = TripDirection.outbound}) {
+  final isReturn = direction == TripDirection.returnTrip;
+  return switch (stage) {
+    JourneyStage.noActiveTrip => const S('Idle', 'مفيش رحلة'),
+    JourneyStage.scheduled => const S('Scheduled', 'مجدولة'),
+    JourneyStage.delayed => const S('Delayed', 'متأخرة'),
+    JourneyStage.started => isReturn
+        ? const S('Leaving school', 'طالع من المدرسة')
+        : const S('Starting', 'بدأت'),
+    JourneyStage.onTheWay => isReturn
+        ? const S('On the way home', 'في الطريق للبيت')
+        : const S('En route', 'في الطريق'),
+    JourneyStage.approachingPickup => isReturn
+        ? const S('Approaching home', 'قريب من البيت')
+        : const S('Approaching', 'قريب من محطتك'),
+    JourneyStage.arrivedAtPickup => isReturn
+        ? const S('Near home', 'وصل قريب من البيت')
+        : const S('Arrived at stop', 'وصل المحطة'),
+    JourneyStage.boarded => const S('Boarded', 'ركب الأتوبيس'),
+    JourneyStage.continuingToSchool => const S(
+      'En route to school',
+      'متجه للمدرسة',
+    ),
+    JourneyStage.arrivedAtSchool => const S('At school', 'في المدرسة'),
+    JourneyStage.droppedOff => const S('Dropped off', 'اتسلّم للبيت'),
+    JourneyStage.completed => const S('Completed', 'اكتملت'),
+    JourneyStage.paused => const S('Paused', 'متوقفة مؤقتًا'),
+    JourneyStage.emergency => const S('Emergency', 'طوارئ'),
+    JourneyStage.cancelled => const S('Cancelled', 'ملغاة'),
+  };
+}
 
 /// The full sentence a parent reads first — written as the answer to the
-/// question they opened the app to ask, not as a status string.
-S stageHeadline(JourneyStage stage, {required String studentName}) =>
-    switch (stage) {
-      JourneyStage.noActiveTrip => const S(
-        'No active trip',
-        'مفيش رحلة شغالة',
-      ),
-      JourneyStage.scheduled => const S('Trip scheduled', 'الرحلة متجدولة'),
-      JourneyStage.delayed => const S(
-        'Running late to start',
-        'متأخرة عن معادها',
-      ),
-      JourneyStage.started => const S('Trip starting…', 'الرحلة بتبدأ…'),
-      JourneyStage.onTheWay => const S(
-        'Bus is on the way',
-        'الأتوبيس في الطريق',
-      ),
-      JourneyStage.approachingPickup => const S(
-        'Bus is approaching your stop',
-        'الأتوبيس قرّب من محطتك',
-      ),
-      JourneyStage.arrivedAtPickup => const S(
-        'Bus has arrived at your stop',
-        'الأتوبيس وصل محطتك',
-      ),
-      JourneyStage.boarded => S(
-        '$studentName boarded the bus',
-        '$studentName ركب الأتوبيس',
-      ),
-      JourneyStage.continuingToSchool => S(
-        '$studentName is on the bus to school',
-        '$studentName في الأتوبيس متجه للمدرسة',
-      ),
-      JourneyStage.arrivedAtSchool => const S(
-        'Bus arrived at school',
-        'الأتوبيس وصل المدرسة',
-      ),
-      JourneyStage.completed => const S('Trip completed', 'الرحلة خلصت'),
-      JourneyStage.paused => const S(
-        'Trip paused',
-        'الرحلة متوقفة مؤقتًا',
-      ),
-      JourneyStage.emergency => const S(
-        'Emergency reported on this trip',
-        'اتبلّغ عن طوارئ في الرحلة دي',
-      ),
-      JourneyStage.cancelled => const S('Trip cancelled', 'الرحلة اتلغت'),
-    };
-
-/// Resolves a [StatusTone] to its concrete token color.
-Color toneColor(AppColorTokens colors, StatusTone tone) => switch (tone) {
-  StatusTone.success => colors.success,
-  StatusTone.warning => colors.warning,
-  StatusTone.error => colors.error,
-  StatusTone.info => colors.info,
-  StatusTone.emergency => colors.emergency,
-  StatusTone.neutral => colors.textMuted,
-};
+/// question they opened the app to ask, not as a status string. See
+/// [stageBadgeLabel] for why only some stages vary by [direction].
+S stageHeadline(
+  JourneyStage stage, {
+  required String studentName,
+  TripDirection direction = TripDirection.outbound,
+}) {
+  final isReturn = direction == TripDirection.returnTrip;
+  return switch (stage) {
+    JourneyStage.noActiveTrip => const S(
+      'No active trip',
+      'مفيش رحلة شغالة',
+    ),
+    JourneyStage.scheduled => isReturn
+        ? const S('Return trip scheduled', 'رحلة العودة متجدولة')
+        : const S('Trip scheduled', 'الرحلة متجدولة'),
+    JourneyStage.delayed => const S(
+      'Running late to start',
+      'متأخرة عن معادها',
+    ),
+    JourneyStage.started => isReturn
+        ? S(
+            '$studentName is boarding for the ride home',
+            '$studentName بيركب عشان يرجع البيت',
+          )
+        : const S('Trip starting…', 'الرحلة بتبدأ…'),
+    JourneyStage.onTheWay => isReturn
+        ? S(
+            '$studentName is on the bus home',
+            '$studentName في الأتوبيس رايح البيت',
+          )
+        : const S(
+            'Bus is on the way',
+            'الأتوبيس في الطريق',
+          ),
+    JourneyStage.approachingPickup => isReturn
+        ? const S(
+            'Bus is approaching home',
+            'الأتوبيس قرّب من البيت',
+          )
+        : const S(
+            'Bus is approaching your stop',
+            'الأتوبيس قرّب من محطتك',
+          ),
+    JourneyStage.arrivedAtPickup => isReturn
+        ? const S(
+            'Bus has arrived near home',
+            'الأتوبيس وصل قريب من البيت',
+          )
+        : const S(
+            'Bus has arrived at your stop',
+            'الأتوبيس وصل محطتك',
+          ),
+    JourneyStage.boarded => S(
+      '$studentName boarded the bus',
+      '$studentName ركب الأتوبيس',
+    ),
+    JourneyStage.continuingToSchool => S(
+      '$studentName is on the bus to school',
+      '$studentName في الأتوبيس متجه للمدرسة',
+    ),
+    JourneyStage.arrivedAtSchool => const S(
+      'Bus arrived at school',
+      'الأتوبيس وصل المدرسة',
+    ),
+    JourneyStage.droppedOff => S(
+      '$studentName was dropped off at home',
+      '$studentName اتسلّم في البيت',
+    ),
+    JourneyStage.completed => isReturn
+        ? const S('Return trip completed', 'رحلة العودة خلصت')
+        : const S('Trip completed', 'الرحلة خلصت'),
+    JourneyStage.paused => const S(
+      'Trip paused',
+      'الرحلة متوقفة مؤقتًا',
+    ),
+    JourneyStage.emergency => const S(
+      'Emergency reported on this trip',
+      'اتبلّغ عن طوارئ في الرحلة دي',
+    ),
+    JourneyStage.cancelled => const S('Trip cancelled', 'الرحلة اتلغت'),
+  };
+}
 
 /// True for the stages where a bus is actually out on the road for this
 /// child right now — i.e. where a live map is worth putting on screen and
@@ -152,6 +198,9 @@ bool stageIsLive(JourneyStage stage) => switch (stage) {
   JourneyStage.arrivedAtSchool ||
   JourneyStage.paused ||
   JourneyStage.emergency => true,
+  // Not "live" — the trip may still be active for other students, but
+  // this child's own journey is already over, same as arrivedAtSchool.
+  JourneyStage.droppedOff ||
   JourneyStage.noActiveTrip ||
   JourneyStage.scheduled ||
   JourneyStage.delayed ||

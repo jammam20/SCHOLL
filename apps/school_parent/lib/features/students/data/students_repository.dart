@@ -3,12 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/analytics.dart';
+import 'audit_log_repository.dart';
 
 class StudentsRepository {
-  StudentsRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  StudentsRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> _students(String schoolId) {
     return _firestore
@@ -164,13 +167,24 @@ class StudentsRepository {
     required String studentId,
     required double latitude,
     required double longitude,
-  }) {
-    return _students(schoolId).doc(studentId).update({
+  }) async {
+    await _students(schoolId).doc(studentId).update({
       'pendingLatitude': latitude,
       'pendingLongitude': longitude,
       'pendingLocationRequestedAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    // Feature: activity timeline — the admin's per-student detail view
+    // reads this same auditLog collection, so a parent's own submission
+    // shows up right alongside the accept/reject it led to.
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.studentLocationRequestSubmitted,
+      entityType: 'student',
+      entityId: studentId,
+      studentId: studentId,
+      metadata: {'latitude': latitude, 'longitude': longitude},
+    );
   }
 
   /// A collision-free id for a newly added [AuthorizedPickupPerson].

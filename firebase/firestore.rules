@@ -256,9 +256,13 @@ service cloud.firestore {
         // flipping `status`/`isActive` directly — restricted to just those
         // two fields (plus updatedAt) so an update can't also smuggle in a
         // role change or reassign the doc to a different school.
+        // Feature: unified accept/reject UI — `rejectionReason` records why
+        // a suspend/reject happened (shown back in the member's own
+        // approval history); added to this same allow-list rather than a
+        // new rule, since it's still the identical admin-triage action.
         allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
             request.resource.data.diff(resource.data).affectedKeys()
-                .hasOnly(['status', 'isActive', 'updatedAt']);
+                .hasOnly(['status', 'isActive', 'updatedAt', 'rejectionReason']);
         // A member updates their own denormalized display name (kept in
         // sync with users/{uid}.name by ProfileRepository) — restricted to
         // just that field so it can't also touch status/role/schoolId.

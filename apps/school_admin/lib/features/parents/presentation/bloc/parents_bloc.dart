@@ -22,15 +22,17 @@ class ParentApproved extends ParentsEvent {
 }
 
 class ParentSuspended extends ParentsEvent {
-  ParentSuspended(this.schoolId, this.uid);
+  ParentSuspended(this.schoolId, this.uid, {this.reason});
   final String schoolId;
   final String uid;
+  final String? reason;
 }
 
 class ParentRejected extends ParentsEvent {
-  ParentRejected(this.schoolId, this.uid);
+  ParentRejected(this.schoolId, this.uid, {this.reason});
   final String schoolId;
   final String uid;
+  final String? reason;
 }
 
 class _ParentsSnapshotReceived extends ParentsEvent {
@@ -134,7 +136,11 @@ class ParentsBloc extends Bloc<ParentsEvent, ParentsState> {
     Emitter<ParentsState> emit,
   ) async {
     try {
-      await _repository.suspendParent(schoolId: event.schoolId, uid: event.uid);
+      await _repository.suspendParent(
+        schoolId: event.schoolId,
+        uid: event.uid,
+        reason: event.reason,
+      );
     } catch (e) {
       emit(ParentsFailure(e.toString()));
     }
@@ -145,7 +151,11 @@ class ParentsBloc extends Bloc<ParentsEvent, ParentsState> {
     Emitter<ParentsState> emit,
   ) async {
     try {
-      await _repository.rejectParent(schoolId: event.schoolId, uid: event.uid);
+      await _repository.rejectParent(
+        schoolId: event.schoolId,
+        uid: event.uid,
+        reason: event.reason,
+      );
     } catch (e) {
       emit(ParentsFailure(e.toString()));
     }

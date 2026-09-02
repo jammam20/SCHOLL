@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../widgets/parent_ui.dart';
 import '../../trips/data/trips_repository.dart';
 import '../data/parent_requests_repository.dart';
 

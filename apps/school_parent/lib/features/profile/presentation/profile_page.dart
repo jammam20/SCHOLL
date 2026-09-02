@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
-import '../../../widgets/parent_ui.dart';
 import '../../legal/presentation/legal_page.dart';
 import '../../messages/presentation/parent_requests_page.dart';
 import '../../settings/presentation/notification_settings_page.dart';

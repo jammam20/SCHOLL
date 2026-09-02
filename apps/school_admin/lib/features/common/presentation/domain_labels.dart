@@ -146,6 +146,14 @@ String auditActionLabel(String action, BuildContext context) =>
         const S('Inspection completed', 'اكتمل الفحص').of(context),
       AuditActions.inspectionFailed =>
         const S('Inspection failed', 'فشل الفحص').of(context),
+      AuditActions.studentLocationRequestSubmitted =>
+        const S('Location request submitted', 'تم إرسال طلب الموقع').of(context),
+      AuditActions.studentLocationRequestAccepted =>
+        const S('Location request accepted', 'تم قبول طلب الموقع').of(context),
+      AuditActions.studentLocationRequestRejected =>
+        const S('Location request rejected', 'تم رفض طلب الموقع').of(context),
+      AuditActions.studentRequestRejected =>
+        const S('Student request rejected', 'تم رفض طلب الطالب').of(context),
       _ => action.replaceAll('_', ' '),
     };
 
@@ -164,7 +172,10 @@ StatusTone auditActionTone(String action) => switch (action) {
   AuditActions.inspectionCompleted => StatusTone.success,
   AuditActions.busReassigned ||
   AuditActions.driverReassigned ||
-  AuditActions.incidentAcknowledged => StatusTone.info,
+  AuditActions.incidentAcknowledged ||
+  AuditActions.studentLocationRequestAccepted => StatusTone.info,
+  AuditActions.studentLocationRequestRejected ||
+  AuditActions.studentRequestRejected => StatusTone.warning,
   _ => StatusTone.neutral,
 };
 
@@ -180,17 +191,43 @@ String reassignmentTypeLabel(ReassignmentType type, BuildContext context) =>
         const S('Stop skipped', 'تم تخطي محطة').of(context),
     };
 
-/// Maps a [StatusTone] onto its token color. A copy of the same helper
-/// admin_home_page.dart already keeps private to itself — exposed here so
-/// the new standalone feature pages don't each re-derive it.
-Color toneColor(AppColorTokens colors, StatusTone tone) => switch (tone) {
-  StatusTone.success => colors.success,
-  StatusTone.warning => colors.warning,
-  StatusTone.error => colors.error,
-  StatusTone.info => colors.info,
-  StatusTone.emergency => colors.emergency,
-  StatusTone.neutral => colors.textMuted,
-};
+/// Maps a member's stored `status` string (drivers/parents — `pending` /
+/// `approved` / `suspended` / `rejected`, see `DriversRepository` /
+/// `ParentsRepository`) onto the one shared status pattern used everywhere
+/// else in the product, per `design-system/MASTER.md` §2/§8. Promoted out
+/// of `admin_home_page.dart` (where it was private) so DriverDetailPage
+/// can show the exact same status badge without a second copy.
+StatusTone memberStatusTone(String status) {
+  switch (status) {
+    case 'approved':
+      return StatusTone.success;
+    case 'suspended':
+    case 'rejected':
+      return StatusTone.error;
+    case 'pending':
+    default:
+      return StatusTone.warning;
+  }
+}
+
+String memberStatusLabel(BuildContext context, String status) {
+  switch (status) {
+    case 'approved':
+      return const S('Approved', 'مقبول').of(context);
+    case 'suspended':
+      return const S('Suspended', 'موقوف').of(context);
+    case 'rejected':
+      return const S('Rejected', 'مرفوض').of(context);
+    case 'pending':
+    default:
+      return const S('Pending', 'قيد الانتظار').of(context);
+  }
+}
+
+// toneColor(AppColorTokens, StatusTone) moved to
+// packages/school_shared/lib/src/design/components/status_badge.dart —
+// every call site here already imports school_shared.dart, so nothing
+// needed to change beyond removing this now-duplicate definition.
 
 /// "in 6 days" / "3 days overdue" / "today", for every due-date the
 /// vehicle and driver management screens surface. Deliberately whole-day

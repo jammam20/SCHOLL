@@ -20,11 +20,28 @@ const _stepLabels = [
   S('Trip completed', 'الرحلة خلصت'),
 ];
 
+/// The return-trip equivalent of [_stepLabels] — see returnJourneyPath's
+/// doc comment for why this is shorter and in a different order (boarding
+/// happens before departure, so the meaningful last step is drop-off, not
+/// a shared "arrived" moment).
+const _returnStepLabels = [
+  S('Return trip scheduled', 'رحلة العودة متجدولة'),
+  S('Leaving school', 'طالع من المدرسة'),
+  S('Bus is on the way home', 'الأتوبيس في الطريق للبيت'),
+  S('Bus approaching home', 'الأتوبيس قرّب من البيت'),
+  S('Bus arrived near home', 'الأتوبيس وصل قريب من البيت'),
+  S('Dropped off at home', 'اتسلّم في البيت'),
+];
+
 /// The index in [_stepLabels] of the step that *is* this child's own stop —
 /// the one place where "stop N of M" from the real stop order belongs.
+/// Coincidentally the same index in [_returnStepLabels] ("arrived near
+/// home") — both are the 5th step of their respective paths.
 const _ownStopStepIndex = 4;
 
 /// The index of the school's arrival step — the trip's fixed final stop.
+/// Outbound only: a return trip starts at the school rather than arriving
+/// at it, so this detail never applies there.
 const _schoolStepIndex = 7;
 
 /// How far along today's trip is, step by step, for one child.
@@ -47,12 +64,14 @@ class JourneyTimeline extends StatelessWidget {
     super.key,
     required this.stage,
     required this.hasBoarded,
+    this.direction = TripDirection.outbound,
     this.stopNumber,
     this.totalStops,
   });
 
   final JourneyStage stage;
   final bool hasBoarded;
+  final TripDirection direction;
 
   /// This child's 1-based position in the trip's full stop order, or null
   /// when the driver hasn't computed today's order yet (or this child
@@ -66,9 +85,14 @@ class JourneyTimeline extends StatelessWidget {
   bool get _hasStopPosition =>
       stopNumber != null && totalStops != null && totalStops! > 0;
 
+  bool get _isReturn => direction == TripDirection.returnTrip;
+
+  List<S> get _labels => _isReturn ? _returnStepLabels : _stepLabels;
+
   @override
   Widget build(BuildContext context) {
     final reached = reachedStepCount(stage, hasBoarded: hasBoarded);
+    final labels = _labels;
     final tone = stageTone(stage);
     final accent = toneColor(context.appColors, tone);
     final isCancelled = stage == JourneyStage.cancelled;
@@ -89,17 +113,17 @@ class JourneyTimeline extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < _stepLabels.length; i++)
+        for (var i = 0; i < labels.length; i++)
           _TimelineStep(
             index: i,
-            label: _stepLabels[i].of(context),
+            label: labels[i].of(context),
             detail: _detailFor(context, i),
             state: stateFor(i),
             // The connector below a step is "travelled" once that step
             // itself is behind us — so the filled line runs right up to
             // the current node and stops there, never past it.
             connectorDone: i < reached,
-            isLast: i == _stepLabels.length - 1,
+            isLast: i == labels.length - 1,
             accent: accent,
           ),
       ],
@@ -115,7 +139,7 @@ class JourneyTimeline extends StatelessWidget {
         'المحطة رقم $stopNumber من $totalStops في خط النهاردة',
       ).of(context);
     }
-    if (index == _schoolStepIndex && _hasStopPosition) {
+    if (!_isReturn && index == _schoolStepIndex && _hasStopPosition) {
       return const S(
         'The final stop on every trip',
         'آخر محطة في كل رحلة',
@@ -367,17 +391,21 @@ class JourneyProgressRail extends StatelessWidget {
     super.key,
     required this.stage,
     required this.hasBoarded,
+    this.direction = TripDirection.outbound,
   });
 
   final JourneyStage stage;
   final bool hasBoarded;
+  final TripDirection direction;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tones = context.appColors;
     final reached = reachedStepCount(stage, hasBoarded: hasBoarded);
-    final total = mainJourneyPath.length;
+    final total = direction == TripDirection.returnTrip
+        ? returnJourneyPath.length
+        : mainJourneyPath.length;
     final tone = stageTone(stage);
     final accent = toneColor(tones, tone);
     final isCancelled = stage == JourneyStage.cancelled;
@@ -418,12 +446,12 @@ class JourneyProgressRail extends StatelessWidget {
           // report — it stopped being a sequence the moment it was called
           // off, so it just says what it is.
           isCancelled
-              ? stageBadgeLabel(stage).of(context)
+              ? stageBadgeLabel(stage, direction: direction).of(context)
               : S(
                   'Step ${reached.clamp(1, total)} of $total · '
-                      '${stageBadgeLabel(stage).of(context)}',
+                      '${stageBadgeLabel(stage, direction: direction).of(context)}',
                   'الخطوة ${reached.clamp(1, total)} من $total · '
-                      '${stageBadgeLabel(stage).of(context)}',
+                      '${stageBadgeLabel(stage, direction: direction).of(context)}',
                 ).of(context),
           style: theme.textTheme.bodySmall?.copyWith(
             color: tones.textSecondary,

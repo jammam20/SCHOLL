@@ -37,11 +37,16 @@ class DriversRepository {
     required String schoolId,
     required String uid,
     required String status,
+    String? reason,
   }) {
     return _members(schoolId).doc(uid).update({
       'status': status,
       'isActive': status == 'approved',
       'updatedAt': FieldValue.serverTimestamp(),
+      // Feature: unified accept/reject UI — recorded alongside status so a
+      // suspend/reject carries its own "why" (see PendingApprovalCard),
+      // rather than only living in the moment's audit-log entry.
+      if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
     });
   }
 
@@ -49,11 +54,29 @@ class DriversRepository {
     return _setStatus(schoolId: schoolId, uid: uid, status: 'approved');
   }
 
-  Future<void> suspendDriver({required String schoolId, required String uid}) {
-    return _setStatus(schoolId: schoolId, uid: uid, status: 'suspended');
+  Future<void> suspendDriver({
+    required String schoolId,
+    required String uid,
+    String? reason,
+  }) {
+    return _setStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'suspended',
+      reason: reason,
+    );
   }
 
-  Future<void> rejectDriver({required String schoolId, required String uid}) {
-    return _setStatus(schoolId: schoolId, uid: uid, status: 'rejected');
+  Future<void> rejectDriver({
+    required String schoolId,
+    required String uid,
+    String? reason,
+  }) {
+    return _setStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'rejected',
+      reason: reason,
+    );
   }
 }

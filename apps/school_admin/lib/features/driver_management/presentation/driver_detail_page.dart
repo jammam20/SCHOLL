@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../buses/data/buses_repository.dart';
+import '../../common/presentation/domain_labels.dart';
 import '../../drivers/data/drivers_repository.dart';
 import '../../routes/data/routes_repository.dart';
+import '../../../widgets/activity_timeline.dart';
 import '../../../widgets/async_error_view.dart';
 import '../data/driver_performance_repository.dart';
 import '../data/driver_profiles_repository.dart';
@@ -144,6 +146,10 @@ class _DriverDetailBody extends StatelessWidget {
                 schoolId: schoolId,
                 driver: driver,
               );
+              final activityCard = _DriverActivityCard(
+                schoolId: schoolId,
+                driverId: driver.uid,
+              );
 
               if (constraints.maxWidth < 900) {
                 return Column(
@@ -152,6 +158,8 @@ class _DriverDetailBody extends StatelessWidget {
                     profileCard,
                     const SizedBox(height: AppSpacing.xl2),
                     performanceCard,
+                    const SizedBox(height: AppSpacing.xl2),
+                    activityCard,
                   ],
                 );
               }
@@ -160,12 +168,57 @@ class _DriverDetailBody extends StatelessWidget {
                 children: [
                   Expanded(flex: 5, child: profileCard),
                   const SizedBox(width: AppSpacing.xl),
-                  Expanded(flex: 4, child: performanceCard),
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        performanceCard,
+                        const SizedBox(height: AppSpacing.xl2),
+                        activityCard,
+                      ],
+                    ),
+                  ),
                 ],
               );
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Feature: activity timeline — reuses the school's existing audit trail,
+/// filtered to entries about this one driver.
+class _DriverActivityCard extends StatelessWidget {
+  const _DriverActivityCard({required this.schoolId, required this.driverId});
+
+  final String schoolId;
+  final String driverId;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: colors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionHeader(
+            title: const S('Recent activity', 'النشاط الأخير').of(context),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ActivityTimeline(
+            schoolId: schoolId,
+            matches: (entry) => entry.driverId == driverId,
+          ),
+        ],
       ),
     );
   }
@@ -234,7 +287,12 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
         children: [
           SectionHeader(
             title: const S('Driver profile', 'بيانات السائق').of(context),
+            trailing: StatusBadge(
+              label: memberStatusLabel(context, widget.driver.status),
+              tone: memberStatusTone(widget.driver.status),
+            ),
           ),
+          const SizedBox(height: AppSpacing.md),
           if (widget.driver.licenseExpired ||
               widget.driver.licenseExpiringSoon(now))
             _LicenseAlertBanner(driver: widget.driver, now: now),
