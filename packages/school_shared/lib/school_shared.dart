@@ -13,12 +13,14 @@ export 'src/enums/membership_status.dart';
 export 'src/enums/parent_request_status.dart';
 export 'src/enums/pickup_verification.dart';
 export 'src/enums/reassignment_type.dart';
+export 'src/enums/trip_direction.dart';
 export 'src/enums/trip_status.dart';
 export 'src/enums/user_role.dart';
 
 // Models
 export 'src/models/app_notification.dart';
 export 'src/models/app_user.dart';
+export 'src/models/attendance_record.dart';
 export 'src/models/audit_log_entry.dart';
 export 'src/models/auth_failure.dart';
 export 'src/models/auth_session_state.dart';

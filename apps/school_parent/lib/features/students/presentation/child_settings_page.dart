@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../widgets/parent_ui.dart';
 import '../../messages/presentation/contact_school_page.dart';
 import '../data/students_repository.dart';
+import 'child_location_picker_page.dart';
 
 /// Per-child settings: mark them absent for today (so the driver's pickup
 /// order skips their home and the bus doesn't detour for nothing), manage
@@ -44,6 +46,58 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     widget.student.scheduledAbsenceDates,
   )..sort();
   bool _savingScheduledDates = false;
+
+  /// Feature: Parent can add child location. Same optimistic/snapshot
+  /// reasoning as above — this page was opened with a point-in-time
+  /// Student, so a just-submitted proposal is tracked locally rather than
+  /// waiting for a refetch that would never come.
+  late bool _locationRequestPending = widget.student.hasPendingLocationRequest;
+  bool _submittingLocation = false;
+
+  Future<void> _proposeLocation() async {
+    final picked = await Navigator.push<LatLng>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChildLocationPickerPage(
+          studentName: widget.student.name,
+          initialPosition: widget.student.hasLocation
+              ? LatLng(widget.student.latitude!, widget.student.longitude!)
+              : null,
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _submittingLocation = true);
+    try {
+      await StudentsRepository().proposeLocationChange(
+        schoolId: widget.user.schoolId,
+        studentId: widget.student.id,
+        latitude: picked.latitude,
+        longitude: picked.longitude,
+      );
+      if (!mounted) return;
+      setState(() => _locationRequestPending = true);
+      AppSnackbar.success(
+        context,
+        const S(
+          'Sent to your school for review.',
+          'اتبعتت لمدرستك للمراجعة.',
+        ).of(context),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackbar.error(
+        context,
+        const S(
+          "Couldn't send that — check your connection and try again.",
+          'معرفناش نبعتها — اتأكد من الاتصال وجرب تاني.',
+        ).of(context),
+      );
+    } finally {
+      if (mounted) setState(() => _submittingLocation = false);
+    }
+  }
 
   Future<void> _toggleAbsent(bool value) async {
     final previous = _absentToday;
@@ -497,9 +551,19 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               ),
               SettingsTile(
                 icon: Icons.location_on_rounded,
-                tone: student.hasLocation ? colors.success : colors.warning,
+                tone: _locationRequestPending
+                    ? colors.info
+                    : student.hasLocation
+                    ? colors.success
+                    : colors.warning,
                 title: const S('Pickup point', 'نقطة الاستلام').of(context),
-                subtitle: student.hasLocation
+                subtitle: _locationRequestPending
+                    ? const S(
+                        'Your suggested location is waiting for the school '
+                            'to review it.',
+                        'الموقع اللي اقترحته في انتظار مراجعة المدرسة.',
+                      ).of(context)
+                    : student.hasLocation
                     ? const S(
                         'Set by the school',
                         'محددة من المدرسة',
@@ -509,15 +573,34 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                         'لسه مش متحددة — كلم مدرستك.',
                       ).of(context),
                 trailing: StatusBadge(
-                  label: student.hasLocation
+                  label: _locationRequestPending
+                      ? const S('Pending', 'قيد المراجعة').of(context)
+                      : student.hasLocation
                       ? const S('Set', 'محددة').of(context)
                       : const S('Missing', 'ناقص').of(context),
-                  tone: student.hasLocation
+                  tone: _locationRequestPending
+                      ? StatusTone.info
+                      : student.hasLocation
                       ? StatusTone.success
                       : StatusTone.warning,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Feature: Parent can add child location. The school still has
+          // the final say — see StudentsRepository.proposeLocationChange —
+          // so this is framed as a suggestion, not a change, and is
+          // disabled while one is already pending review.
+          AppButton.secondary(
+            label: _locationRequestPending
+                ? const S('Suggestion pending review', 'الاقتراح قيد المراجعة')
+                    .of(context)
+                : const S('Suggest a pickup location', 'اقترح نقطة استلام')
+                    .of(context),
+            icon: Icons.edit_location_alt_outlined,
+            loading: _submittingLocation,
+            onPressed: _locationRequestPending ? null : _proposeLocation,
           ),
           const SizedBox(height: AppSpacing.xl3),
 

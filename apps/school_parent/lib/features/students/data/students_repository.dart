@@ -70,6 +70,32 @@ class StudentsRepository {
         'createdAt': FieldValue.serverTimestamp(),
       });
     }
+    // Feature: absence data integrity — upserts the canonical one-per-
+    // (student, day) record (merged into the SAME doc id every time, see
+    // AttendanceRecord.idFor) instead of only appending to absenceLog
+    // above, so a parent toggling absent -> present -> absent for the same
+    // day settles on one final state for reporting instead of being
+    // counted as two absences. `absentOn` is always about *today* (see
+    // Student.absentOn's own doc comment), so clearing it (null) means
+    // "not absent today" just as surely as setting it means "absent on
+    // absentOn".
+    if (uid != null) {
+      final date = absentOn ?? todayIsoDate();
+      batch.set(
+        _attendanceRecords(schoolId).doc(
+          AttendanceRecord.idFor(studentId: studentId, date: date),
+        ),
+        AttendanceRecord(
+          studentId: studentId,
+          schoolId: schoolId,
+          date: date,
+          isAbsent: absentOn != null,
+          updatedBy: uid,
+          studentName: studentName,
+        ).toMap(),
+        SetOptions(merge: true),
+      );
+    }
     return batch.commit();
   }
 
@@ -126,6 +152,27 @@ class StudentsRepository {
     });
   }
 
+  /// Proposes a new pickup/drop-off location for an already-approved child
+  /// (Feature: Parent can add child location). This never touches the
+  /// official `latitude`/`longitude` fields — firestore.rules restricts a
+  /// parent to exactly `pendingLatitude`/`pendingLongitude`/
+  /// `pendingLocationRequestedAt` — so the change only becomes official
+  /// once a school admin reviews and accepts it (see the admin app's
+  /// StudentsRepository.acceptLocationRequest).
+  Future<void> proposeLocationChange({
+    required String schoolId,
+    required String studentId,
+    required double latitude,
+    required double longitude,
+  }) {
+    return _students(schoolId).doc(studentId).update({
+      'pendingLatitude': latitude,
+      'pendingLongitude': longitude,
+      'pendingLocationRequestedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   /// A collision-free id for a newly added [AuthorizedPickupPerson].
   /// Firestore's own client-side id generator, taken from a document
   /// reference that is never written — cheaper and safer than hashing a
@@ -137,5 +184,14 @@ class StudentsRepository {
         .collection('schools')
         .doc(schoolId)
         .collection('absenceLog');
+  }
+
+  CollectionReference<Map<String, dynamic>> _attendanceRecords(
+    String schoolId,
+  ) {
+    return _firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('attendanceRecords');
   }
 }

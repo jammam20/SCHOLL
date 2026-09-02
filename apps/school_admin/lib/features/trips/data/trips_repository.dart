@@ -54,6 +54,7 @@ class TripsRepository {
     required String driverId,
     required String driverName,
     required DateTime scheduledAt,
+    TripDirection direction = TripDirection.outbound,
   }) async {
     final ref = _trips(schoolId).doc();
 
@@ -68,6 +69,7 @@ class TripsRepository {
       'driverId': driverId,
       'driverName': driverName,
       'status': 'scheduled',
+      'direction': direction.value,
       'scheduledAt': Timestamp.fromDate(scheduledAt),
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),

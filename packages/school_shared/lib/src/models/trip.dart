@@ -1,3 +1,4 @@
+import '../enums/trip_direction.dart';
 import '../enums/trip_status.dart';
 
 class SchoolTrip {
@@ -9,6 +10,7 @@ class SchoolTrip {
     required this.driverId,
     required this.status,
     required this.scheduledAt,
+    this.direction = TripDirection.outbound,
     this.routeName = '',
     this.busName = '',
     this.busPlateNumber = '',
@@ -28,6 +30,12 @@ class SchoolTrip {
   final String driverId;
   final TripStatus status;
   final DateTime scheduledAt;
+
+  // Feature: two daily trips. Defaults to outbound so every trip document
+  // written before this field existed keeps behaving exactly as it always
+  // did — a school that never touches direction just runs one outbound
+  // trip per day, same as before.
+  final TripDirection direction;
   // Set once, by the driver app, the first time the trip actually goes
   // active (not re-set on a pause/resume) and when it's marked completed —
   // real operational timestamps used for on-time and duration reporting,
@@ -61,6 +69,7 @@ class SchoolTrip {
       driverId: data['driverId'] as String? ?? '',
       status: _statusFromValue(data['status']) ?? TripStatus.scheduled,
       scheduledAt: _asDateTime(data['scheduledAt']) ?? DateTime.now(),
+      direction: TripDirection.fromValue(data['direction']),
       routeName: data['routeName'] as String? ?? '',
       busName: data['busName'] as String? ?? '',
       busPlateNumber: data['busPlateNumber'] as String? ?? '',
@@ -86,6 +95,7 @@ class SchoolTrip {
       'driverId': driverId,
       'driverName': driverName,
       'status': status.name,
+      'direction': direction.value,
     };
   }
 

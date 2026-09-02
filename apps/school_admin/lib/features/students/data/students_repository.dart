@@ -1,10 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
+
+import '../../audit/data/audit_log_repository.dart';
 
 class StudentsRepository {
-  StudentsRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  StudentsRepository({
+    FirebaseFirestore? firestore,
+    AuditLogRepository? auditLog,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> _students(String schoolId) {
     return _firestore
@@ -137,5 +144,54 @@ class StudentsRepository {
     required String studentId,
   }) {
     return _students(schoolId).doc(studentId).delete();
+  }
+
+  /// Accepts a parent's proposed pickup/drop-off location (Feature: Parent
+  /// can add child location) — copies `pendingLatitude`/`pendingLongitude`
+  /// onto the official `latitude`/`longitude` and clears the pending
+  /// fields, in one write, so the two can never disagree mid-operation.
+  Future<void> acceptLocationRequest({
+    required String schoolId,
+    required String studentId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    await _students(schoolId).doc(studentId).update({
+      'latitude': latitude,
+      'longitude': longitude,
+      'pendingLatitude': null,
+      'pendingLongitude': null,
+      'pendingLocationRequestedAt': null,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.studentLocationRequestAccepted,
+      entityType: 'student',
+      entityId: studentId,
+      studentId: studentId,
+      metadata: {'latitude': latitude, 'longitude': longitude},
+    );
+  }
+
+  /// Rejects a parent's proposed location — clears the pending fields only,
+  /// leaving the official location (if any) exactly as it was.
+  Future<void> rejectLocationRequest({
+    required String schoolId,
+    required String studentId,
+  }) async {
+    await _students(schoolId).doc(studentId).update({
+      'pendingLatitude': null,
+      'pendingLongitude': null,
+      'pendingLocationRequestedAt': null,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.studentLocationRequestRejected,
+      entityType: 'student',
+      entityId: studentId,
+      studentId: studentId,
+    );
   }
 }

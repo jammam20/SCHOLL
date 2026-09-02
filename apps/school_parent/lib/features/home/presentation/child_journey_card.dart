@@ -877,7 +877,13 @@ class _Body extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.appColors;
 
+    // Feature: two daily trips — a compact direction cue rather than a
+    // separate morning/return section, folded right into the existing
+    // facts line so it costs no extra vertical space.
     final facts = <String>[
+      trip.direction == TripDirection.returnTrip
+          ? const S('← Return home', '← رجوع للمنزل').of(context)
+          : const S('→ To school', '→ للمدرسة').of(context),
       if (trip.routeName.isNotEmpty) trip.routeName,
       if (trip.busName.isNotEmpty)
         trip.busPlateNumber.isEmpty

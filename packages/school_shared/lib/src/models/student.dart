@@ -16,6 +16,9 @@ class Student {
     this.scheduledAbsenceDates = const [],
     this.pickupPointId,
     this.authorizedPickupPersons = const [],
+    this.pendingLatitude,
+    this.pendingLongitude,
+    this.pendingLocationRequestedAt,
   });
 
   final String id;
@@ -71,6 +74,19 @@ class Student {
   // app, which does that pruning on every write.
   final List<String> scheduledAbsenceDates;
 
+  // Feature: Parent can add child location — a parent-proposed pickup/
+  // drop-off location, sitting alongside (never replacing) the official
+  // [latitude]/[longitude] until a school admin reviews and accepts it.
+  // Non-null pendingLatitude/pendingLongitude means there's a proposal
+  // awaiting review; the admin accepting it copies these onto the official
+  // fields and clears these three, rejecting just clears these three.
+  final double? pendingLatitude;
+  final double? pendingLongitude;
+  final DateTime? pendingLocationRequestedAt;
+
+  bool get hasPendingLocationRequest =>
+      pendingLatitude != null && pendingLongitude != null;
+
   bool get hasLocation => latitude != null && longitude != null;
 
   bool get isAbsentToday => isAbsentOn(todayIsoDate());
@@ -104,6 +120,25 @@ class Student {
                   Map<String, dynamic>.from(e as Map)))
               .toList() ??
           const [],
+      pendingLatitude: (data['pendingLatitude'] as num?)?.toDouble(),
+      pendingLongitude: (data['pendingLongitude'] as num?)?.toDouble(),
+      pendingLocationRequestedAt: _asDateTime(data['pendingLocationRequestedAt']),
     );
+  }
+
+  /// Accepts a [DateTime] directly, or anything exposing a Firestore-style
+  /// `toDate()` method (i.e. a `Timestamp`), without this package taking a
+  /// hard dependency on `cloud_firestore` — mirrors SchoolTrip's own
+  /// helper of the same name.
+  static DateTime? _asDateTime(Object? value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    try {
+      final dynamic dynamicValue = value;
+      final result = dynamicValue.toDate();
+      return result is DateTime ? result : null;
+    } catch (_) {
+      return null;
+    }
   }
 }

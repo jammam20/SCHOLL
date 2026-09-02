@@ -17,6 +17,7 @@ import '../../incidents/presentation/report_incident_dialog.dart';
 import '../../inspections/data/inspections_repository.dart';
 import '../../inspections/domain/inspection_checklist.dart';
 import '../../inspections/presentation/inspection_checklist_page.dart';
+import '../../schools/data/schools_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
 import '../../trips/presentation/stop_order_view.dart';
@@ -359,6 +360,19 @@ class _TripCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 2),
+            // Feature: two daily trips — a compact direction cue rather
+            // than a separate morning/return section (see design intent:
+            // "must stay compact").
+            Text(
+              trip.direction == TripDirection.returnTrip
+                  ? const S('← Return home', '← رجوع للمنزل').of(context)
+                  : const S('→ To school', '→ للمدرسة').of(context),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
@@ -540,10 +554,58 @@ class _TripCard extends StatelessWidget {
   /// complete, we don't know whether the vehicle was inspected, and
   /// guessing "probably fine" is the one answer this gate exists to
   /// prevent.
+  /// Feature: driver trip start window. The real enforcement is
+  /// firestore.rules' `isWithinTripStartWindow` — this is purely the "why
+  /// not" explanation for a driver who taps too early, checked up front so
+  /// they aren't sent through the pre-trip inspection flow first only to
+  /// have the actual start rejected at the very end.
+  Future<bool> _blockedByStartWindow(BuildContext context) async {
+    final school = await SchoolsRepository()
+        .watchSchool(schoolId: schoolId)
+        .first;
+    final windowMinutes = school?.tripStartWindowMinutes;
+    if (windowMinutes == null) return false;
+
+    final earliest = trip.scheduledAt.subtract(Duration(minutes: windowMinutes));
+    if (!DateTime.now().isBefore(earliest)) return false;
+
+    if (!context.mounted) return true;
+    final timeFormat = DateFormat.jm();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(const S("You can't start this trip yet", 'لسه معندكش تبدأ الرحلة')
+            .of(dialogContext)),
+        content: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Text(
+            S(
+              'Scheduled for ${timeFormat.format(trip.scheduledAt)}. '
+                  'Your school allows starting from ${timeFormat.format(earliest)} '
+                  'onward.',
+              'مجدولة الساعة ${timeFormat.format(trip.scheduledAt)}. '
+                  'مدرستك بتسمح بالبدء من الساعة ${timeFormat.format(earliest)}.',
+            ).of(dialogContext),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(const S('OK', 'تمام').of(dialogContext)),
+          ),
+        ],
+      ),
+    );
+    return true;
+  }
+
   Future<void> _startTrip(
     BuildContext context, {
     required bool alreadyStarting,
   }) async {
+    if (!alreadyStarting && await _blockedByStartWindow(context)) return;
+    if (!context.mounted) return;
+
     final bloc = context.read<TripsBloc>();
 
     final bool alreadyPassed;

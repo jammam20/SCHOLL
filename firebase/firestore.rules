@@ -88,6 +88,50 @@ service cloud.firestore {
           (current == 'emergency' && (next == 'completed' || next == 'cancelled'));
     }
 
+    // Feature: school location must be set first. A school's own location
+    // (schools/{schoolId}.latitude/longitude) is every trip's fixed
+    // endpoint — creating operational geography (routes, pickup points)
+    // before it exists would leave that endpoint undefined, so those
+    // `create` rules gate on it directly instead of trusting the client to
+    // have checked first.
+    function schoolHasLocation(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)).data.latitude is number &&
+          get(/databases/$(database)/documents/schools/$(schoolId)).data.longitude is number;
+    }
+
+    // Feature: driver trip start window. `tripStartWindowMinutes` is a
+    // school-wide setting (schools/{schoolId}.tripStartWindowMinutes); null/
+    // unset means "not configured", which keeps every existing school's
+    // current behavior (start any time) unchanged.
+    function isWithinTripStartWindow(schoolId, scheduledAt) {
+      let windowMinutes = get(/databases/$(database)/documents/schools/$(schoolId)).data.get('tripStartWindowMinutes', null);
+      return windowMinutes == null ||
+          request.time >= scheduledAt - duration.value(windowMinutes, 'm');
+    }
+
+    // Feature: absence cutoff. Computed against the student's route's fixed
+    // daily outbound schedule (SchoolRoute.outboundScheduledMinutes — "today's
+    // trip" can't be looked up by a security rule without a query, but a
+    // route's own recurring schedule can be `get()` directly) rather than a
+    // specific trip document. `outboundScheduledMinutes` is stored as
+    // minutes since UTC midnight precisely so it lines up with
+    // `request.time.date()` below, which is always UTC midnight — see the
+    // model's own doc comment for the local-time-at-save-time convention
+    // this depends on. Either setting left unconfigured (null) means no
+    // cutoff, matching every route/school that predates this feature.
+    function isBeforeAbsenceCutoff(schoolId, routeId) {
+      let cutoffMinutes = get(/databases/$(database)/documents/schools/$(schoolId)).data.get('absenceCutoffMinutes', null);
+      let routeExists = routeId is string && routeId != '' &&
+          exists(/databases/$(database)/documents/schools/$(schoolId)/routes/$(routeId));
+      let scheduledMinutes = routeExists ?
+          get(/databases/$(database)/documents/schools/$(schoolId)/routes/$(routeId)).data.get('outboundScheduledMinutes', null) :
+          null;
+      return cutoffMinutes == null || scheduledMinutes == null ||
+          request.time <= request.time.date() +
+              duration.value(scheduledMinutes, 'm') -
+              duration.value(cutoffMinutes, 'm');
+    }
+
     match /users/{uid} {
       allow read: if isSelf(uid) || isSystemAdmin();
       allow create: if isSelf(uid) &&
@@ -185,6 +229,18 @@ service cloud.firestore {
           (isSchoolAdmin(schoolId) &&
               request.resource.data.diff(resource.data).affectedKeys()
                   .hasOnly(['latitude', 'longitude', 'updatedAt']));
+      // A school admin configures operational settings — trip start
+      // window, absence cutoff, weekly/special holidays (Features: driver
+      // trip start window, absence cutoff, school calendar) — kept as its
+      // own rule, separate from the location update above, so each stays
+      // independently scoped the same way the students rules do.
+      allow update: if isSystemAdmin() ||
+          (isSchoolAdmin(schoolId) &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly([
+                    'tripStartWindowMinutes', 'absenceCutoffMinutes',
+                    'weeklyHolidays', 'specialHolidays', 'updatedAt'
+                  ]));
 
       match /members/{uid} {
         allow read: if isSelf(uid) || isSchoolAdmin(schoolId) || isSystemAdmin();
@@ -240,12 +296,17 @@ service cloud.firestore {
         // A parent marks their own (already-approved) child absent/present
         // for a day — restricted to just that field so they can't also
         // rename the student, unlink themselves, or touch the pickup point.
+        // Feature: absence cutoff — gated by isBeforeAbsenceCutoff once the
+        // school has configured one; a student with no route or a route
+        // with no configured schedule is never gated (nothing to compute
+        // the cutoff from).
         allow update: if isActiveMember(schoolId) &&
             resource.data.approved == true &&
             ('parentIds' in resource.data) &&
             request.auth.uid in resource.data.parentIds &&
             request.resource.data.diff(resource.data).affectedKeys()
-                .hasOnly(['absentOn', 'updatedAt']);
+                .hasOnly(['absentOn', 'updatedAt']) &&
+            isBeforeAbsenceCutoff(schoolId, resource.data.get('routeId', null));
         // A parent schedules future absence dates for their own
         // (already-approved) child — kept as its own rule for the same
         // reason authorizedPickupPersons is: so scheduling a future date
@@ -274,6 +335,25 @@ service cloud.firestore {
             request.auth.uid in resource.data.parentIds &&
             request.resource.data.diff(resource.data).affectedKeys()
                 .hasOnly(['authorizedPickupPersons', 'updatedAt']);
+        // Feature: Parent can add child location. A parent proposes a new
+        // pickup/drop-off location for their own (already-approved) child
+        // — kept as its own field-restricted rule for the same reason as
+        // the three above, and deliberately NOT able to touch `latitude`/
+        // `longitude` directly: the parent has no authority to make the
+        // location official, only to request a change. An admin accepts
+        // or rejects it through their own already-unrestricted `write`
+        // rule above (accepting copies pending* onto latitude/longitude
+        // and clears pending*; rejecting just clears pending*) — see
+        // StudentsRepository in the admin app.
+        allow update: if isActiveMember(schoolId) &&
+            resource.data.approved == true &&
+            ('parentIds' in resource.data) &&
+            request.auth.uid in resource.data.parentIds &&
+            request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly([
+                  'pendingLatitude', 'pendingLongitude',
+                  'pendingLocationRequestedAt', 'updatedAt'
+                ]);
       }
 
       // A durable log of "student X was marked absent on date Y", written
@@ -288,6 +368,32 @@ service cloud.firestore {
         allow create: if isActiveMember(schoolId) &&
             request.resource.data.recordedBy == request.auth.uid;
         allow update, delete: if false;
+      }
+
+      // Feature: absence data integrity. The canonical one-per-(student,
+      // day) attendance state — see AttendanceRecord in school_shared for
+      // why this exists alongside (not instead of) absenceLog above. Doc id
+      // is always `${studentId}_${date}`, enforced below, so a parent
+      // toggling absent -> present -> absent for the same day merges into
+      // the same document instead of appending duplicates the way
+      // absenceLog's auto-ids do — that's what makes reporting able to
+      // count "was this student absent on this day" instead of "how many
+      // absence events fired". A parent may only write their own child's
+      // record; a driver (trusted with the full roster already, see
+      // isSchoolDriver) or admin may write any student's.
+      match /attendanceRecords/{recordId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+            (isActiveMember(schoolId) &&
+                exists(/databases/$(database)/documents/schools/$(schoolId)/students/$(resource.data.studentId)) &&
+                request.auth.uid in get(/databases/$(database)/documents/schools/$(schoolId)/students/$(resource.data.studentId)).data.parentIds);
+        allow write: if isActiveMember(schoolId) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.updatedBy == request.auth.uid &&
+            recordId == request.resource.data.studentId + '_' + request.resource.data.date &&
+            (isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolDriver(schoolId) ||
+                (exists(/databases/$(database)/documents/schools/$(schoolId)/students/$(request.resource.data.studentId)) &&
+                    request.auth.uid in get(/databases/$(database)/documents/schools/$(schoolId)/students/$(request.resource.data.studentId)).data.parentIds));
+        allow delete: if false;
       }
 
       // A parent's message/request to the school (Feature: Parent–Driver
@@ -365,7 +471,14 @@ service cloud.firestore {
 
       match /routes/{routeId} {
         allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
-        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        // Feature: school location must be set first — see
+        // schoolHasLocation. Editing/deactivating an existing route stays
+        // unrestricted so this can never lock an admin out of managing
+        // what's already there, only out of creating new geography before
+        // the school's own endpoint exists.
+        allow create: if isSystemAdmin() ||
+            (isSchoolAdmin(schoolId) && schoolHasLocation(schoolId));
+        allow update, delete: if isSchoolAdmin(schoolId) || isSystemAdmin();
 
         match /stops/{stopId} {
           allow read, write: if isSchoolAdmin(schoolId) || isSystemAdmin();
@@ -377,7 +490,12 @@ service cloud.firestore {
       // point their child is assigned to), written only by an admin.
       match /pickupPoints/{pickupPointId} {
         allow read: if isActiveMember(schoolId) || isSystemAdmin();
-        allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
+        // Feature: school location must be set first — same gate as routes
+        // above, same reasoning (a pickup point is operational geography
+        // too).
+        allow create: if isSystemAdmin() ||
+            (isSchoolAdmin(schoolId) && schoolHasLocation(schoolId));
+        allow update, delete: if isSchoolAdmin(schoolId) || isSystemAdmin();
       }
 
       // Operational detail for a driver (Feature: Driver Management) — kept
@@ -488,7 +606,9 @@ service cloud.firestore {
                   'cancelReason', 'updatedAt'
                 ]) &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) ||
-                isValidTripTransition(resource.data.status, request.resource.data.status)) &&
+                (isValidTripTransition(resource.data.status, request.resource.data.status) &&
+                    (request.resource.data.status != 'starting' ||
+                        isWithinTripStartWindow(schoolId, resource.data.scheduledAt)))) &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['boardedStudents']) ||
                 resource.data.status == 'active') &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['droppedOffStudents']) ||

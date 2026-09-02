@@ -104,4 +104,24 @@ class SchoolsRepository {
       );
     }
   }
+
+  /// Operational settings — trip start window, absence cutoff, calendar
+  /// (Features: driver trip start window, absence cutoff, school calendar).
+  /// A null minutes value clears that restriction entirely, matching how
+  /// `firestore.rules`/`School` treat "not configured".
+  Future<void> updateSettings({
+    required String schoolId,
+    int? tripStartWindowMinutes,
+    int? absenceCutoffMinutes,
+    required List<int> weeklyHolidays,
+    required List<String> specialHolidays,
+  }) {
+    return _schools.doc(schoolId).update({
+      'tripStartWindowMinutes': tripStartWindowMinutes,
+      'absenceCutoffMinutes': absenceCutoffMinutes,
+      'weeklyHolidays': weeklyHolidays,
+      'specialHolidays': specialHolidays,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

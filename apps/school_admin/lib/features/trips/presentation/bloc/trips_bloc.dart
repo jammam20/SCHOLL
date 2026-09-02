@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
 
 import '../../data/trips_repository.dart';
 
@@ -26,6 +27,7 @@ class TripCreated extends TripsEvent {
     required this.driverId,
     required this.driverName,
     required this.scheduledAt,
+    this.direction = TripDirection.outbound,
   });
 
   final String schoolId;
@@ -37,6 +39,7 @@ class TripCreated extends TripsEvent {
   final String driverId;
   final String driverName;
   final DateTime scheduledAt;
+  final TripDirection direction;
 }
 
 class TripCancelled extends TripsEvent {
@@ -186,6 +189,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
         driverId: event.driverId,
         driverName: event.driverName,
         scheduledAt: event.scheduledAt,
+        direction: event.direction,
       );
     } catch (e) {
       emit(TripsFailure(e.toString()));

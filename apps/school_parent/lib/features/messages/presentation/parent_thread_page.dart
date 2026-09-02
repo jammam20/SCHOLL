@@ -30,6 +30,29 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
   /// animates there instead of teleporting mid-conversation.
   int _renderedMessageCount = 0;
 
+  // Feature: keyboard bug fix. Created exactly once, not on every build().
+  // markReadByParent below writes to this same thread the moment the page
+  // opens, which makes the *outer* watchMyRequests stream (subscribed in
+  // build()) emit again almost immediately — if `_repository.watchMessages
+  // (...)` were called fresh inside build() (as it used to be), that
+  // rebuild would hand the messages StreamBuilder a brand-new Stream
+  // object, which StreamBuilder treats as "resubscribe": it drops back to
+  // ConnectionState.waiting and replaces the message list with a loading
+  // view for a frame, right as a parent who opened the thread and started
+  // typing would hit their first keystroke — a real, reproducible cause of
+  // “the composer jumps/the keyboard dismisses on the first character”.
+  // Caching the stream once means that rebuild can no longer touch this
+  // subtree's subscription at all.
+  late final Stream<List<ParentThreadMessage>> _messagesStream = _repository
+      .watchMessages(schoolId: widget.user.schoolId, requestId: widget.request.id);
+
+  // Same reasoning as _messagesStream above — this drives only the AppBar
+  // title/closed-banner/delivery-tick (see build()), but caching it here
+  // means those don't ever force a resubscribe on the sibling stream above
+  // either, since both now live below one build() that only runs once.
+  late final Stream<List<ParentRequest>> _threadStream = _repository
+      .watchMyRequests(schoolId: widget.user.schoolId, parentUid: widget.user.uid);
+
   @override
   void initState() {
     super.initState();
@@ -103,10 +126,7 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
     // adding a new per-document read) keeps the delivery indicator honest
     // without touching the repository's API.
     return StreamBuilder<List<ParentRequest>>(
-      stream: _repository.watchMyRequests(
-        schoolId: widget.user.schoolId,
-        parentUid: widget.user.uid,
-      ),
+      stream: _threadStream,
       builder: (context, threadSnapshot) {
         var thread = widget.request;
         for (final candidate in threadSnapshot.data ?? const <ParentRequest>[]) {
@@ -177,10 +197,7 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
             ),
           Expanded(
             child: StreamBuilder<List<ParentThreadMessage>>(
-              stream: _repository.watchMessages(
-                schoolId: widget.user.schoolId,
-                requestId: widget.request.id,
-              ),
+              stream: _messagesStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return ErrorStateView(

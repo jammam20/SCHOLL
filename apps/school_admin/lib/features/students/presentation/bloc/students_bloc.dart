@@ -69,6 +69,30 @@ class StudentLocationChanged extends StudentsEvent {
   final double longitude;
 }
 
+class StudentLocationRequestAccepted extends StudentsEvent {
+  StudentLocationRequestAccepted({
+    required this.schoolId,
+    required this.studentId,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String schoolId;
+  final String studentId;
+  final double latitude;
+  final double longitude;
+}
+
+class StudentLocationRequestRejected extends StudentsEvent {
+  StudentLocationRequestRejected({
+    required this.schoolId,
+    required this.studentId,
+  });
+
+  final String schoolId;
+  final String studentId;
+}
+
 class StudentApproved extends StudentsEvent {
   StudentApproved({required this.schoolId, required this.studentId});
   final String schoolId;
@@ -147,6 +171,8 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     on<StudentCreated>(_onCreated);
     on<StudentRouteAssigned>(_onRouteAssigned);
     on<StudentLocationChanged>(_onLocationChanged);
+    on<StudentLocationRequestAccepted>(_onLocationRequestAccepted);
+    on<StudentLocationRequestRejected>(_onLocationRequestRejected);
     on<StudentApproved>(_onApproved);
     on<StudentRejected>(_onRejected);
     on<StudentParentLinked>(_onParentLinked);
@@ -262,6 +288,36 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
         schoolId: event.schoolId,
         studentId: event.studentId,
         data: {'latitude': event.latitude, 'longitude': event.longitude},
+      );
+    } catch (e) {
+      emit(StudentsFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onLocationRequestAccepted(
+    StudentLocationRequestAccepted event,
+    Emitter<StudentsState> emit,
+  ) async {
+    try {
+      await _repository.acceptLocationRequest(
+        schoolId: event.schoolId,
+        studentId: event.studentId,
+        latitude: event.latitude,
+        longitude: event.longitude,
+      );
+    } catch (e) {
+      emit(StudentsFailure(e.toString()));
+    }
+  }
+
+  Future<void> _onLocationRequestRejected(
+    StudentLocationRequestRejected event,
+    Emitter<StudentsState> emit,
+  ) async {
+    try {
+      await _repository.rejectLocationRequest(
+        schoolId: event.schoolId,
+        studentId: event.studentId,
       );
     } catch (e) {
       emit(StudentsFailure(e.toString()));

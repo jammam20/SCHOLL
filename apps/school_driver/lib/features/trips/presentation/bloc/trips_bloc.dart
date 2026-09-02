@@ -328,6 +328,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
         schoolId: event.schoolId,
         tripId: event.tripId,
         routeId: event.routeId,
+        direction: _tripById(event.tripId)?.direction ?? TripDirection.outbound,
       ),
     );
     AppAnalytics.logTripStarted(tripId: event.tripId);

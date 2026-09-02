@@ -27,6 +27,7 @@ import '../../reports/presentation/reports_tab.dart';
 import '../../routes/data/routes_repository.dart';
 import '../../routes/presentation/bloc/routes_bloc.dart';
 import '../../routes/presentation/route_deviations_page.dart';
+import '../../schools/data/schools_repository.dart';
 import '../../students/data/students_repository.dart';
 import '../../students/presentation/bloc/students_bloc.dart';
 import '../../trips/data/trips_repository.dart';
@@ -495,6 +496,12 @@ class _StudentsTab extends StatelessWidget {
                       final latitude = (data['latitude'] as num?)?.toDouble();
                       final longitude = (data['longitude'] as num?)
                           ?.toDouble();
+                      final pendingLatitude =
+                          (data['pendingLatitude'] as num?)?.toDouble();
+                      final pendingLongitude =
+                          (data['pendingLongitude'] as num?)?.toDouble();
+                      final hasPendingLocation =
+                          pendingLatitude != null && pendingLongitude != null;
                       final approved = data['approved'] != false;
                       final absentOn = data['absentOn'] as String?;
                       final isAbsentToday =
@@ -645,6 +652,16 @@ class _StudentsTab extends StatelessWidget {
                                         ).of(context),
                                       ),
                                     ],
+                                    if (hasPendingLocation) ...[
+                                      const SizedBox(height: 6),
+                                      StatusBadge(
+                                        tone: StatusTone.info,
+                                        label: const S(
+                                          'Location suggested by parent',
+                                          'موقع مقترح من ولي الأمر',
+                                        ).of(context),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -653,7 +670,10 @@ class _StudentsTab extends StatelessWidget {
                                   'Assign route, pickup point & link parents',
                                   'تحديد الخط ونقطة الاستلام وربط أولياء الأمور',
                                 ).of(context),
-                                icon: const Icon(Icons.manage_accounts),
+                                icon: Icon(
+                                  Icons.manage_accounts,
+                                  color: hasPendingLocation ? colors.info : null,
+                                ),
                                 onPressed: () => _manageStudent(
                                   context,
                                   schoolId: schoolId,
@@ -662,6 +682,8 @@ class _StudentsTab extends StatelessWidget {
                                   currentParentIds: parentIds,
                                   currentLatitude: latitude,
                                   currentLongitude: longitude,
+                                  pendingLatitude: pendingLatitude,
+                                  pendingLongitude: pendingLongitude,
                                 ),
                               ),
                               Switch(
@@ -774,6 +796,8 @@ class _StudentsTab extends StatelessWidget {
     required List<String> currentParentIds,
     required double? currentLatitude,
     required double? currentLongitude,
+    double? pendingLatitude,
+    double? pendingLongitude,
   }) async {
     final bloc = context.read<StudentsBloc>();
 
@@ -786,6 +810,8 @@ class _StudentsTab extends StatelessWidget {
         initialParentIds: currentParentIds,
         initialLatitude: currentLatitude,
         initialLongitude: currentLongitude,
+        pendingLatitude: pendingLatitude,
+        pendingLongitude: pendingLongitude,
         onRouteChanged: (routeId) => bloc.add(
           StudentRouteAssigned(
             schoolId: schoolId,
@@ -800,6 +826,17 @@ class _StudentsTab extends StatelessWidget {
             latitude: latitude,
             longitude: longitude,
           ),
+        ),
+        onLocationRequestAccepted: (latitude, longitude) => bloc.add(
+          StudentLocationRequestAccepted(
+            schoolId: schoolId,
+            studentId: studentId,
+            latitude: latitude,
+            longitude: longitude,
+          ),
+        ),
+        onLocationRequestRejected: () => bloc.add(
+          StudentLocationRequestRejected(schoolId: schoolId, studentId: studentId),
         ),
         onParentLinked: (parentUid) => bloc.add(
           StudentParentLinked(
@@ -834,6 +871,10 @@ class _ManageStudentDialog extends StatefulWidget {
     required this.onLocationChanged,
     required this.onParentLinked,
     required this.onParentUnlinked,
+    this.pendingLatitude,
+    this.pendingLongitude,
+    this.onLocationRequestAccepted,
+    this.onLocationRequestRejected,
   });
 
   final String schoolId;
@@ -847,6 +888,13 @@ class _ManageStudentDialog extends StatefulWidget {
   final ValueChanged<String> onParentLinked;
   final ValueChanged<String> onParentUnlinked;
 
+  // Feature: Parent can add child location.
+  final double? pendingLatitude;
+  final double? pendingLongitude;
+  final void Function(double latitude, double longitude)?
+  onLocationRequestAccepted;
+  final VoidCallback? onLocationRequestRejected;
+
   @override
   State<_ManageStudentDialog> createState() => _ManageStudentDialogState();
 }
@@ -858,7 +906,49 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
   late final List<String> _parentIds = List.of(widget.initialParentIds);
   late double? _latitude = widget.initialLatitude;
   late double? _longitude = widget.initialLongitude;
+  late bool _hasPendingLocation =
+      widget.pendingLatitude != null && widget.pendingLongitude != null;
   String? _parentToAdd;
+
+  Future<void> _resolveLocationRequest({required bool accept}) async {
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: accept
+          ? const S('Accept this location?', 'قبول الموقع ده؟').of(context)
+          : const S('Reject this suggestion?', 'رفض الاقتراح ده؟').of(context),
+      message: accept
+          ? const S(
+              "This becomes the student's official pickup point.",
+              'ده هيبقى نقطة الاستلام الرسمية للطالب.',
+            ).of(context)
+          : const S(
+              "The parent's suggested location will be dismissed — the "
+                  'official pickup point (if any) stays unchanged.',
+              'الموقع المقترح من ولي الأمر هيتشال — نقطة الاستلام الرسمية '
+                  '(لو موجودة) هتفضل زي ما هي.',
+            ).of(context),
+      confirmLabel: accept
+          ? const S('Accept', 'قبول').of(context)
+          : const S('Reject', 'رفض').of(context),
+      destructive: !accept,
+    );
+    if (confirmed != true) return;
+
+    if (accept) {
+      widget.onLocationRequestAccepted?.call(
+        widget.pendingLatitude!,
+        widget.pendingLongitude!,
+      );
+      setState(() {
+        _latitude = widget.pendingLatitude;
+        _longitude = widget.pendingLongitude;
+        _hasPendingLocation = false;
+      });
+    } else {
+      widget.onLocationRequestRejected?.call();
+      setState(() => _hasPendingLocation = false);
+    }
+  }
 
   /// The small uppercase "section eyebrow" used above each field group in
   /// this dialog — MASTER.md §3's `labelSmall`/Label style, used here for
@@ -922,6 +1012,73 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                   );
                 },
               ),
+              if (_hasPendingLocation) ...[
+                const SizedBox(height: AppSpacing.xl),
+                _sectionLabel(
+                  context,
+                  const S(
+                    'Pending location request',
+                    'طلب موقع قيد المراجعة',
+                  ).of(context),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: context.appColors.info.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: context.appColors.info.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Directionality(
+                        textDirection: ui.TextDirection.ltr,
+                        child: Text(
+                          _latitude == null
+                              ? 'No current pickup point'
+                              : 'Current: ${_latitude!.toStringAsFixed(5)}, '
+                                    '${_longitude!.toStringAsFixed(5)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Directionality(
+                        textDirection: ui.TextDirection.ltr,
+                        child: Text(
+                          'Requested: '
+                          '${widget.pendingLatitude!.toStringAsFixed(5)}, '
+                          '${widget.pendingLongitude!.toStringAsFixed(5)}',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppButton.destructive(
+                              label: const S('Reject', 'رفض').of(context),
+                              onPressed: () =>
+                                  _resolveLocationRequest(accept: false),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: AppButton.primary(
+                              label: const S('Accept', 'قبول').of(context),
+                              onPressed: () =>
+                                  _resolveLocationRequest(accept: true),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xl),
               _sectionLabel(
                 context,
@@ -1447,6 +1604,85 @@ class _RoutesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Feature: school location must be set first. Routes are operational
+    // geography — a route's implied final stop is the school's own
+    // location — so creating one before that exists is blocked here (and,
+    // load-bearingly, by firestore.rules' routes `create` rule too; this is
+    // the explanatory UI on top of that real enforcement, not a substitute
+    // for it).
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: SchoolsRepository().watchSchool(schoolId),
+      builder: (context, schoolSnapshot) {
+        final data = schoolSnapshot.data?.data();
+        final hasLocation = data != null &&
+            School.fromMap(schoolSnapshot.data!.id, data).hasLocation;
+        if (schoolSnapshot.hasData && !hasLocation) {
+          return _SchoolLocationRequiredGate(schoolId: schoolId);
+        }
+        return _RoutesTabContent(schoolId: schoolId);
+      },
+    );
+  }
+}
+
+/// Shown in place of the routes list until the school's own location is
+/// configured — see `_RoutesTab.build`'s comment.
+class _SchoolLocationRequiredGate extends StatelessWidget {
+  const _SchoolLocationRequiredGate({required this.schoolId});
+
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyStateView(
+      icon: Icons.location_off_outlined,
+      title: const S(
+        'Set your school location first',
+        'حدد موقع مدرستك الأول',
+      ).of(context),
+      message: const S(
+        "Every trip ends at your school's own location, so routes and "
+            "pickup points can't be created until it's set.",
+        'كل رحلة بتنتهي عند موقع مدرستك، فمينفعش تضيف خطوط سير أو نقاط '
+            'استلام قبل ما تحدده.',
+      ).of(context),
+      actionLabel: const S('Set school location', 'تحديد موقع المدرسة')
+          .of(context),
+      onAction: () async {
+        final picked = await Navigator.push<LatLng>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LocationPickerPage(
+              title: const S('Set school location', 'تحديد موقع المدرسة')
+                  .of(context),
+            ),
+          ),
+        );
+        if (picked == null || !context.mounted) return;
+        try {
+          await SchoolsRepository().updateLocation(
+            schoolId: schoolId,
+            latitude: picked.latitude,
+            longitude: picked.longitude,
+          );
+        } on SchoolLocationException catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(e.message)));
+          }
+        }
+      },
+    );
+  }
+}
+
+class _RoutesTabContent extends StatelessWidget {
+  const _RoutesTabContent({required this.schoolId});
+
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
           RoutesBloc(RoutesRepository())..add(RoutesStarted(schoolId)),
@@ -1682,6 +1918,8 @@ class _RoutesTab extends StatelessWidget {
         description: draft.description,
         deviationToleranceMeters: draft.deviationToleranceMeters,
         isActive: route.isActive,
+        outboundScheduledMinutes: draft.outboundScheduledMinutes,
+        returnScheduledMinutes: draft.returnScheduledMinutes,
       ),
     );
   }
@@ -1692,11 +1930,15 @@ class _RouteDraft {
     required this.name,
     required this.deviationToleranceMeters,
     this.description,
+    this.outboundScheduledMinutes,
+    this.returnScheduledMinutes,
   });
 
   final String name;
   final String? description;
   final double deviationToleranceMeters;
+  final int? outboundScheduledMinutes;
+  final int? returnScheduledMinutes;
 }
 
 /// Add/edit a route, including its deviation tolerance — how far (in
@@ -1724,6 +1966,22 @@ class _RouteDialogState extends State<_RouteDialog> {
   late double _tolerance =
       widget.route?.deviationToleranceMeters ??
       defaultDeviationToleranceMeters;
+
+  // Feature: two daily trips. Held as a local wall-clock TimeOfDay for
+  // editing; converted to/from the stored UTC-minutes value (see
+  // localTimeToUtcMinutes/utcMinutesToLocalTime) only at the model
+  // boundary. Null means that direction isn't run on this route.
+  late TimeOfDay? _outbound = _fromStored(widget.route?.outboundScheduledMinutes);
+  late TimeOfDay? _return = _fromStored(widget.route?.returnScheduledMinutes);
+
+  static TimeOfDay? _fromStored(int? utcMinutes) {
+    if (utcMinutes == null) return null;
+    final (hour, minute) = utcMinutesToLocalTime(utcMinutes);
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  int? _toStored(TimeOfDay? time) =>
+      time == null ? null : localTimeToUtcMinutes(time.hour, time.minute);
 
   @override
   void dispose() {
@@ -1814,6 +2072,44 @@ class _RouteDialogState extends State<_RouteDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                const S(
+                  'Daily schedule',
+                  'الجدول اليومي',
+                ).of(context).toUpperCase(),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                const S(
+                  'The fixed time this route runs each direction — used for '
+                      'generating today\'s outbound/return trips and for the '
+                      'absence cutoff. Leave a direction blank if this route '
+                      "doesn't run it.",
+                  'الميعاد الثابت للخط في كل اتجاه — بيتحسب عليه رحلات '
+                      'الذهاب/العودة اليومية وموعد قفل الغياب. سيب الاتجاه '
+                      'فاضي لو الخط ده مش بيعمله.',
+                ).of(context),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _DirectionTimeRow(
+                label: const S('Outbound (to school)', 'الذهاب للمدرسة')
+                    .of(context),
+                time: _outbound,
+                onChanged: (time) => setState(() => _outbound = time),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              _DirectionTimeRow(
+                label: const S('Return (home)', 'العودة للمنزل').of(context),
+                time: _return,
+                onChanged: (time) => setState(() => _return = time),
+              ),
             ],
           ),
         ),
@@ -1835,10 +2131,66 @@ class _RouteDialogState extends State<_RouteDialog> {
                         ? null
                         : _description.text,
                     deviationToleranceMeters: _tolerance,
+                    outboundScheduledMinutes: _toStored(_outbound),
+                    returnScheduledMinutes: _toStored(_return),
                   ),
                 ),
         ),
       ],
+    );
+  }
+}
+
+/// One direction's fixed time-of-day, plus a clear affordance to unset it
+/// (this route doesn't run that direction).
+class _DirectionTimeRow extends StatelessWidget {
+  const _DirectionTimeRow({
+    required this.label,
+    required this.time,
+    required this.onChanged,
+  });
+
+  final String label;
+  final TimeOfDay? time;
+  final ValueChanged<TimeOfDay?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: time ?? const TimeOfDay(hour: 7, minute: 0),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        decoration: BoxDecoration(
+          border: Border.all(color: colors.border),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.schedule_outlined),
+          title: Text(label),
+          subtitle: time == null
+              ? Text(
+                  const S("Not run", 'مش بيعمله').of(context),
+                  style: TextStyle(color: colors.textMuted),
+                )
+              : Text(time!.format(context)),
+          trailing: time == null
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: const S('Clear', 'مسح').of(context),
+                  onPressed: () => onChanged(null),
+                ),
+        ),
+      ),
     );
   }
 }
@@ -2300,6 +2652,26 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
   bool _repeatDaily = false;
   DateTime? _repeatUntil;
 
+  // Feature: two daily trips. Defaults to outbound — the common case for a
+  // single freshly-created trip.
+  TripDirection _direction = TripDirection.outbound;
+
+  // Feature: school calendar. Fetched once (not streamed — a holiday
+  // calendar doesn't change mid-dialog) purely so _scheduledDates() can
+  // skip configured weekly/special holidays when repeating.
+  School? _school;
+
+  @override
+  void initState() {
+    super.initState();
+    SchoolsRepository().watchSchool(widget.schoolId).first.then((snapshot) {
+      final data = snapshot.data();
+      if (mounted && data != null) {
+        setState(() => _school = School.fromMap(snapshot.id, data));
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -2417,6 +2789,28 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                 },
               ),
               const SizedBox(height: AppSpacing.lg),
+              // Feature: two daily trips — which leg of the school day this
+              // trip (or repeated series) covers. Stops are ordered by the
+              // driver app at runtime from this same flag (home->school for
+              // outbound, school->home for return), not by a separate route.
+              SegmentedButton<TripDirection>(
+                segments: [
+                  ButtonSegment(
+                    value: TripDirection.outbound,
+                    label: Text(const S('Outbound', 'ذهاب').of(context)),
+                    icon: const Icon(Icons.north_east),
+                  ),
+                  ButtonSegment(
+                    value: TripDirection.returnTrip,
+                    label: Text(const S('Return', 'عودة').of(context)),
+                    icon: const Icon(Icons.south_west),
+                  ),
+                ],
+                selected: {_direction},
+                onSelectionChanged: (selection) =>
+                    setState(() => _direction = selection.first),
+              ),
+              const SizedBox(height: AppSpacing.md),
               InkWell(
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 onTap: _pickScheduledAt,
@@ -2537,6 +2931,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                         driverId: _driverId!,
                         driverName: _driverName,
                         scheduledAt: date,
+                        direction: _direction,
                       ),
                     );
                   }
@@ -2548,10 +2943,14 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
     );
   }
 
-  /// One entry for a single trip, or one per day (inclusive) up to
-  /// [_repeatUntil] when repeating — always at least one, and repeating
-  /// with an end date before the start date still yields exactly the
-  /// original single trip rather than creating none.
+  /// One entry for a single trip, or one per non-holiday day (inclusive) up
+  /// to [_repeatUntil] when repeating — always at least one (a single trip
+  /// the admin explicitly picked a date for is created even if that date
+  /// happens to be a holiday; the calendar only prunes the *generated*
+  /// days of a repeat), and repeating with an end date before the start
+  /// date still yields exactly the original single trip rather than
+  /// creating none. Feature: school calendar — skips any day
+  /// `_school?.isHoliday` flags (weekly recurring or a special date).
   List<DateTime> _scheduledDates() {
     if (!_repeatDaily) return [_scheduledAt];
     final until = _repeatUntil ?? _scheduledAt;
@@ -2559,9 +2958,11 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
         .difference(DateTime(_scheduledAt.year, _scheduledAt.month, _scheduledAt.day))
         .inDays;
     if (days <= 0) return [_scheduledAt];
+    final school = _school;
     return [
       for (var i = 0; i <= days; i++)
-        _scheduledAt.add(Duration(days: i)),
+        if (school == null || !school.isHoliday(_scheduledAt.add(Duration(days: i))))
+          _scheduledAt.add(Duration(days: i)),
     ];
   }
 

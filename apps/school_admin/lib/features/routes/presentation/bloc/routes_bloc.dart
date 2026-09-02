@@ -34,6 +34,8 @@ class RouteUpdated extends RoutesEvent {
     required this.deviationToleranceMeters,
     required this.isActive,
     this.description,
+    this.outboundScheduledMinutes,
+    this.returnScheduledMinutes,
   });
 
   final String schoolId;
@@ -42,6 +44,8 @@ class RouteUpdated extends RoutesEvent {
   final String? description;
   final double deviationToleranceMeters;
   final bool isActive;
+  final int? outboundScheduledMinutes;
+  final int? returnScheduledMinutes;
 }
 
 class RouteStatusChanged extends RoutesEvent {
@@ -143,6 +147,8 @@ class RoutesBloc extends Bloc<RoutesEvent, RoutesState> {
         description: event.description,
         deviationToleranceMeters: event.deviationToleranceMeters,
         isActive: event.isActive,
+        outboundScheduledMinutes: event.outboundScheduledMinutes,
+        returnScheduledMinutes: event.returnScheduledMinutes,
       );
     } catch (e) {
       emit(RoutesFailure(e.toString()));

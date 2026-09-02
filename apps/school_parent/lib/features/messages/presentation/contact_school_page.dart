@@ -49,6 +49,23 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
   /// the checkbox that governs whether it's used has its own state.
   SchoolTrip? _contextTrip;
 
+  // Feature: keyboard bug fix. `_onMessageChanged` below calls setState on
+  // every keystroke (to flip the send button's enabled state), which
+  // re-runs build() — if `TripsRepository().watchMyStudents(...)` were
+  // called fresh inside build() (as it used to be), each of those
+  // keystroke-triggered rebuilds would hand the StreamBuilder a brand-new
+  // Stream object. StreamBuilder treats a changed stream reference as
+  // "resubscribe": it drops straight back to its loading branch — which
+  // here is a bare skeleton ListView with no TextField in it at all — for
+  // one frame, unmounting the very TextField the parent is typing into and
+  // taking the keyboard down with it. Caching the stream once removes the
+  // only thing that was changing between those rebuilds.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _studentsStream =
+      TripsRepository().watchMyStudents(
+        schoolId: widget.user.schoolId,
+        parentUid: widget.user.uid,
+      );
+
   @override
   void initState() {
     super.initState();
@@ -136,10 +153,7 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: TripsRepository().watchMyStudents(
-          schoolId: widget.user.schoolId,
-          parentUid: widget.user.uid,
-        ),
+        stream: _studentsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return ListView(
@@ -439,7 +453,7 @@ class _PickerChip extends StatelessWidget {
 /// so an admin reading the request knows which run it's about without the
 /// parent having to describe it. Renders nothing when there's no trip on
 /// record for today — there'd be nothing real to attach.
-class _TripContextField extends StatelessWidget {
+class _TripContextField extends StatefulWidget {
   const _TripContextField({
     required this.schoolId,
     required this.routeId,
@@ -457,14 +471,42 @@ class _TripContextField extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
+  State<_TripContextField> createState() => _TripContextFieldState();
+}
+
+class _TripContextFieldState extends State<_TripContextField> {
+  // Feature: keyboard bug fix (same pattern as _ContactSchoolPageState's
+  // _studentsStream) — this widget is rebuilt fresh on every keystroke in
+  // the parent form (it's inline in that build(), not const), so a stream
+  // constructed directly inside build() here would resubscribe on every
+  // keystroke too. Cached per routeId instead, so it only actually changes
+  // when the parent switches which child (and therefore which route) this
+  // is about.
+  late String _streamRouteId = widget.routeId;
+  late Stream<QuerySnapshot<Map<String, dynamic>>> _tripStream =
+      TripsRepository().watchLatestTripForRoute(
+        schoolId: widget.schoolId,
+        routeId: widget.routeId,
+      );
+
+  @override
+  void didUpdateWidget(covariant _TripContextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.routeId != _streamRouteId) {
+      _streamRouteId = widget.routeId;
+      _tripStream = TripsRepository().watchLatestTripForRoute(
+        schoolId: widget.schoolId,
+        routeId: widget.routeId,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: TripsRepository().watchLatestTripForRoute(
-        schoolId: schoolId,
-        routeId: routeId,
-      ),
+      stream: _tripStream,
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? const [];
         SchoolTrip? trip;
@@ -478,7 +520,7 @@ class _TripContextField extends StatelessWidget {
           if (isToday) trip = candidate;
         }
 
-        onTripResolved(trip);
+        widget.onTripResolved(trip);
         if (trip == null) return const SizedBox.shrink();
 
         final label = trip.routeName.isEmpty
@@ -500,8 +542,10 @@ class _TripContextField extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             controlAffinity: ListTileControlAffinity.leading,
-            value: attach,
-            onChanged: enabled ? (value) => onChanged(value ?? false) : null,
+            value: widget.attach,
+            onChanged: widget.enabled
+                ? (value) => widget.onChanged(value ?? false)
+                : null,
             title: Text(
               const S(
                 "Include today's trip",

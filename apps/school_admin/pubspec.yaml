@@ -27,6 +27,9 @@ dependencies:
   intl: ^0.20.2
 
   google_maps_flutter: ^2.18.0
+  geolocator: ^14.0.3
+  http: ^1.2.0
+  web: ^1.1.0
 
   school_shared:
     path: ../../packages/school_shared

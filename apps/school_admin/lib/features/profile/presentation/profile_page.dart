@@ -132,6 +132,15 @@ class _ProfilePageState extends State<ProfilePage> {
           _SchoolCard(schoolId: user.schoolId),
           const SizedBox(height: AppSpacing.xl3),
           SectionHeader(
+            title: const S('Operational settings', 'إعدادات التشغيل').of(context),
+            subtitle: const S(
+              'Enforced by the server, not just this screen.',
+              'مطبقة من السيرفر، مش بس من الشاشة دي.',
+            ).of(context),
+          ),
+          _OperationalSettingsCard(schoolId: user.schoolId),
+          const SizedBox(height: AppSpacing.xl3),
+          SectionHeader(
             title: const S('Preferences', 'التفضيلات').of(context),
           ),
           Card(
@@ -366,6 +375,277 @@ class _SchoolCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Trip start window, absence cutoff, and calendar (Features: driver trip
+/// start window, absence cutoff, school calendar) — all three are enforced
+/// in firestore.rules directly (see `isWithinTripStartWindow`/
+/// `isBeforeAbsenceCutoff`), this screen is just where an admin configures
+/// the numbers those rules read.
+class _OperationalSettingsCard extends StatelessWidget {
+  const _OperationalSettingsCard({required this.schoolId});
+
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: SchoolsRepository().watchSchool(schoolId),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data();
+        if (data == null) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.xl),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+        return _OperationalSettingsEditor(
+          key: ValueKey(schoolId),
+          schoolId: schoolId,
+          school: School.fromMap(schoolId, data),
+        );
+      },
+    );
+  }
+}
+
+class _OperationalSettingsEditor extends StatefulWidget {
+  const _OperationalSettingsEditor({
+    super.key,
+    required this.schoolId,
+    required this.school,
+  });
+
+  final String schoolId;
+  final School school;
+
+  @override
+  State<_OperationalSettingsEditor> createState() =>
+      _OperationalSettingsEditorState();
+}
+
+class _OperationalSettingsEditorState
+    extends State<_OperationalSettingsEditor> {
+  late final _startWindow = TextEditingController(
+    text: widget.school.tripStartWindowMinutes?.toString() ?? '',
+  );
+  late final _cutoff = TextEditingController(
+    text: widget.school.absenceCutoffMinutes?.toString() ?? '',
+  );
+  final Set<int> _weeklyHolidays = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _weeklyHolidays.addAll(widget.school.weeklyHolidays);
+  }
+  bool _saving = false;
+
+  static const _weekdayLabels = [
+    S('Mon', 'إثنين'),
+    S('Tue', 'ثلاثاء'),
+    S('Wed', 'أربعاء'),
+    S('Thu', 'خميس'),
+    S('Fri', 'جمعة'),
+    S('Sat', 'سبت'),
+    S('Sun', 'حد'),
+  ];
+
+  @override
+  void dispose() {
+    _startWindow.dispose();
+    _cutoff.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickSpecialHoliday() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
+    if (picked == null) return;
+    final iso = isoDateOnly(picked);
+    if (widget.school.specialHolidays.contains(iso)) return;
+    await _save(
+      specialHolidays: [...widget.school.specialHolidays, iso]..sort(),
+    );
+  }
+
+  Future<void> _removeSpecialHoliday(String iso) async {
+    await _save(
+      specialHolidays:
+          widget.school.specialHolidays.where((d) => d != iso).toList(),
+    );
+  }
+
+  Future<void> _save({List<String>? specialHolidays}) async {
+    setState(() => _saving = true);
+    try {
+      await SchoolsRepository().updateSettings(
+        schoolId: widget.schoolId,
+        tripStartWindowMinutes: int.tryParse(_startWindow.text.trim()),
+        absenceCutoffMinutes: int.tryParse(_cutoff.text.trim()),
+        weeklyHolidays: _weeklyHolidays.toList(),
+        specialHolidays: specialHolidays ?? widget.school.specialHolidays,
+      );
+      if (!mounted) return;
+      AppSnackbar.success(
+        context,
+        const S('Settings saved.', 'اتحفظت الإعدادات.').of(context),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackbar.error(
+        context,
+        const S(
+          "Couldn't save these settings — try again.",
+          'معرفناش نحفظ الإعدادات دي — جرب تاني.',
+        ).of(context),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              const S('Driver trip start window', 'موعد بدء الرحلة للسواق')
+                  .of(context),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              const S(
+                'How many minutes before the scheduled time a driver may '
+                    'start a trip. Leave blank to allow starting any time.',
+                'قد إيه بالدقايق قبل الميعاد المحدد يقدر السواق يبدأ الرحلة. '
+                    'سيبه فاضي عشان تسمح بالبدء في أي وقت.',
+              ).of(context),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: colors.textMuted),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _startWindow,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                suffixText: const S('minutes', 'دقيقة').of(context),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              const S('Absence cutoff', 'موعد قفل الغياب').of(context),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              const S(
+                'How many minutes before a route\'s outbound schedule a '
+                    "parent may still mark their child absent for today. "
+                    'Only applies to routes with an outbound time set. '
+                    'Leave blank for no cutoff.',
+                'قد إيه بالدقايق قبل ميعاد ذهاب الخط يقدر ولي الأمر يعلّم '
+                    'ابنه غايب النهاردة. بتتطبق بس على الخطوط اللي ليها '
+                    'ميعاد ذهاب محدد. سيبه فاضي عشان مفيش قفل.',
+              ).of(context),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: colors.textMuted),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _cutoff,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                suffixText: const S('minutes', 'دقيقة').of(context),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Text(
+              const S('Weekly holidays', 'الإجازات الأسبوعية').of(context),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (var weekday = 1; weekday <= 7; weekday++)
+                  FilterChip(
+                    label: Text(_weekdayLabels[weekday - 1].of(context)),
+                    selected: _weeklyHolidays.contains(weekday),
+                    onSelected: (selected) => setState(() {
+                      if (selected) {
+                        _weeklyHolidays.add(weekday);
+                      } else {
+                        _weeklyHolidays.remove(weekday);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    const S('Special holidays', 'إجازات خاصة').of(context),
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _pickSpecialHoliday,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(const S('Add date', 'إضافة تاريخ').of(context)),
+                ),
+              ],
+            ),
+            if (widget.school.specialHolidays.isNotEmpty)
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  for (final iso in widget.school.specialHolidays)
+                    Chip(
+                      label: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(iso),
+                      ),
+                      onDeleted: () => _removeSpecialHoliday(iso),
+                    ),
+                ],
+              ),
+            const SizedBox(height: AppSpacing.xl),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: AppButton.primary(
+                label: const S('Save', 'حفظ').of(context),
+                loading: _saving,
+                onPressed: () => _save(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

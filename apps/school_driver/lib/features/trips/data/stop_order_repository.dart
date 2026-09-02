@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../schools/data/schools_repository.dart';
 import '../domain/trip_operation_exception.dart';
 
 /// Sentinel appended to the end of every computed stop order to represent
@@ -71,27 +72,33 @@ class StopOrderRepository {
     });
   }
 
-  /// Computes a nearest-neighbor pickup order starting from the driver's
-  /// current position through every present student on the route who has a
-  /// pickup point set (students marked absent today — see
-  /// Student.isAbsentToday — are skipped so the bus doesn't detour for
-  /// them), then writes it directly to the trip (drivers can update just
-  /// `stopOrder`/`boardedStudents` on their own trips — see
-  /// firestore.rules). The school is always the fixed final stop. Silently
-  /// no-ops if the driver's current position isn't available — the driver
-  /// can still set an order by hand from the trip screen.
+  /// Computes a nearest-neighbor stop order through every present student
+  /// on the route who has a pickup point set (students marked absent today
+  /// — see Student.isAbsentToday — are skipped so the bus doesn't detour
+  /// for them), then writes it directly to the trip (drivers can update
+  /// just `stopOrder`/`boardedStudents` on their own trips — see
+  /// firestore.rules).
+  ///
+  /// Feature: two daily trips — [direction] decides both the school's
+  /// position in the order and where the nearest-neighbor search starts
+  /// from, matching how the trip actually runs:
+  ///  - **outbound** (home -> school): the bus is already out among the
+  ///    students, so the search starts from the driver's own live GPS
+  ///    position, and the school — the fixed destination — is appended
+  ///    last.
+  ///  - **return** (school -> home): the bus starts at the school, so the
+  ///    search starts from the school's own location instead of the
+  ///    driver's (who may not even be there yet), and the school is placed
+  ///    *first* rather than last.
+  ///
+  /// Silently no-ops if the required starting position isn't available —
+  /// the driver can still set an order by hand from the trip screen.
   Future<void> computeInitialOrder({
     required String schoolId,
     required String tripId,
     required String routeId,
+    TripDirection direction = TripDirection.outbound,
   }) async {
-    final Position position;
-    try {
-      position = await Geolocator.getCurrentPosition();
-    } catch (_) {
-      return;
-    }
-
     final studentsSnap = await _firestore
         .collection('schools')
         .doc(schoolId)
@@ -109,11 +116,31 @@ class StopOrderRepository {
         .nonNulls
         .toList();
 
-    final order = _nearestNeighborOrder(
-      startLat: position.latitude,
-      startLng: position.longitude,
-      students: students,
-    )..add(schoolStopId);
+    final List<String> order;
+    if (direction == TripDirection.returnTrip) {
+      final school = await SchoolsRepository().watchSchool(schoolId: schoolId).first;
+      if (school == null || !school.hasLocation) return;
+      order = [
+        schoolStopId,
+        ..._nearestNeighborOrder(
+          startLat: school.latitude!,
+          startLng: school.longitude!,
+          students: students,
+        ),
+      ];
+    } else {
+      final Position position;
+      try {
+        position = await Geolocator.getCurrentPosition();
+      } catch (_) {
+        return;
+      }
+      order = _nearestNeighborOrder(
+        startLat: position.latitude,
+        startLng: position.longitude,
+        students: students,
+      )..add(schoolStopId);
+    }
 
     await setStopOrder(schoolId: schoolId, tripId: tripId, order: order);
   }

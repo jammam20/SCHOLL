@@ -97,4 +97,7 @@ abstract final class AuditActions {
   static const pickupVerificationPending = 'pickup_verification_pending';
   static const inspectionCompleted = 'inspection_completed';
   static const inspectionFailed = 'inspection_failed';
+  // Feature: Parent can add child location.
+  static const studentLocationRequestAccepted = 'student_location_request_accepted';
+  static const studentLocationRequestRejected = 'student_location_request_rejected';
 }

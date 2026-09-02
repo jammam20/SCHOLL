@@ -77,18 +77,37 @@ class StudentsRepository {
       );
     }
 
-    return _firestore
-        .collection('schools')
-        .doc(schoolId)
-        .collection('absenceLog')
-        .doc()
-        .set({
-          'studentId': studentId,
-          'studentName': studentName,
-          'date': todayIsoDate(),
-          'recordedBy': uid,
-          'source': 'driver',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+    final date = todayIsoDate();
+    final schoolRef = _firestore.collection('schools').doc(schoolId);
+    final batch = _firestore.batch();
+    batch.set(schoolRef.collection('absenceLog').doc(), {
+      'studentId': studentId,
+      'studentName': studentName,
+      'date': date,
+      'recordedBy': uid,
+      'source': 'driver',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    // Feature: absence data integrity — see the parent app's
+    // StudentsRepository.setAbsent for the full rationale. Upserted into
+    // the SAME canonical doc a parent's own report for this student/day
+    // would use, so a driver and a parent both reporting the same absence
+    // (or a driver reporting one the same day a parent later un-marks)
+    // settles on one final state instead of double-counting.
+    batch.set(
+      schoolRef.collection('attendanceRecords').doc(
+        AttendanceRecord.idFor(studentId: studentId, date: date),
+      ),
+      AttendanceRecord(
+        studentId: studentId,
+        schoolId: schoolId,
+        date: date,
+        isAbsent: true,
+        updatedBy: uid,
+        studentName: studentName,
+      ).toMap(),
+      SetOptions(merge: true),
+    );
+    return batch.commit();
   }
 }

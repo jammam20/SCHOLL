@@ -49,12 +49,20 @@ class RoutesRepository {
     String? description,
     required double deviationToleranceMeters,
     required bool isActive,
+    // Feature: two daily trips / absence cutoff — minutes since UTC
+    // midnight, see SchoolRoute's own doc comment. Passing null clears that
+    // direction's schedule (it isn't run on this route / no cutoff can be
+    // computed from it).
+    int? outboundScheduledMinutes,
+    int? returnScheduledMinutes,
   }) {
     return _routes(schoolId).doc(routeId).update({
       'name': name.trim(),
       'description': description?.trim(),
       'deviationToleranceMeters': deviationToleranceMeters,
       'isActive': isActive,
+      'outboundScheduledMinutes': outboundScheduledMinutes,
+      'returnScheduledMinutes': returnScheduledMinutes,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }

@@ -69,23 +69,28 @@ class _ReportsTabState extends State<ReportsTab> {
               ),
               builder: (context, tripsSnapshot) {
                 return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                  stream: ReportsRepository().watchAbsences(
+                  stream: ReportsRepository().watchAttendanceRecordsSince(
                     widget.schoolId,
                     since: since,
                   ),
-                  builder: (context, absencesSnapshot) {
-                    if (tripsSnapshot.hasError || absencesSnapshot.hasError) {
+                  builder: (context, attendanceSnapshot) {
+                    if (tripsSnapshot.hasError || attendanceSnapshot.hasError) {
                       return ErrorStateView(onRetry: () => setState(() {}));
                     }
-                    if (!tripsSnapshot.hasData || !absencesSnapshot.hasData) {
+                    if (!tripsSnapshot.hasData || !attendanceSnapshot.hasData) {
                       return const _ReportsLoadingSkeleton();
                     }
 
                     final trips = tripsSnapshot.data!.docs
                         .map((doc) => SchoolTrip.fromMap(doc.id, doc.data()))
                         .toList();
-                    final absences = absencesSnapshot.data!.docs
-                        .map((doc) => doc.data())
+                    // Feature: absence data integrity — one canonical
+                    // record per (student, day), so this is already
+                    // deduplicated; no student/day is counted twice no
+                    // matter how many times it was toggled.
+                    final absences = attendanceSnapshot.data!.docs
+                        .map((doc) => AttendanceRecord.fromMap(doc.data()))
+                        .where((record) => record.isAbsent)
                         .toList();
 
                     return _ReportsBody(trips: trips, absences: absences);
@@ -164,7 +169,7 @@ class _ReportsBody extends StatelessWidget {
   const _ReportsBody({required this.trips, required this.absences});
 
   final List<SchoolTrip> trips;
-  final List<Map<String, dynamic>> absences;
+  final List<AttendanceRecord> absences;
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +201,7 @@ class _ReportsBody extends StatelessWidget {
 
     final absenceCounts = <String, int>{};
     for (final entry in absences) {
-      final name = entry['studentName']?.toString() ?? '—';
+      final name = entry.studentName.isEmpty ? '—' : entry.studentName;
       absenceCounts[name] = (absenceCounts[name] ?? 0) + 1;
     }
     final topAbsent = absenceCounts.entries.toList()
