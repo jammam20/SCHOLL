@@ -45,6 +45,38 @@ final class AuthDisabled extends AuthState {
   final AppUser user;
 }
 
+// Pure role/status decision logic, extracted so the cross-app role boundary
+// (only 'admin'/'staff' may reach AuthSignedIn here — a parent/driver
+// account must never see this app's dashboard, even though the same
+// `users`/`members` documents back every app) is unit-testable without
+// mocking Firebase. Mirrors the equivalent function in the driver and
+// parent apps' own auth_cubit.dart — each app enforces its own allowed
+// role(s) independently.
+AuthState resolveAuthState(AppUser user) {
+  // This app serves two roles: full admins, and `staff` — a read-only
+  // operational role that gets its own StaffHomePage (see LoginPage,
+  // which branches on AuthSignedIn.user.role). Staff are never treated
+  // as a subset of admin: they go through the same approval gates below
+  // and are handed a shell with no write actions at all, mirroring how
+  // firestore.rules spells out every staff grant separately rather than
+  // folding it into isSchoolAdmin.
+  if (user.role != UserRole.admin && user.role != UserRole.staff) {
+    return const AuthSignedOut(
+      message: 'This account is not an administrator or school staff account.',
+    );
+  }
+
+  if (user.isDisabled) return AuthDisabled(user);
+  if (user.isRejected) return AuthRejected(user);
+  if (user.isPending) return AuthPendingApproval(user);
+
+  if (!user.canAccessApp) {
+    return const AuthSignedOut(message: 'Your account is not active.');
+  }
+
+  return AuthSignedIn(user);
+}
+
 class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
   AuthCubit(this._repository) : super(const AuthLoading());
 
@@ -89,46 +121,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
       return;
     }
 
-    // This app serves two roles: full admins, and `staff` — a read-only
-    // operational role that gets its own StaffHomePage (see LoginPage,
-    // which branches on AuthSignedIn.user.role). Staff are never treated
-    // as a subset of admin: they go through the same approval gates below
-    // and are handed a shell with no write actions at all, mirroring how
-    // firestore.rules spells out every staff grant separately rather than
-    // folding it into isSchoolAdmin.
-    if (user.role != UserRole.admin && user.role != UserRole.staff) {
-      emit(
-        const AuthSignedOut(
-          message:
-              'This account is not an administrator or school staff account.',
-        ),
-      );
-      return;
-    }
-
-    if (user.isDisabled) {
-      emit(AuthDisabled(user));
-      return;
-    }
-
-    if (user.isRejected) {
-      emit(AuthRejected(user));
-      return;
-    }
-
-    if (user.isPending) {
-      emit(AuthPendingApproval(user));
-      return;
-    }
-
-    if (!user.canAccessApp) {
-      emit(
-        const AuthSignedOut(message: 'Your account is not active.'),
-      );
-      return;
-    }
-
-    emit(AuthSignedIn(user));
+    emit(resolveAuthState(user));
   }
 
   Future<void> signIn(String email, String password) async {

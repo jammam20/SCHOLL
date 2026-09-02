@@ -45,6 +45,27 @@ final class AuthRejected extends AuthState {
   final AppUser user;
 }
 
+// Pure role/status decision logic, extracted so the cross-app role boundary
+// (only 'driver' may reach AuthSignedIn here) is unit-testable without
+// mocking Firebase. Mirrors the equivalent function in the admin and
+// parent apps' own auth_cubit.dart — each app enforces its own allowed
+// role(s) independently.
+AuthState resolveAuthState(AppUser user) {
+  if (user.role != UserRole.driver) {
+    return const AuthSignedOut(message: 'This account is not a driver account.');
+  }
+
+  if (user.isDisabled) return AuthDisabled(user);
+  if (user.isRejected) return AuthRejected(user);
+  if (user.isPending) return AuthPendingApproval(user);
+
+  if (!user.canAccessApp) {
+    return const AuthSignedOut(message: 'Your driver account is not active.');
+  }
+
+  return AuthSignedIn(user);
+}
+
 class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
   AuthCubit(this._repository) : super(const AuthLoading());
 
@@ -93,40 +114,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
       return;
     }
 
-    if (user.role != UserRole.driver) {
-      emit(
-        const AuthSignedOut(
-          message: 'This account is not a driver account.',
-        ),
-      );
-      return;
-    }
-
-    if (user.isDisabled) {
-      emit(AuthDisabled(user));
-      return;
-    }
-
-    if (user.isRejected) {
-      emit(AuthRejected(user));
-      return;
-    }
-
-    if (user.isPending) {
-      emit(AuthPendingApproval(user));
-      return;
-    }
-
-    if (!user.canAccessApp) {
-      emit(
-        const AuthSignedOut(
-          message: 'Your driver account is not active.',
-        ),
-      );
-      return;
-    }
-
-    emit(AuthSignedIn(user));
+    emit(resolveAuthState(user));
   }
 
   Future<void> signIn(

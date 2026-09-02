@@ -459,7 +459,13 @@ Future<void> _handleMemberAction(
         .of(context),
   );
   final reason = reasonController.text.trim();
-  reasonController.dispose();
+  // Deliberately not disposed here: the dialog's own TextField is still
+  // mounted and mid-exit-transition when this Future resolves (showDialog
+  // completes as soon as Navigator.pop is called, before the reverse
+  // animation finishes), so an immediate dispose() crashes with "A
+  // TextEditingController was used after being disposed" the next time
+  // that still-animating TextField rebuilds. A short-lived, unowned
+  // controller with no other resources is safe to just let the GC collect.
   if (confirmed != true) return;
   if (isReject) {
     onReject(reason.isEmpty ? null : reason);
