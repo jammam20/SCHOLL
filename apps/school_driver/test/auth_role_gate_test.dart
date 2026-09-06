@@ -68,9 +68,13 @@ void main() {
     });
 
     test('a rejected driver sees the rejected screen, not the trip list', () {
+      // isActive: false matches what every real reject write sets — see
+      // the admin app's equivalent test for why this fixture must not
+      // default to isActive: true.
       final state = resolveAuthState(
         _user(
           role: UserRole.driver,
+          isActive: false,
           approved: false,
           membershipStatus: MembershipStatus.rejected,
         ),

@@ -13,6 +13,21 @@ class TripReassignmentException implements Exception {
   String toString() => message;
 }
 
+/// Raised when a new trip would put the same bus or driver on two active
+/// trips at once — carries user-facing copy rather than a raw Firestore
+/// error, same as [TripReassignmentException].
+class DuplicateActiveTripException implements Exception {
+  const DuplicateActiveTripException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// Trip statuses that represent a trip still in progress — anything not in
+/// this set (`completed`, `cancelled`) has finished being a real commitment
+/// of a bus/driver's time, so it never conflicts with a new one.
+const _activeTripStatuses = ['scheduled', 'starting', 'active', 'paused', 'emergency'];
+
 class TripsRepository {
   TripsRepository({
     FirebaseFirestore? firestore,
@@ -44,6 +59,48 @@ class TripsRepository {
         .snapshots();
   }
 
+  /// Checked against live Firestore state right before the write below, so
+  /// this holds regardless of which screen or recurring-trip loop called
+  /// createTrip — but it is a check-then-write, not a transaction (Firestore
+  /// can't express "no other document in this collection matches X" as a
+  /// security rule, since a rule has no way to enumerate sibling documents).
+  /// Two admins creating a conflicting trip for the same bus within
+  /// milliseconds of each other could still both succeed; closing that
+  /// requires a dedicated lock-document architecture, which is a larger
+  /// change than this guard.
+  Future<void> _assertNoConflictingActiveTrip({
+    required String schoolId,
+    required String busId,
+    required String driverId,
+  }) async {
+    final trips = _trips(schoolId);
+
+    // Filtered by a single equality field each — Firestore's automatic
+    // single-field indexing covers this with no project-specific composite
+    // index to deploy. The (small, per-bus/per-driver) status filtering
+    // happens client-side instead of as a second `where` clause, which
+    // would otherwise require exactly that kind of index.
+    final busTrips = await trips.where('busId', isEqualTo: busId).get();
+    if (busTrips.docs.any(
+      (doc) => _activeTripStatuses.contains(doc.data()['status']),
+    )) {
+      throw const DuplicateActiveTripException(
+        'This bus is already on an active trip. Complete or cancel it '
+        'before starting another one.',
+      );
+    }
+
+    final driverTrips = await trips.where('driverId', isEqualTo: driverId).get();
+    if (driverTrips.docs.any(
+      (doc) => _activeTripStatuses.contains(doc.data()['status']),
+    )) {
+      throw const DuplicateActiveTripException(
+        'This driver is already on an active trip. Complete or cancel it '
+        'before starting another one.',
+      );
+    }
+  }
+
   Future<String> createTrip({
     required String schoolId,
     required String routeId,
@@ -56,6 +113,12 @@ class TripsRepository {
     required DateTime scheduledAt,
     TripDirection direction = TripDirection.outbound,
   }) async {
+    await _assertNoConflictingActiveTrip(
+      schoolId: schoolId,
+      busId: busId,
+      driverId: driverId,
+    );
+
     final ref = _trips(schoolId).doc();
 
     await ref.set({

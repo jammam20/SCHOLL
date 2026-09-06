@@ -66,9 +66,16 @@ AuthState resolveAuthState(AppUser user) {
     );
   }
 
-  if (user.isDisabled) return AuthDisabled(user);
+  // Rejected/pending are checked before the generic isDisabled: every real
+  // reject/register write ties isActive to the approved status (isActive is
+  // false for both), so isDisabled's `!isActive` alone would always match
+  // first and this app would never actually reach the "Registration
+  // rejected"/"Waiting for approval" screens below it — isDisabled is only
+  // meant to catch a membership that *was* approved and later got
+  // suspended/deactivated.
   if (user.isRejected) return AuthRejected(user);
   if (user.isPending) return AuthPendingApproval(user);
+  if (user.isDisabled) return AuthDisabled(user);
 
   if (!user.canAccessApp) {
     return const AuthSignedOut(message: 'Your account is not active.');

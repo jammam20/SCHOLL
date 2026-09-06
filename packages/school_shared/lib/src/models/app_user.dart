@@ -15,6 +15,7 @@ class AppUser extends Equatable {
     this.email = '',
     this.phone,
     this.photoUrl,
+    this.rejectionReason,
   });
 
   final String uid;
@@ -27,6 +28,12 @@ class AppUser extends Equatable {
   final String email;
   final String? phone;
   final String? photoUrl;
+
+  /// Set only when [membershipStatus] is [MembershipStatus.rejected] — the
+  /// text an approver typed when declining this registration, shown back on
+  /// the rejected-screen so the applicant knows why instead of just seeing
+  /// a bare "not approved".
+  final String? rejectionReason;
 
   factory AppUser.fromMap(
       String uid,
@@ -62,6 +69,7 @@ class AppUser extends Equatable {
       email: data['email'] as String? ?? '',
       phone: data['phone'] as String?,
       photoUrl: data['photoUrl'] as String?,
+      rejectionReason: data['rejectionReason'] as String?,
     );
   }
 
@@ -93,5 +101,6 @@ class AppUser extends Equatable {
     email,
     phone,
     photoUrl,
+    rejectionReason,
   ];
 }

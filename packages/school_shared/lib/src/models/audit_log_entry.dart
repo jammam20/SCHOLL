@@ -103,4 +103,10 @@ abstract final class AuditActions {
   static const studentLocationRequestRejected = 'student_location_request_rejected';
   // Feature: unified accept/reject UI.
   static const studentRequestRejected = 'student_request_rejected';
+  // Feature: Parent Community.
+  static const communityPostHidden = 'community_post_hidden';
+  static const communityPostRestored = 'community_post_restored';
+  static const communityPostArchived = 'community_post_archived';
+  static const communityPostDeleted = 'community_post_deleted';
+  static const communityReportResolved = 'community_report_resolved';
 }

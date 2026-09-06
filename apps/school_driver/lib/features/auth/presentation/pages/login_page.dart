@@ -104,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                             ).of(context),
                             onSignOut: context.read<AuthCubit>().signOut,
                           ),
-                          AuthRejected() => _StatusCard(
+                          AuthRejected(:final user) => _StatusCard(
                             icon: Icons.block,
                             tone: StatusTone.error,
                             badgeLabel: const S(
@@ -115,13 +115,22 @@ class _LoginPageState extends State<LoginPage> {
                               'Registration rejected',
                               'تم رفض التسجيل',
                             ).of(context),
-                            message: const S(
-                              'Your school administrator did not approve '
-                                  'this account. Contact your school for '
-                                  'help.',
-                              'أدمن مدرستك متمش موافقته على الحساب ده. '
-                                  'كلّم مدرستك.',
-                            ).of(context),
+                            message:
+                                user.rejectionReason?.isNotEmpty == true
+                                ? S(
+                                    'Your school administrator did not '
+                                        'approve this account: '
+                                        '${user.rejectionReason}',
+                                    'أدمن مدرستك متمش موافقته على الحساب '
+                                        'ده: ${user.rejectionReason}',
+                                  ).of(context)
+                                : const S(
+                                    'Your school administrator did not '
+                                        'approve this account. Contact '
+                                        'your school for help.',
+                                    'أدمن مدرستك متمش موافقته على الحساب '
+                                        'ده. كلّم مدرستك.',
+                                  ).of(context),
                             onSignOut: context.read<AuthCubit>().signOut,
                           ),
                           AuthDisabled() => _StatusCard(
@@ -506,7 +515,14 @@ Future<void> _showForgotPasswordDialog(
       ],
     ),
   );
-  controller.dispose();
+  // Deliberately not disposed here: the dialog's own TextField is still
+  // mounted and mid-exit-transition when this Future resolves (showDialog
+  // completes as soon as Navigator.pop is called, before the reverse
+  // animation finishes), so an immediate dispose() crashes with "A
+  // TextEditingController was used after being disposed" the next time
+  // that still-animating TextField rebuilds. A short-lived, unowned
+  // controller with no other resources is safe to just let the GC
+  // collect once this closure returns.
   if (email == null || !email.contains('@') || !context.mounted) return;
 
   final isArabic = Localizations.localeOf(context).languageCode == 'ar';

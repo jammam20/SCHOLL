@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
@@ -16,6 +17,7 @@ import '../../students/data/students_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../data/ops_tracking_repository.dart';
 import '../domain/trip_path.dart';
+import 'bus_marker_icons.dart';
 import 'stop_marker_factory.dart';
 
 /// The fleet-operations control centre: every bus on the road on one map,
@@ -47,11 +49,16 @@ class LiveOpsTab extends StatefulWidget {
 class _BusFix {
   const _BusFix({
     required this.position,
+    this.heading = 0,
     this.speedMetersPerSecond,
     this.updatedAt,
   });
 
   final LatLng position;
+
+  /// The driver's real GPS heading in degrees, 0 when unavailable — the bus
+  /// bitmap is drawn pointing north precisely so this can turn it.
+  final double heading;
   final double? speedMetersPerSecond;
   final DateTime? updatedAt;
 }
@@ -525,27 +532,86 @@ class _OpsMap extends StatefulWidget {
   State<_OpsMap> createState() => _OpsMapState();
 }
 
-class _OpsMapState extends State<_OpsMap> {
+class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
   /// Bumped whenever a batch of numbered stop pins finishes rendering, to
   /// force one repaint that picks them up out of the cache.
   int _markerGeneration = 0;
+
+  /// The smoothed, currently-drawn position per trip — chases
+  /// [_OpsMap.fixes] a little closer every frame instead of jumping
+  /// straight to each new GPS fix, so N buses glide continuously between
+  /// the (few-seconds-apart) RTDB updates instead of teleporting. The
+  /// parent app's single-bus map gets the same effect from a
+  /// `TweenAnimationBuilder` restarting on every new fix; with an unbounded,
+  /// changing set of buses here, one repeating ticker nudging every entry
+  /// a fixed fraction of the way to its target each frame is the simpler
+  /// approach and reads identically smooth.
+  final Map<String, LatLng> _displayed = {};
+  Ticker? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_onTick)..start();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.dispose();
+    super.dispose();
+  }
+
+  void _onTick(Duration elapsed) {
+    if (!mounted) return;
+    var moved = false;
+    for (final entry in widget.fixes.entries) {
+      final target = entry.value.position;
+      final current = _displayed[entry.key];
+      if (current == null) {
+        _displayed[entry.key] = target;
+        moved = true;
+        continue;
+      }
+      final dLat = target.latitude - current.latitude;
+      final dLng = target.longitude - current.longitude;
+      if (dLat.abs() < 1e-7 && dLng.abs() < 1e-7) continue;
+      // Exponential "chase": close a fixed fraction of the remaining gap
+      // every frame — continuous motion between fixes, and it naturally
+      // re-aims mid-flight if a newer fix arrives before the last one was
+      // fully caught up to.
+      const factor = 0.12;
+      _displayed[entry.key] = LatLng(
+        current.latitude + dLat * factor,
+        current.longitude + dLng * factor,
+      );
+      moved = true;
+    }
+    if (_displayed.length != widget.fixes.length) {
+      _displayed.removeWhere((id, _) => !widget.fixes.containsKey(id));
+      moved = true;
+    }
+    if (moved) setState(() {});
+  }
 
   /// Renders any stop pin this frame needed but didn't have cached yet,
   /// then triggers a single repaint. Called from build; the cache check
   /// makes repeat calls cheap and the early return stops it looping.
   Future<void> _prepareMarkers(
     List<TripPathStop> stops,
+    Set<String> currentStopIds,
     _MapPalette palette,
     double ratio,
   ) async {
     var rendered = false;
     for (final stop in stops) {
       final color = _stopColor(stop, palette);
+      final isCurrent = currentStopIds.contains(stop.stopId);
       if (StopMarkerFactory.cached(
             number: stop.sequence,
             progress: stop.progress,
             color: color,
             devicePixelRatio: ratio,
+            isCurrent: isCurrent,
           ) !=
           null) {
         continue;
@@ -555,12 +621,57 @@ class _OpsMapState extends State<_OpsMap> {
         progress: stop.progress,
         color: color,
         devicePixelRatio: ratio,
+        isCurrent: isCurrent,
       );
+      rendered = true;
+    }
+    for (final trip in widget.visibleOnRoad) {
+      final fix = widget.fixes[trip.trip.id];
+      if (fix == null) continue;
+      final deviation = widget.deviations[trip.trip.id];
+      final isEmergency = trip.trip.status == TripStatus.emergency;
+      final color = isEmergency
+          ? palette.colors.emergency
+          : deviation != null
+          ? palette.colors.warning
+          : palette.colors.info;
+      if (BusMarkerIcons.cached(color: color, devicePixelRatio: ratio) !=
+          null) {
+        continue;
+      }
+      await BusMarkerIcons.prepare(color: color, devicePixelRatio: ratio);
       rendered = true;
     }
     if (rendered && mounted) {
       setState(() => _markerGeneration++);
     }
+  }
+
+  /// A stop's own progress can only tell "boarded" from "pending" — it
+  /// can't say *which* pending stop the bus is heading for right now. That
+  /// comes from the trip's own computed ETA, which is exactly what "next
+  /// stop, clearly marked" means on this map.
+  Set<String> _currentStopIds(List<_LiveTrip> trips) => {
+    for (final trip in trips) ?widget.etas[trip.trip.id]?.nextStopId,
+  };
+
+  /// The longest run of consecutive *done* stops from the front of [path] —
+  /// how far along the expected path the bus has actually gotten, used to
+  /// split the line into "already covered" and "still ahead" rather than
+  /// drawing the whole expected path in one style regardless of progress.
+  /// A plain count of done stops (as the ETA engine's own `stopsCompleted`
+  /// is) would mis-split a route where a stop was boarded out of order; a
+  /// front-anchored run can't.
+  int _donePrefixLength(List<TripPathStop> path) {
+    var count = 0;
+    for (final stop in path) {
+      final done =
+          stop.progress == TripStopProgress.boarded ||
+          stop.progress == TripStopProgress.droppedOff;
+      if (!done) break;
+      count++;
+    }
+    return count;
   }
 
   Color _stopColor(TripPathStop stop, _MapPalette palette) =>
@@ -588,39 +699,79 @@ class _OpsMapState extends State<_OpsMap> {
     final allStops = [
       for (final trip in pathTrips) ...?widget.paths[trip.trip.id],
     ];
+    final currentStopIds = _currentStopIds(widget.visibleOnRoad);
     // Fire-and-forget: renders anything missing, then repaints once.
-    unawaitedPrepare(() => _prepareMarkers(allStops, palette, ratio));
+    unawaitedPrepare(
+      () => _prepareMarkers(allStops, currentStopIds, palette, ratio),
+    );
 
     final markers = <Marker>{};
     final polylines = <Polyline>{};
 
     for (final trip in pathTrips) {
       final path = widget.paths[trip.trip.id] ?? const [];
+      final isCompleted = trip.trip.status == TripStatus.completed;
       if (path.length >= 2) {
-        final isCompleted = trip.trip.status == TripStatus.completed;
-        polylines.add(
-          Polyline(
-            polylineId: PolylineId('path-${trip.trip.id}'),
-            points: [
-              for (final stop in path) LatLng(stop.latitude, stop.longitude),
-            ],
-            color: isCompleted
-                ? palette.completedPath.withValues(alpha: 0.55)
-                : palette.expectedPath.withValues(alpha: 0.85),
-            width: isCompleted ? 3 : 5,
-            patterns: isCompleted
-                ? [PatternItem.dash(18), PatternItem.gap(12)]
-                : const [],
-          ),
-        );
+        if (isCompleted) {
+          // The whole journey is history now — one muted, dashed line.
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId('path-${trip.trip.id}'),
+              points: [
+                for (final stop in path) LatLng(stop.latitude, stop.longitude),
+              ],
+              color: palette.completedPath.withValues(alpha: 0.55),
+              width: 3,
+              patterns: [PatternItem.dash(18), PatternItem.gap(12)],
+            ),
+          );
+        } else {
+          // Still on the road: split at how far the bus has actually
+          // gotten, so "ground already covered" and "what's still ahead"
+          // read differently at a glance instead of one uniform line for
+          // the entire expected path regardless of progress.
+          final doneCount = _donePrefixLength(path);
+          final points = [
+            for (final stop in path) LatLng(stop.latitude, stop.longitude),
+          ];
+          if (doneCount > 0) {
+            polylines.add(
+              Polyline(
+                polylineId: PolylineId('path-done-${trip.trip.id}'),
+                points: points.sublist(
+                  0,
+                  (doneCount + 1).clamp(0, points.length),
+                ),
+                color: palette.completedPath.withValues(alpha: 0.6),
+                width: 3,
+                patterns: [PatternItem.dash(14), PatternItem.gap(10)],
+                zIndex: 0,
+              ),
+            );
+          }
+          final remaining = points.sublist(doneCount.clamp(0, points.length));
+          if (remaining.length >= 2) {
+            polylines.add(
+              Polyline(
+                polylineId: PolylineId('path-remaining-${trip.trip.id}'),
+                points: remaining,
+                color: palette.expectedPath.withValues(alpha: 0.9),
+                width: 5,
+                zIndex: 1,
+              ),
+            );
+          }
+        }
       }
 
       for (final stop in path) {
+        final isCurrent = currentStopIds.contains(stop.stopId);
         final icon = StopMarkerFactory.cached(
           number: stop.sequence,
           progress: stop.progress,
           color: _stopColor(stop, palette),
           devicePixelRatio: ratio,
+          isCurrent: isCurrent,
         );
         markers.add(
           Marker(
@@ -628,10 +779,13 @@ class _OpsMapState extends State<_OpsMap> {
             position: LatLng(stop.latitude, stop.longitude),
             icon: icon ?? BitmapDescriptor.defaultMarker,
             anchor: const Offset(0.5, 0.5),
-            zIndexInt: 1,
+            zIndexInt: isCurrent ? 2 : 1,
             infoWindow: InfoWindow(
               title: '${stop.sequence}. ${stop.label}',
-              snippet: _stopStateLabel(stop.progress, context),
+              snippet: isCurrent
+                  ? '${_stopStateLabel(stop.progress, context)} · '
+                        '${const S('Next stop', 'المحطة الجاية').of(context)}'
+                  : _stopStateLabel(stop.progress, context),
             ),
           ),
         );
@@ -642,23 +796,40 @@ class _OpsMapState extends State<_OpsMap> {
     for (final trip in widget.visibleOnRoad) {
       final fix = widget.fixes[trip.trip.id];
       if (fix == null) continue;
+      final displayedPosition = _displayed[trip.trip.id] ?? fix.position;
 
       final deviation = widget.deviations[trip.trip.id];
       final isEmergency = trip.trip.status == TripStatus.emergency;
       final eta = widget.etas[trip.trip.id];
+      final busColor = isEmergency
+          ? palette.colors.emergency
+          : deviation != null
+          ? palette.colors.warning
+          : palette.colors.info;
+      final busIcon = BusMarkerIcons.cached(
+        color: busColor,
+        devicePixelRatio: ratio,
+      );
 
       markers.add(
         Marker(
           markerId: MarkerId('bus-${trip.trip.id}'),
-          position: fix.position,
-          zIndexInt: 2,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            isEmergency
-                ? BitmapDescriptor.hueRed
-                : deviation != null
-                ? BitmapDescriptor.hueOrange
-                : BitmapDescriptor.hueAzure,
-          ),
+          position: displayedPosition,
+          // The driver's own reported GPS heading — the bus bitmap is
+          // drawn pointing north precisely so this can turn it.
+          rotation: fix.heading,
+          flat: true,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: 3,
+          icon:
+              busIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(
+                isEmergency
+                    ? BitmapDescriptor.hueRed
+                    : deviation != null
+                    ? BitmapDescriptor.hueOrange
+                    : BitmapDescriptor.hueAzure,
+              ),
           infoWindow: InfoWindow(
             title: trip.trip.routeName.isEmpty
                 ? trip.trip.busName
@@ -875,6 +1046,7 @@ class _MapFiltersCard extends StatelessWidget {
             DropdownButtonFormField<String?>(
               initialValue: routeFilter,
               isDense: true,
+              isExpanded: true,
               decoration: InputDecoration(
                 isDense: true,
                 labelText: const S('Route', 'الخط').of(context),
@@ -884,12 +1056,18 @@ class _MapFiltersCard extends StatelessWidget {
                   value: null,
                   child: Text(
                     const S('All routes', 'كل الخطوط').of(context),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
                 for (final entry in routeOptions.entries)
                   DropdownMenuItem<String?>(
                     value: entry.key,
-                    child: Text(entry.value),
+                    child: Text(
+                      entry.value,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
               ],
               onChanged: onRouteFilterChanged,
@@ -1879,9 +2057,13 @@ class _TripLocationSubscriberState extends State<_TripLocationSubscriber> {
           final latitude = (data['latitude'] as num?)?.toDouble();
           final longitude = (data['longitude'] as num?)?.toDouble();
           if (latitude != null && longitude != null) {
-            final updatedAtMillis = (data['updatedAt'] as num?)?.toInt();
+            // The driver app writes this node's freshness as `timestamp`
+            // (see DriverTrackingRepository) — matches the parent app's own
+            // `LiveBusPosition.fromRtdbValue` parsing of the same node.
+            final updatedAtMillis = (data['timestamp'] as num?)?.toInt();
             fix = _BusFix(
               position: LatLng(latitude, longitude),
+              heading: (data['heading'] as num?)?.toDouble() ?? 0,
               speedMetersPerSecond: (data['speed'] as num?)?.toDouble(),
               updatedAt: updatedAtMillis == null
                   ? null

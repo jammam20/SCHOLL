@@ -559,35 +559,60 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: AppButton.secondary(
-            label: const S('Message school', 'راسل المدرسة').of(context),
-            icon: Icons.chat_bubble_outline_rounded,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => ContactSchoolPage(user: user)),
-            ),
-          ),
+    final messageButton = AppButton.secondary(
+      label: const S('Message school', 'راسل المدرسة').of(context),
+      icon: Icons.chat_bubble_outline_rounded,
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ContactSchoolPage(user: user)),
+      ),
+    );
+
+    if (!student.approved) return messageButton;
+
+    final settingsButton = AppButton.secondary(
+      label: const S('Child settings', 'إعدادات الطفل').of(context),
+      icon: Icons.tune_rounded,
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChildSettingsPage(user: user, student: student),
         ),
-        if (student.approved) ...[
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: AppButton.secondary(
-              label: const S('Child settings', 'إعدادات الطفل').of(context),
-              icon: Icons.tune_rounded,
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      ChildSettingsPage(user: user, student: student),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
+      ),
+    );
+
+    // Side by side, each button gets roughly half the card's width minus the
+    // gap — on a 375px phone that's too narrow for "Message school" /
+    // "Child settings" at default text scale, so the label silently
+    // truncated to "Message …" on every phone-width screen. Below
+    // `_stackBreakpoint`, stack them full-width instead so neither label
+    // ever has less room than it needs.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _stackBreakpoint) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              messageButton,
+              const SizedBox(height: AppSpacing.sm),
+              settingsButton,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: messageButton),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: settingsButton),
+          ],
+        );
+      },
     );
   }
 }
+
+/// Below this available width, [_QuickActions] stacks its two buttons
+/// instead of splitting the row in half — chosen from the two English
+/// labels ("Message school" / "Child settings"), the longer of the pair,
+/// at the app's default text scale.
+const _stackBreakpoint = 360.0;

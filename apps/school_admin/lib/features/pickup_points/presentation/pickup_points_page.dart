@@ -831,6 +831,50 @@ class _StudentAssignmentRow extends StatelessWidget {
                 ),
             ],
           ),
+          // A student assigned to a shared pickup point that itself belongs
+          // to a route only actually gets a stop generated on that route's
+          // trips if the student's own `routeId` also points at that same
+          // route — a second, separate field (set from the Students tab,
+          // not here) that's easy to forget. Left unset, the assignment
+          // above silently produces zero trip stops with no error anywhere,
+          // which is exactly the trap a school admin previously fell into
+          // live.
+          if (assigned != null &&
+              assigned.routeId != null &&
+              assigned.routeId != student.routeId) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: colors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: colors.warning.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 18, color: colors.warning),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      const S(
+                        "This student isn't assigned to this pickup point's "
+                            'route, so they will NOT appear as a stop on '
+                            "that route's trips. Assign the student to the "
+                            'same route from the Students tab to fix this.',
+                        'الطالب ده مش متخصص لخط نقطة الاستلام دي، فمش هيظهر '
+                            'كمحطة في رحلات الخط ده. خصص الطالب لنفس الخط من '
+                            'تبويب الطلاب عشان تظبط الموضوع.',
+                      ).of(context),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           if (!student.hasLocation)
             Text(

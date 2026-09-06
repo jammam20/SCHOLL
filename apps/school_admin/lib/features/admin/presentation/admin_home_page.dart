@@ -11,6 +11,7 @@ import '../../../app/notification_routing.dart';
 import '../../audit/presentation/audit_trail_page.dart';
 import '../../buses/data/buses_repository.dart';
 import '../../common/presentation/location_picker_page.dart';
+import '../../community/presentation/community_admin_page.dart';
 import '../../dashboard/presentation/control_center_tab.dart';
 import '../../driver_management/presentation/driver_management_page.dart';
 import '../../drivers/data/drivers_repository.dart';
@@ -120,6 +121,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
       ),
       ReportsTab(schoolId: schoolId),
       ParentMessagesPage(schoolId: schoolId),
+      CommunityAdminPage(schoolId: schoolId),
       ProfilePage(user: widget.user, onSignOut: widget.onSignOut),
     ];
 
@@ -170,6 +172,11 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 selected: true,
               ),
               label: const S('Messages', 'الرسايل').of(context),
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.forum_outlined),
+              selectedIcon: const Icon(Icons.forum_rounded),
+              label: const S('Community', 'المجتمع').of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.person_outline),
@@ -836,9 +843,14 @@ class _StudentsTab extends StatelessWidget {
       );
     }
 
-    name.dispose();
-    grade.dispose();
-    phone.dispose();
+    // Deliberately not disposed here: the dialog's own TextFields are still
+    // mounted and mid-exit-transition when this Future resolves (showDialog
+    // completes as soon as Navigator.pop is called, before the reverse
+    // animation finishes), so disposing these controllers immediately
+    // crashes the still-animating TextFields the next time they rebuild —
+    // see pending_approval_card.dart's identical note. Short-lived, unowned
+    // controllers with no other resources are safe to just let the GC
+    // collect once this closure returns.
   }
 
   Future<void> _manageStudent(
@@ -2038,6 +2050,8 @@ class _RoutesTabContent extends StatelessWidget {
         name: draft.name,
         description: draft.description,
         deviationToleranceMeters: draft.deviationToleranceMeters,
+        outboundScheduledMinutes: draft.outboundScheduledMinutes,
+        returnScheduledMinutes: draft.returnScheduledMinutes,
       ),
     );
   }

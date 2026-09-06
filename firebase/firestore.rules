@@ -53,6 +53,15 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Feature: Parent Community. Distinguishes a parent from an admin/
+    // staff/driver wherever community write access must be limited to the
+    // "parent" persona this feature is specifically about — never treated
+    // as a subset of isActiveMember anywhere it matters.
+    function isSchoolParent(schoolId) {
+      return isActiveMember(schoolId) &&
+          membership(schoolId).data.role == 'parent';
+    }
+
     // A brand-new parent, driver or admin registers by writing these two
     // documents directly (see FirebaseAuthRepository.registerParent/
     // registerDriver/registerAdmin in the parent/driver/admin apps) instead
@@ -422,6 +431,23 @@ service cloud.firestore {
             request.resource.data.schoolId == schoolId &&
             request.resource.data.parentUid == request.auth.uid &&
             request.resource.data.status == 'open';
+        // Feature: Parent Community's "Message Parent" action. An admin can
+        // also *open* a thread — targeted at one specific, already-approved
+        // parent of their own school — rather than only ever replying
+        // inside one a parent started first. Reuses this exact collection/
+        // `messages` subcollection/onParentMessageCreated pipeline rather
+        // than building a second messaging path; the parent-initiated
+        // branch above is untouched. `unreadByParent`/`unreadByAdmin` are
+        // pinned to the correct starting direction so the admin's own inbox
+        // doesn't immediately show its own just-opened thread as unread.
+        allow create: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.status == 'open' &&
+            request.resource.data.unreadByParent == true &&
+            request.resource.data.unreadByAdmin == false &&
+            get(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.resource.data.parentUid)).data.role == 'parent' &&
+            get(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.resource.data.parentUid)).data.status == 'approved' &&
+            get(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.resource.data.parentUid)).data.isActive == true;
         // An admin triages a thread (status/readBy/readAt) OR the two
         // sides keep the "who has unread messages here" flags in sync as
         // the conversation continues (see the messages subcollection
@@ -729,6 +755,156 @@ service cloud.firestore {
               request.resource.data.tripId == tripId &&
               request.resource.data.driverId == request.auth.uid;
           allow update, delete: if false;
+        }
+      }
+
+      // Feature: Parent Community. A parent's anonymous post to their own
+      // school's community feed — anonymity is enforced by data shape, not
+      // just UI: this document never carries an authorUid field at all (see
+      // the `authors` subcollection below), so there is nothing for a
+      // parent-level read to expose even by mistake. Read is open to every
+      // active member, but only while `status == 'active'` — once an admin
+      // hides/archives/deletes a post it disappears from every non-admin
+      // read entirely (the client-side feed query filters on `status` to
+      // satisfy this; a query that didn't would be denied outright rather
+      // than silently dropping the now-invisible docs). Only a parent may
+      // create one, for their own school, starting active with zero
+      // counters. The three further update rules below handle admin
+      // moderation (status only) and the counter bumps the parent-writable
+      // subcollections below each cause.
+      match /communityPosts/{postId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+            (isActiveMember(schoolId) && resource.data.status == 'active');
+        // `hasOnly` is the field-level guarantee behind this feature's
+        // anonymity promise: without it, nothing would stop a tampered
+        // client from smuggling an extra field (an `authorUid`, someone
+        // else's uid, anything) onto a document every parent in the school
+        // can read back via the `allow read` above — a UI that simply
+        // doesn't display a field is not the same as a field that cannot
+        // exist. The one place an author identity is allowed to live is
+        // the separate, admin-only `authors` subcollection below.
+        allow create: if isSchoolParent(schoolId) &&
+            request.resource.data.keys().hasOnly([
+              'schoolId', 'category', 'content', 'status', 'createdAt',
+              'updatedAt', 'reactionCount', 'commentCount', 'reportCount',
+            ]) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.status == 'active' &&
+            request.resource.data.content is string &&
+            request.resource.data.content.size() > 0 &&
+            request.resource.data.content.size() <= 4000 &&
+            request.resource.data.reactionCount == 0 &&
+            request.resource.data.commentCount == 0 &&
+            request.resource.data.reportCount == 0;
+        // Admin moderation: hide/restore/archive/delete — status only,
+        // never touches the content a parent wrote. Deliberately no state
+        // machine (unlike TripStatus): moderation freely moves a post
+        // between any of the four states, and "delete" here is still just
+        // a status flip (see the class doc on CommunityPostStatus) rather
+        // than an actual document delete, so nothing is ever destroyed.
+        allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+            request.resource.data.status in ['active', 'hidden', 'archived', 'deleted'];
+        // A reaction is toggled on/off in the same request that creates/
+        // deletes the caller's own `reactions/{uid}` doc below — the
+        // `exists()` check ties the counter to that reality instead of
+        // trusting the client's arithmetic alone. +1 exactly matches a new
+        // reaction just having been created; -1 matches one just removed.
+        allow update: if isSchoolParent(schoolId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionCount', 'updatedAt']) &&
+            ((request.resource.data.reactionCount == resource.data.reactionCount + 1 &&
+                  exists(/databases/$(database)/documents/schools/$(schoolId)/communityPosts/$(postId)/reactions/$(request.auth.uid))) ||
+                (request.resource.data.reactionCount == resource.data.reactionCount - 1 &&
+                    !exists(/databases/$(database)/documents/schools/$(schoolId)/communityPosts/$(postId)/reactions/$(request.auth.uid))));
+        // Bumped by the same parent whose comment/report create (below)
+        // this accompanies — always by exactly one, never decremented by a
+        // client (comments/reports aren't parent-deletable). An admin's own
+        // reply bumps this exactly the same way.
+        allow update: if (isSchoolParent(schoolId) || isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['commentCount', 'updatedAt']) &&
+            request.resource.data.commentCount == resource.data.commentCount + 1;
+        allow update: if isSchoolParent(schoolId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reportCount', 'updatedAt']) &&
+            request.resource.data.reportCount == resource.data.reportCount + 1;
+        allow delete: if false;
+
+        // The one place this feature's author identity actually lives —
+        // deliberately its own document, never a field on the post/comment
+        // itself, so a parent-level read of the post/comment (open to the
+        // whole school above) can never expose it even by a future mistake.
+        // Doc id `post` is the post's own author; a comment's author lives
+        // at the matching commentId. Admin-and-system-admin read only — not
+        // even the author themselves, since nothing in this feature asks a
+        // parent to recognize their own past posts by identity. Written
+        // once, self-attested, at create time; never editable.
+        match /authors/{authorDocId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin();
+          allow create: if isSchoolParent(schoolId) &&
+              request.resource.data.keys().hasOnly(['authorUid', 'createdAt']) &&
+              request.resource.data.authorUid == request.auth.uid;
+          allow update, delete: if false;
+        }
+
+        // A comment carries the same anonymity guarantee as the post it's
+        // on (see `authors` above) and disappears the moment its post is no
+        // longer active, exactly like the post's own read rule.
+        match /comments/{commentId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId) ||
+              (isActiveMember(schoolId) &&
+                  get(/databases/$(database)/documents/schools/$(schoolId)/communityPosts/$(postId)).data.status == 'active');
+          // A parent's comment stays anonymous like the post itself (see
+          // `authors` above). An admin's own reply is the one place this
+          // feature shows a real, official voice — pinned `isAdmin: true`
+          // right on the comment (not who specifically, just that it's the
+          // school), never routed through the anonymous-author machinery
+          // parents use, since there is nothing to anonymize about it.
+          allow create: if isSchoolParent(schoolId) &&
+              request.resource.data.keys().hasOnly(['content', 'createdAt']) &&
+              request.resource.data.content is string &&
+              request.resource.data.content.size() > 0 &&
+              request.resource.data.content.size() <= 2000;
+          allow create: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+              request.resource.data.keys().hasOnly(['content', 'createdAt', 'isAdmin']) &&
+              request.resource.data.isAdmin == true &&
+              request.resource.data.content is string &&
+              request.resource.data.content.size() > 0 &&
+              request.resource.data.content.size() <= 2000;
+          allow update, delete: if false;
+        }
+
+        // One reaction per parent per post — the doc id is the reacting
+        // parent's own uid, so "already reacted" is just `exists()` and a
+        // second reaction can never be recorded twice. Readable by the
+        // reacting parent themselves (so their own UI can show "you
+        // reacted") and by admin; not by any other parent — who reacted is
+        // exactly the kind of identity this feature keeps anonymous.
+        match /reactions/{uid} {
+          allow read: if isSelf(uid) || isSchoolAdmin(schoolId) || isSystemAdmin();
+          allow create: if isSchoolParent(schoolId) && isSelf(uid) &&
+              request.resource.data.keys().hasOnly(['createdAt']);
+          allow delete: if isSelf(uid);
+          allow update: if false;
+        }
+
+        // A parent's report against a post — admin-only read (moderation's
+        // job, not a public signal, and deliberately not even visible back
+        // to the reporter, matching this feature's own privacy stance).
+        // Self-attested reporterUid; starts `open`; an admin may only ever
+        // flip it to `resolved`.
+        match /reports/{reportId} {
+          allow read: if isSchoolAdmin(schoolId) || isSystemAdmin();
+          allow create: if isSchoolParent(schoolId) &&
+              request.resource.data.keys().hasOnly([
+                'reporterUid', 'reason', 'status', 'createdAt', 'details',
+              ]) &&
+              request.resource.data.reporterUid == request.auth.uid &&
+              request.resource.data.status == 'open';
+          allow update: if (isSchoolAdmin(schoolId) || isSystemAdmin()) &&
+              resource.data.status == 'open' &&
+              request.resource.data.status == 'resolved' &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['status', 'resolvedAt', 'resolvedBy']);
+          allow delete: if false;
         }
       }
     }

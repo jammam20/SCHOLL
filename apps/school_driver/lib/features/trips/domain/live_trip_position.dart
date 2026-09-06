@@ -13,12 +13,16 @@ class LiveTripPosition {
   const LiveTripPosition({
     required this.latitude,
     required this.longitude,
+    this.heading = 0,
     this.speedMetersPerSecond,
     this.updatedAt,
   });
 
   final double latitude;
   final double longitude;
+
+  /// The device's real GPS heading in degrees, 0 when unavailable.
+  final double heading;
   final double? speedMetersPerSecond;
   final DateTime? updatedAt;
 
@@ -36,6 +40,7 @@ class LiveTripPosition {
     return LiveTripPosition(
       latitude: latitude,
       longitude: longitude,
+      heading: (data['heading'] as num?)?.toDouble() ?? 0,
       speedMetersPerSecond: (data['speed'] as num?)?.toDouble(),
       updatedAt: timestampMs == null
           ? null

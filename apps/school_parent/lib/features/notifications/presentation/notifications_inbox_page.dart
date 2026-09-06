@@ -240,6 +240,76 @@ class _NotificationCard extends StatelessWidget {
     final isUnread = !notification.read;
     final isEmergency = tone == StatusTone.emergency;
 
+    final iconBadge = Container(
+      width: 38,
+      height: 38,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.md - 2),
+      ),
+      child: Icon(notificationTypeIcon(notification.type), color: accent, size: 19),
+    );
+
+    final titleRow = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            notification.title,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: colors.textPrimary,
+              fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
+            ),
+          ),
+        ),
+        if (isUnread) ...[
+          const SizedBox(width: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    final metaRow = Row(
+      children: [
+        StatusBadge(
+          label: notificationTypeLabel(notification.type).of(context),
+          tone: tone,
+        ),
+        const Spacer(),
+        Text(
+          DateFormat.jm().format(notification.createdAt),
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
+        ),
+      ],
+    );
+
+    final textColumn = Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          titleRow,
+          const SizedBox(height: 3),
+          Text(
+            notification.body,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          metaRow,
+        ],
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Material(
@@ -264,107 +334,32 @@ class _NotificationCard extends StatelessWidget {
         ),
         child: InkWell(
           onTap: onTap,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // An accent rail on the leading edge, so the tone of an
-                // entry is legible before a single word is read.
-                Container(width: isEmergency ? 4 : 3, color: accent),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(
-                              AppRadius.md - 2,
-                            ),
-                          ),
-                          child: Icon(
-                            notificationTypeIcon(notification.type),
-                            color: accent,
-                            size: 19,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      notification.title,
-                                      style: theme.textTheme.bodyLarge
-                                          ?.copyWith(
-                                            color: colors.textPrimary,
-                                            fontWeight: isUnread
-                                                ? FontWeight.w800
-                                                : FontWeight.w600,
-                                          ),
-                                    ),
-                                  ),
-                                  if (isUnread) ...[
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Container(
-                                        width: 9,
-                                        height: 9,
-                                        decoration: BoxDecoration(
-                                          color: accent,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                notification.body,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colors.textSecondary,
-                                  height: 1.45,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              Row(
-                                children: [
-                                  StatusBadge(
-                                    label: notificationTypeLabel(
-                                      notification.type,
-                                    ).of(context),
-                                    tone: tone,
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    DateFormat.jm().format(
-                                      notification.createdAt,
-                                    ),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          child: Container(
+            // The accent rail used to be a sibling flex child inside an
+            // IntrinsicHeight Row, stretched to match this card's content
+            // height. IntrinsicHeight computes that height itself (from
+            // computeMinIntrinsicHeight), which can land a hair short of
+            // what the body text's `height: 1.45` line-height multiplier
+            // actually lays out to — a 1px rounding gap that showed up as a
+            // real, 100%-reproducible "RenderFlex overflowed by 1.00
+            // pixels" on every notification. A left border paints the same
+            // full-height accent rail without computing an intrinsic height
+            // at all, so there's nothing left to round.
+            decoration: BoxDecoration(
+              border: Border(
+                left: BorderSide(color: accent, width: isEmergency ? 4 : 3),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  iconBadge,
+                  const SizedBox(width: AppSpacing.md),
+                  textColumn,
+                ],
+              ),
             ),
           ),
         ),

@@ -105,7 +105,18 @@ class _LiveTripMapState extends State<LiveTripMap> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    try {
+      _controller?.dispose();
+    } catch (_) {
+      // google_maps_flutter_web's controller.dispose() asserts
+      // "Maps cannot be retrieved before calling buildView!" if this widget
+      // is unmounted before the map's platform view finished attaching
+      // (e.g. navigating away right after the map first appears, or a fast
+      // reload while it's still initializing) — a real, reproducible crash
+      // found during live QA that took down the entire page's widget-tree
+      // teardown, not just this map. There is nothing to actually clean up
+      // in that case, so swallowing it here is safe.
+    }
     super.dispose();
   }
 

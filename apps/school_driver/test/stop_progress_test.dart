@@ -56,6 +56,42 @@ void main() {
     expect(progress.nextStopId, isNull);
   });
 
+  // Regression test for a real crash/mislabel found during live QA: a
+  // return trip's order has school FIRST (boarded there, dropped off at
+  // home), not last. The school-is-always-remaining assumption above
+  // previously ignored that, leaving school stuck as `currentStopId`
+  // forever — which the driver app showed as "Next stop: School" even
+  // once the bus was already moving toward the student's home stop, and
+  // fed a stale index into the reorder dropdown that crashed it.
+  group('return trip (school first)', () {
+    const returnOrder = [schoolStopId, 'student-1', 'student-2'];
+
+    test('school is reached immediately; the first student is current', () {
+      final progress = computeStopProgress(
+        order: returnOrder,
+        boardedStudents: {},
+        schoolStopId: schoolStopId,
+      );
+
+      expect(progress.completedStopIds, [schoolStopId]);
+      expect(progress.currentStopId, 'student-1');
+      expect(progress.nextStopId, 'student-2');
+      expect(progress.remainingStopIds, ['student-1', 'student-2']);
+    });
+
+    test('boarding students in turn advances past school correctly', () {
+      final progress = computeStopProgress(
+        order: returnOrder,
+        boardedStudents: {'student-1'},
+        schoolStopId: schoolStopId,
+      );
+
+      expect(progress.completedStopIds, [schoolStopId, 'student-1']);
+      expect(progress.currentStopId, 'student-2');
+      expect(progress.nextStopId, isNull);
+    });
+  });
+
   test('an empty order reports no current stop', () {
     final progress = computeStopProgress(
       order: const [],

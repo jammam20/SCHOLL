@@ -21,8 +21,21 @@ class StopMarkerFactory {
 
   static final Map<String, BitmapDescriptor> _cache = {};
 
-  static String _key(int number, TripStopProgress progress, Color color, double ratio) =>
-      '$number:${progress.name}:${color.toARGB32()}:${ratio.toStringAsFixed(2)}';
+  /// Keys currently being rendered — the live-ops map calls [prepare] once
+  /// per uncached stop on every animated frame (see `_OpsMapState`'s
+  /// per-frame marker chase), so without this guard a pin still being
+  /// rasterized would get a fresh, redundant render kicked off on each of
+  /// those frames instead of the one already in flight being awaited.
+  static final Set<String> _pending = {};
+
+  static String _key(
+    int number,
+    TripStopProgress progress,
+    Color color,
+    double ratio,
+    bool isCurrent,
+  ) =>
+      '$number:${progress.name}:${color.toARGB32()}:${ratio.toStringAsFixed(2)}:$isCurrent';
 
   /// Returns the cached pin if one exists, otherwise null — callers render
   /// with what's cached and repaint once [prepare] resolves, so building
@@ -32,24 +45,55 @@ class StopMarkerFactory {
     required TripStopProgress progress,
     required Color color,
     required double devicePixelRatio,
-  }) => _cache[_key(number, progress, color, devicePixelRatio)];
+    bool isCurrent = false,
+  }) => _cache[_key(number, progress, color, devicePixelRatio, isCurrent)];
 
   /// Renders and caches one pin. Safe to call repeatedly for the same
   /// inputs — the second call is a cache hit and does no drawing.
+  ///
+  /// [isCurrent] marks the one stop a trip's computed ETA says the bus is
+  /// actually heading for right now — drawn with an extra halo ring, the
+  /// same "next stop" treatment the parent app's own map gives a child's
+  /// stop, so it's unmistakable among a whole route's worth of pins.
   static Future<void> prepare({
     required int number,
     required TripStopProgress progress,
     required Color color,
     required double devicePixelRatio,
+    bool isCurrent = false,
   }) async {
-    final key = _key(number, progress, color, devicePixelRatio);
-    if (_cache.containsKey(key)) return;
+    final key = _key(number, progress, color, devicePixelRatio, isCurrent);
+    if (_cache.containsKey(key) || !_pending.add(key)) return;
+    try {
+      await _render(key, number, progress, color, devicePixelRatio, isCurrent);
+    } finally {
+      _pending.remove(key);
+    }
+  }
 
-    final size = 34.0 * devicePixelRatio;
+  static Future<void> _render(
+    String key,
+    int number,
+    TripStopProgress progress,
+    Color color,
+    double devicePixelRatio,
+    bool isCurrent,
+  ) async {
+    // The halo ring needs extra canvas room around the pin itself.
+    final logicalSize = isCurrent ? 46.0 : 34.0;
+    final size = logicalSize * devicePixelRatio;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final center = Offset(size / 2, size / 2);
-    final radius = size / 2;
+    final radius = (34.0 * devicePixelRatio) / 2;
+
+    if (isCurrent) {
+      canvas.drawCircle(
+        center,
+        radius + 6 * devicePixelRatio,
+        Paint()..color = color.withValues(alpha: 0.20),
+      );
+    }
 
     // A soft halo so a pin stays legible against dark satellite imagery
     // and light street tiles alike.
@@ -104,8 +148,8 @@ class StopMarkerFactory {
 
     _cache[key] = BitmapDescriptor.bytes(
       bytes.buffer.asUint8List(),
-      width: 34,
-      height: 34,
+      width: logicalSize,
+      height: logicalSize,
     );
   }
 }

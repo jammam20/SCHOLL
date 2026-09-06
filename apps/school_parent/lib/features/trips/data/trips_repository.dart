@@ -24,7 +24,14 @@ class TripsRepository {
   // Matches the composite index (routeId ASC, scheduledAt DESC) in
   // firebase/firestore.indexes.json. There's no explicit "today's trip"
   // concept yet (see the Trips feature gap noted in the project review), so
-  // this just returns the most recently scheduled trip for the route.
+  // this returns the most recently *scheduled* candidates for the route —
+  // deliberately more than one. A single result picked by scheduledAt alone
+  // is wrong whenever a later-scheduled trip on the same route gets
+  // cancelled (or two same-day trips exist): it would permanently shadow an
+  // earlier-scheduled trip that is actually active right now. The caller
+  // (child_journey_card.dart's _TripSection) picks the right one out of
+  // these candidates — this method can't do that itself since Firestore
+  // can't order by "is this the one that's live" without a stored field.
   Stream<QuerySnapshot<Map<String, dynamic>>> watchLatestTripForRoute({
     required String schoolId,
     required String routeId,
@@ -35,7 +42,7 @@ class TripsRepository {
         .collection('trips')
         .where('routeId', isEqualTo: routeId)
         .orderBy('scheduledAt', descending: true)
-        .limit(1)
+        .limit(10)
         .snapshots();
   }
 }

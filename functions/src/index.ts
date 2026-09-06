@@ -373,7 +373,7 @@ async function writeNotificationRecords(
   type: string,
   title: string,
   body: string,
-  extra?: { tripId?: string; busId?: string; studentId?: string },
+  extra?: { tripId?: string; busId?: string; studentId?: string; postId?: string },
 ): Promise<void> {
   const uniqueUids = [...new Set(uids)].filter((uid) => uid.length > 0);
   if (uniqueUids.length === 0) return;
@@ -394,6 +394,7 @@ async function writeNotificationRecords(
           ...(extra?.tripId ? { tripId: extra.tripId } : {}),
           ...(extra?.busId ? { busId: extra.busId } : {}),
           ...(extra?.studentId ? { studentId: extra.studentId } : {}),
+          ...(extra?.postId ? { postId: extra.postId } : {}),
         })
         .catch((error) =>
           console.error(`Failed to write notification inbox entry for ${uid}`, error),
@@ -1250,6 +1251,134 @@ export const onParentMessageCreated = onDocumentWritten(
       });
       await writeNotificationRecords([parentUid], schoolId, "parent_message", "School Bus", body);
     }
+  },
+);
+
+/// Notifies a community post's author when their post is hidden by
+/// moderation (Feature: Parent Community) — the only status transition
+/// that gets a push; restore/archive/delete don't, matching the user-
+/// facing spec's own notification list. The author's uid is never on the
+/// post document itself (see firestore.rules' own comment on why identity
+/// lives only in the admin-only `authors` subcollection); this function
+/// can still read it because Admin SDK writes bypass security rules
+/// entirely — that's what makes a server-only lookup like this safe where
+/// a client-side one would defeat the whole anonymity guarantee.
+export const onCommunityPostStatusChanged = onDocumentUpdated(
+  "schools/{schoolId}/communityPosts/{postId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.status === after.status || after.status !== "hidden") return;
+
+    const { schoolId, postId } = event.params;
+    const authorSnap = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("communityPosts")
+      .doc(postId)
+      .collection("authors")
+      .doc("post")
+      .get();
+    const authorUid = String(authorSnap.data()?.authorUid ?? "");
+    if (!authorUid) return;
+
+    const { tokens } = await tokensAndPrefsForUser(authorUid);
+    const body = "Your community post was hidden by your school's admin.";
+    await sendPushNotification(tokens, "School Bus", body, {
+      type: "community_post_hidden",
+      schoolId,
+      postId,
+    });
+    await writeNotificationRecords(
+      [authorUid],
+      schoolId,
+      "community_post_hidden",
+      "School Bus",
+      body,
+      { postId },
+    );
+  },
+);
+
+/// Notifies a post's author when the school admin replies to it (Feature:
+/// Parent Community) — the one reply-side push this feature sends; a
+/// parent's own comment never notifies anyone, matching how a post never
+/// notifies other parents either. Create-only, and only for an admin's
+/// reply (`isAdmin === true`) — a fellow parent's comment is exactly the
+/// kind of activity this feature deliberately keeps quiet.
+export const onCommunityCommentCreated = onDocumentWritten(
+  "schools/{schoolId}/communityPosts/{postId}/comments/{commentId}",
+  async (event) => {
+    if (!event.data?.after.exists || event.data.before.exists) return; // create-only
+
+    const comment = event.data.after.data()!;
+    if (comment.isAdmin !== true) return;
+
+    const { schoolId, postId } = event.params;
+    const authorSnap = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("communityPosts")
+      .doc(postId)
+      .collection("authors")
+      .doc("post")
+      .get();
+    const authorUid = String(authorSnap.data()?.authorUid ?? "");
+    if (!authorUid) return;
+
+    const text = String(comment.content ?? "");
+    const preview = text.length > 120 ? `${text.slice(0, 120)}…` : text;
+    const { tokens } = await tokensAndPrefsForUser(authorUid);
+    const body = `🏫 Your school replied to your community post: ${preview}`;
+    await sendPushNotification(tokens, "School Bus", body, {
+      type: "community_admin_replied",
+      schoolId,
+      postId,
+    });
+    await writeNotificationRecords(
+      [authorUid],
+      schoolId,
+      "community_admin_replied",
+      "School Bus",
+      body,
+      { postId },
+    );
+  },
+);
+
+/// Notifies a report's own reporter once an admin marks it resolved
+/// (Feature: Parent Community) — deliberately the only report-side push;
+/// nothing ever notifies the *post's* author that they were reported, and
+/// nothing tells one parent who reported them, matching this feature's
+/// anonymity guarantee.
+export const onCommunityReportResolved = onDocumentUpdated(
+  "schools/{schoolId}/communityPosts/{postId}/reports/{reportId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.status === after.status || after.status !== "resolved") return;
+
+    const { schoolId, postId } = event.params;
+    const reporterUid = String(after.reporterUid ?? "");
+    if (!reporterUid) return;
+
+    const { tokens } = await tokensAndPrefsForUser(reporterUid);
+    const body = "Your school reviewed the post you reported.";
+    await sendPushNotification(tokens, "School Bus", body, {
+      type: "community_report_resolved",
+      schoolId,
+      postId,
+    });
+    await writeNotificationRecords(
+      [reporterUid],
+      schoolId,
+      "community_report_resolved",
+      "School Bus",
+      body,
+      { postId },
+    );
   },
 );
 

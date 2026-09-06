@@ -58,9 +58,13 @@ AuthState resolveAuthState(AppUser user) {
     return const AuthSignedOut(message: 'This account is not a parent account.');
   }
 
-  if (user.isDisabled) return AuthDisabled(user);
+  // See the admin app's resolveAuthState for why order matters here: every
+  // real reject/register write ties isActive to the approved status, so the
+  // broader isDisabled check must run after isRejected/isPending or it
+  // always wins first and those two states become unreachable.
   if (user.isRejected) return AuthRejected(user);
   if (user.isPending) return AuthPendingApproval(user);
+  if (user.isDisabled) return AuthDisabled(user);
 
   if (!user.canAccessApp) {
     return const AuthSignedOut(message: 'Your account is not authorized.');

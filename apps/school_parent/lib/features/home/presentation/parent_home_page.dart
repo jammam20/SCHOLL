@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../../app/notification_routing.dart';
+import '../../community/presentation/community_page.dart';
 import '../../messages/presentation/parent_requests_page.dart';
 import '../../notifications/data/notifications_repository.dart';
 import '../../notifications/presentation/notifications_inbox_page.dart';
@@ -27,7 +28,7 @@ const _maxContentWidth = 980.0;
 
 /// The parent app shell.
 ///
-/// **Three destinations: Home, Messages, Profile.**
+/// **Four destinations: Home, Messages, Community, Profile.**
 ///
 /// *Home* absorbs tracking rather than tracking getting a destination of
 /// its own. There is exactly one trip per route per day in this system, so
@@ -44,8 +45,14 @@ const _maxContentWidth = 980.0;
 /// starts threads there and comes back for replies, and burying a
 /// conversation two taps deep under "Profile" is the wrong shape for that.
 ///
+/// *Community* (Feature: Parent Community) is the school's anonymous
+/// parent feed — problems, questions, suggestions, feedback — kept as its
+/// own destination rather than folded into Home, since it's a distinct
+/// audience-wide space rather than anything about *this* parent's own
+/// child.
+///
 /// *Notifications* deliberately stays as the app-bar bell with a live
-/// unread badge instead of taking a fourth slot. It is a read-only history
+/// unread badge instead of taking its own slot. It is a read-only history
 /// — one that already announces itself through push and through the badge —
 /// and a badge on a bell is exactly as discoverable as a nav item without
 /// spending a permanent slot on a log.
@@ -62,6 +69,7 @@ class ParentHomePage extends StatefulWidget {
 class _ParentHomePageState extends State<ParentHomePage> {
   static const _homeIndex = 0;
   static const _messagesIndex = 1;
+  static const _communityIndex = 2;
 
   int _index = _homeIndex;
 
@@ -80,16 +88,24 @@ class _ParentHomePageState extends State<ParentHomePage> {
 
   /// Sends a tapped push to the destination that actually holds it. The
   /// `type` strings are the ones functions/src/index.ts really sends —
-  /// message traffic belongs on Messages now that it has its own
-  /// destination; everything else (trip, emergency, boarding, deviation,
-  /// bus change) is about a child's journey, which lives on Home.
+  /// message traffic (including an admin's "Message Parent" reply to a
+  /// community post, which reuses the exact same parent_message pipeline)
+  /// belongs on Messages; a community moderation notice (post hidden,
+  /// report resolved — Feature: Parent Community) belongs on Community;
+  /// everything else (trip, emergency, boarding, deviation, bus change) is
+  /// about a child's journey, which lives on Home.
   void _onNotificationTapped() {
     final type = NotificationRouting.pendingTarget.value;
     if (type == null) return;
     NotificationRouting.pendingTarget.value = null;
-    final target = (type == 'school_message' || type == 'parent_message')
-        ? _messagesIndex
-        : _homeIndex;
+    final target = switch (type) {
+      'school_message' || 'parent_message' => _messagesIndex,
+      'community_post_hidden' ||
+      'community_report_resolved' ||
+      'community_admin_replied' =>
+        _communityIndex,
+      _ => _homeIndex,
+    };
     setState(() => _index = target);
   }
 
@@ -98,6 +114,7 @@ class _ParentHomePageState extends State<ParentHomePage> {
     final pages = [
       _HomeTab(user: widget.user),
       ParentRequestsPage(user: widget.user),
+      CommunityPage(user: widget.user),
       ProfilePage(user: widget.user, onSignOut: widget.onSignOut),
     ];
 
@@ -111,6 +128,11 @@ class _ParentHomePageState extends State<ParentHomePage> {
         icon: Icons.chat_bubble_outline_rounded,
         selectedIcon: Icons.chat_bubble_rounded,
         label: const S('Messages', 'الرسايل').of(context),
+      ),
+      _Destination(
+        icon: Icons.forum_outlined,
+        selectedIcon: Icons.forum_rounded,
+        label: const S('Community', 'المجتمع').of(context),
       ),
       _Destination(
         icon: Icons.person_outline,
@@ -303,39 +325,53 @@ class _HomeTabState extends State<_HomeTab> {
                         setState(() => _selectedStudentId = id),
                   ),
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.md,
-                      AppSpacing.lg,
-                      96,
-                    ),
-                    children: [
-                      _TodayStrip(
-                        childCount: students.length,
-                        focusedName: focused == null
-                            ? null
-                            : visible.first.name,
+                  // Reserves real layout space for the floating "Add child"
+                  // FAB by shrinking the ListView's own viewport, rather
+                  // than relying on the ListView's trailing scroll padding.
+                  // Trailing padding only helps once the user has scrolled
+                  // to the very end — on a page short enough to render
+                  // fully without scrolling (e.g. a single focused child),
+                  // the last row (Message school / Child settings) is laid
+                  // out from the top and can land at the same on-screen
+                  // position the FAB floats over, regardless of how much
+                  // padding follows off-screen. Shrinking the viewport up
+                  // front keeps content out of that zone in every case.
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 88),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      for (final student in visible)
-                        ChildJourneyCard(
-                          // Keyed by student id so switching filters
-                          // rebuilds each card against its own child
-                          // rather than recycling the element (and its
-                          // stream subscriptions) from whichever sibling
-                          // sat at that index before.
-                          key: ValueKey('${student.id}|${focused != null}'),
-                          user: user,
-                          student: student,
-                          expanded: focused != null,
-                          onFocusRequested: focused != null
+                      children: [
+                        _TodayStrip(
+                          childCount: students.length,
+                          focusedName: focused == null
                               ? null
-                              : () => setState(
-                                  () => _selectedStudentId = student.id,
-                                ),
+                              : visible.first.name,
                         ),
-                    ],
+                        const SizedBox(height: AppSpacing.lg),
+                        for (final student in visible)
+                          ChildJourneyCard(
+                            // Keyed by student id so switching filters
+                            // rebuilds each card against its own child
+                            // rather than recycling the element (and its
+                            // stream subscriptions) from whichever sibling
+                            // sat at that index before.
+                            key: ValueKey('${student.id}|${focused != null}'),
+                            user: user,
+                            student: student,
+                            expanded: focused != null,
+                            onFocusRequested: focused != null
+                                ? null
+                                : () => setState(
+                                    () => _selectedStudentId = student.id,
+                                  ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -396,8 +432,14 @@ class _HomeTabState extends State<_HomeTab> {
         ],
       ),
     );
-    controller.dispose();
-
+    // Deliberately not disposed here: the dialog's own TextField is still
+    // mounted and mid-exit-transition when this Future resolves (showDialog
+    // completes as soon as Navigator.pop is called, before the reverse
+    // animation finishes), so an immediate dispose() crashes with "A
+    // TextEditingController was used after being disposed" the next time
+    // that still-animating TextField rebuilds. A short-lived, unowned
+    // controller with no other resources is safe to just let the GC
+    // collect once this closure returns.
     if (name == null || name.trim().isEmpty) return;
     await StudentsRepository().addChild(
       schoolId: user.schoolId,

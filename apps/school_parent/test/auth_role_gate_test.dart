@@ -71,9 +71,13 @@ void main() {
     });
 
     test('a rejected parent sees the rejected screen, not the home page', () {
+      // isActive: false matches what every real reject write sets — see
+      // the admin app's equivalent test for why this fixture must not
+      // default to isActive: true.
       final state = resolveAuthState(
         _user(
           role: UserRole.parent,
+          isActive: false,
           approved: false,
           membershipStatus: MembershipStatus.rejected,
         ),

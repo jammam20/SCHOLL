@@ -72,6 +72,7 @@ class FirebaseAuthRepository {
               member.status == MembershipStatus.approved,
               'membershipStatus':
               member.status.value,
+              'rejectionReason': member.rejectionReason,
             },
           );
         });
@@ -131,6 +132,7 @@ class FirebaseAuthRepository {
       'isActive': member.isActive,
       'approved': member.status == MembershipStatus.approved,
       'membershipStatus': member.status.value,
+      'rejectionReason': member.rejectionReason,
     });
   }
 

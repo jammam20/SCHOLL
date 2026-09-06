@@ -19,6 +19,14 @@ class RoutesRepository {
     required String name,
     String? description,
     double deviationToleranceMeters = defaultDeviationToleranceMeters,
+    // Feature: two daily trips / absence cutoff — minutes since UTC
+    // midnight, see SchoolRoute's own doc comment. Must be accepted here as
+    // well as in updateRoute: a route created with its daily schedule
+    // already set (the common case — the Add route dialog collects both
+    // directions up front) previously had that schedule silently dropped
+    // until the admin happened to re-save through Edit.
+    int? outboundScheduledMinutes,
+    int? returnScheduledMinutes,
   }) async {
     final ref = _routes(schoolId).doc();
 
@@ -29,6 +37,8 @@ class RoutesRepository {
       'description': description?.trim(),
       'isActive': true,
       'deviationToleranceMeters': deviationToleranceMeters,
+      'outboundScheduledMinutes': outboundScheduledMinutes,
+      'returnScheduledMinutes': returnScheduledMinutes,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

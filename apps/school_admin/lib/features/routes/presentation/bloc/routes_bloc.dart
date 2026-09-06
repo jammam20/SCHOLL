@@ -18,12 +18,16 @@ class RouteCreated extends RoutesEvent {
     required this.name,
     this.description,
     this.deviationToleranceMeters = defaultDeviationToleranceMeters,
+    this.outboundScheduledMinutes,
+    this.returnScheduledMinutes,
   });
 
   final String schoolId;
   final String name;
   final String? description;
   final double deviationToleranceMeters;
+  final int? outboundScheduledMinutes;
+  final int? returnScheduledMinutes;
 }
 
 class RouteUpdated extends RoutesEvent {
@@ -132,6 +136,8 @@ class RoutesBloc extends Bloc<RoutesEvent, RoutesState> {
         name: event.name,
         description: event.description,
         deviationToleranceMeters: event.deviationToleranceMeters,
+        outboundScheduledMinutes: event.outboundScheduledMinutes,
+        returnScheduledMinutes: event.returnScheduledMinutes,
       );
     } catch (e) {
       emit(RoutesFailure(e.toString()));

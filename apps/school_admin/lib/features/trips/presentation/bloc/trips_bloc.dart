@@ -191,8 +191,19 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
         scheduledAt: event.scheduledAt,
         direction: event.direction,
       );
+      // No success state to emit here (unlike reassign): the trip list's
+      // own Firestore subscription already picks up the new document via
+      // _onSnapshot, and TripsActionSucceeded's listener is worded
+      // specifically for a reassignment notifying its new driver — reusing
+      // it here would show that message for an unrelated action.
     } catch (e) {
-      emit(TripsFailure(e.toString()));
+      // TripsFailure replaces the whole list with a full-page error view —
+      // right for the initial load stream failing, wrong here: a rejected
+      // create (e.g. DuplicateActiveTripException, a routine and expected
+      // outcome once the bus/driver conflict check landed) is just as
+      // recoverable as a failed reassign, and shouldn't blank a trips list
+      // the admin is actively working in.
+      emit(TripsActionFailure(e.toString(), _lastSnapshot, hasMore: _hasMore));
     }
   }
 

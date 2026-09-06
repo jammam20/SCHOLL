@@ -151,18 +151,26 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     }
   }
 
-  Future<void> _savePickupPersons(List<AuthorizedPickupPerson> next) async {
+  /// Returns whether the save actually succeeded. Callers that show their
+  /// own success message (`_addPickupPerson`) must check this first — a
+  /// caught failure here already shows its own error snackbar, and showing
+  /// a *second*, unconditional success snackbar on top of that regardless
+  /// of the outcome (the bug this fixes) told a parent a pickup
+  /// authorization was recorded when it had just been silently rolled back.
+  Future<bool> _savePickupPersons(List<AuthorizedPickupPerson> next) async {
     final previous = _pickupPersons;
     setState(() {
       _pickupPersons = next;
       _savingPickupPersons = true;
     });
+    var succeeded = false;
     try {
       await StudentsRepository().setAuthorizedPickupPersons(
         schoolId: widget.user.schoolId,
         studentId: widget.student.id,
         persons: next,
       );
+      succeeded = true;
     } catch (_) {
       if (mounted) {
         setState(() => _pickupPersons = previous);
@@ -177,21 +185,27 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     } finally {
       if (mounted) setState(() => _savingPickupPersons = false);
     }
+    return succeeded;
   }
 
-  Future<void> _saveScheduledDates(List<String> next) async {
+  /// Returns whether the save actually succeeded — see _savePickupPersons's
+  /// doc comment for why callers that show their own success message
+  /// (_addScheduledDate, _removeScheduledDate) must check this first.
+  Future<bool> _saveScheduledDates(List<String> next) async {
     final previous = _scheduledDates;
     final sorted = List.of(next)..sort();
     setState(() {
       _scheduledDates = sorted;
       _savingScheduledDates = true;
     });
+    var succeeded = false;
     try {
       await StudentsRepository().setScheduledAbsences(
         schoolId: widget.user.schoolId,
         studentId: widget.student.id,
         dates: sorted,
       );
+      succeeded = true;
     } catch (_) {
       if (mounted) {
         setState(() => _scheduledDates = previous);
@@ -206,6 +220,7 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     } finally {
       if (mounted) setState(() => _savingScheduledDates = false);
     }
+    return succeeded;
   }
 
   Future<void> _addScheduledDate() async {
@@ -239,8 +254,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
     if (picked == null) return;
     final iso = isoDateOnly(picked);
     if (_scheduledDates.contains(iso)) return;
-    await _saveScheduledDates([..._scheduledDates, iso]);
-    if (!mounted) return;
+    final succeeded = await _saveScheduledDates([..._scheduledDates, iso]);
+    if (!mounted || !succeeded) return;
     AppSnackbar.success(
       context,
       S(
@@ -251,10 +266,10 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
   }
 
   Future<void> _removeScheduledDate(String date) async {
-    await _saveScheduledDates(
+    final succeeded = await _saveScheduledDates(
       _scheduledDates.where((d) => d != date).toList(),
     );
-    if (!mounted) return;
+    if (!mounted || !succeeded) return;
     AppSnackbar.info(
       context,
       S(
@@ -272,8 +287,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       ),
     );
     if (person == null) return;
-    await _savePickupPersons([..._pickupPersons, person]);
-    if (!mounted) return;
+    final succeeded = await _savePickupPersons([..._pickupPersons, person]);
+    if (!mounted || !succeeded) return;
     AppSnackbar.success(
       context,
       S(

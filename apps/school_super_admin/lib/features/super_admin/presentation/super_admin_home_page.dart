@@ -414,8 +414,14 @@ class _SchoolsTab extends StatelessWidget {
       );
     }
 
-    name.dispose();
-    code.dispose();
+    // Deliberately not disposed here: the dialog's own TextFields are still
+    // mounted and mid-exit-transition when this Future resolves (showDialog
+    // completes as soon as Navigator.pop is called, before the reverse
+    // animation finishes), so an immediate dispose() crashes with "A
+    // TextEditingController was used after being disposed" the next time
+    // those still-animating TextFields rebuild. Short-lived, unowned
+    // controllers with no other resources are safe to just let the GC
+    // collect once this closure returns.
   }
 }
 
@@ -466,115 +472,243 @@ class _PendingAdminsTab extends StatelessWidget {
               final data = doc.data();
               // Collection-group docs: reference.parent.parent is the school.
               final schoolId = doc.reference.parent.parent!.id;
-              final colors = context.appColors;
 
-              return Container(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                  border: Border.all(color: colors.border),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: colors.warning.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Icon(
-                        Icons.hourglass_top_rounded,
-                        color: colors.warning,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  data['displayName']?.toString() ?? doc.id,
-                                  style: Theme.of(context).textTheme.titleSmall
-                                      ?.copyWith(color: colors.textPrimary),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              StatusBadge(
-                                label: const S('Pending', 'معلّق').of(
-                                  context,
-                                ),
-                                tone: StatusTone.warning,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${data['email'] ?? ''}',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: colors.textSecondary),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            S(
-                              'School: $schoolId',
-                              'المدرسة: $schoolId',
-                            ).of(context),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: colors.textMuted),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton.filled(
-                          tooltip: const S('Approve', 'موافقة').of(context),
-                          style: IconButton.styleFrom(
-                            backgroundColor: colors.success.withValues(
-                              alpha: 0.12,
-                            ),
-                            foregroundColor: colors.success,
-                          ),
-                          icon: const Icon(Icons.check_rounded),
-                          onPressed: () => SuperAdminRepository().approveAdmin(
-                            schoolId: schoolId,
-                            uid: doc.id,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        IconButton.filled(
-                          tooltip: const S('Reject', 'رفض').of(context),
-                          style: IconButton.styleFrom(
-                            backgroundColor: colors.error.withValues(
-                              alpha: 0.12,
-                            ),
-                            foregroundColor: colors.error,
-                          ),
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => SuperAdminRepository().rejectAdmin(
-                            schoolId: schoolId,
-                            uid: doc.id,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              return _PendingAdminCard(
+                schoolId: schoolId,
+                uid: doc.id,
+                displayName: data['displayName']?.toString() ?? doc.id,
+                email: '${data['email'] ?? ''}',
               );
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _PendingAdminCard extends StatefulWidget {
+  const _PendingAdminCard({
+    required this.schoolId,
+    required this.uid,
+    required this.displayName,
+    required this.email,
+  });
+
+  final String schoolId;
+  final String uid;
+  final String displayName;
+  final String email;
+
+  @override
+  State<_PendingAdminCard> createState() => _PendingAdminCardState();
+}
+
+class _PendingAdminCardState extends State<_PendingAdminCard> {
+  bool _busy = false;
+
+  Future<void> _approve() async {
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: const S('Approve this admin?', 'الموافقة على الأدمن ده؟').of(
+        context,
+      ),
+      message: S(
+        '${widget.displayName} will get full admin access to their school.',
+        '${widget.displayName} هياخد صلاحيات أدمن كاملة على مدرسته.',
+      ).of(context),
+      confirmLabel: const S('Approve', 'موافقة').of(context),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await SuperAdminRepository().approveAdmin(
+        schoolId: widget.schoolId,
+        uid: widget.uid,
+      );
+      if (!mounted) return;
+      AppSnackbar.success(
+        context,
+        const S('Admin approved.', 'تمت الموافقة على الأدمن.').of(context),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackbar.error(
+        context,
+        const S("Couldn't approve — try again.", 'معرفناش نوافق — جرب تاني.')
+            .of(context),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _reject() async {
+    final reasonController = TextEditingController();
+    final confirmed = await showAppConfirmDialog(
+      context,
+      title: const S('Reject this admin?', 'رفض الأدمن ده؟').of(context),
+      message: S(
+        '${widget.displayName} will not be able to sign in.',
+        '${widget.displayName} مش هيقدر يسجّل دخول.',
+      ).of(context),
+      confirmLabel: const S('Reject', 'رفض').of(context),
+      destructive: true,
+      reasonController: reasonController,
+      reasonHint: const S(
+        'Reason (shown to the applicant)',
+        'السبب (بيتشاف لصاحب الطلب)',
+      ).of(context),
+    );
+    // Deliberately not disposed here: the dialog's own TextField is still
+    // mounted and mid-exit-transition when this Future resolves (showDialog
+    // completes as soon as Navigator.pop is called, before the reverse
+    // animation finishes) — see pending_approval_card.dart's identical note.
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await SuperAdminRepository().rejectAdmin(
+        schoolId: widget.schoolId,
+        uid: widget.uid,
+        reason: reasonController.text.trim().isEmpty
+            ? null
+            : reasonController.text.trim(),
+      );
+      if (!mounted) return;
+      AppSnackbar.success(
+        context,
+        const S('Admin rejected.', 'تم رفض الأدمن.').of(context),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppSnackbar.error(
+        context,
+        const S("Couldn't reject — try again.", 'معرفناش نرفض — جرب تاني.')
+            .of(context),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: colors.warning.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Icon(
+              Icons.hourglass_top_rounded,
+              color: colors.warning,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        widget.displayName,
+                        style: Theme.of(context).textTheme.titleSmall
+                            ?.copyWith(color: colors.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    StatusBadge(
+                      label: const S('Pending', 'معلّق').of(context),
+                      tone: StatusTone.warning,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.email,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  future: FirebaseFirestore.instance
+                      .collection('schools')
+                      .doc(widget.schoolId)
+                      .get(),
+                  builder: (context, schoolSnapshot) {
+                    final schoolName =
+                        schoolSnapshot.data?.data()?['name']?.toString() ??
+                        widget.schoolId;
+                    return Text(
+                      S('School: $schoolName', 'المدرسة: $schoolName').of(
+                        context,
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.textMuted,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          if (_busy)
+            const Padding(
+              padding: EdgeInsets.all(AppSpacing.sm),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton.filled(
+                  tooltip: const S('Approve', 'موافقة').of(context),
+                  style: IconButton.styleFrom(
+                    backgroundColor: colors.success.withValues(alpha: 0.12),
+                    foregroundColor: colors.success,
+                  ),
+                  icon: const Icon(Icons.check_rounded),
+                  onPressed: _approve,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                IconButton.filled(
+                  tooltip: const S('Reject', 'رفض').of(context),
+                  style: IconButton.styleFrom(
+                    backgroundColor: colors.error.withValues(alpha: 0.12),
+                    foregroundColor: colors.error,
+                  ),
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: _reject,
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }

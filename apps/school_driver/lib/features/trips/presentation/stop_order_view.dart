@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -12,6 +14,8 @@ import '../data/trip_location_repository.dart';
 import '../domain/live_trip_position.dart';
 import '../domain/stop_progress.dart';
 import 'bloc/trips_bloc.dart';
+import 'bus_marker_icons.dart';
+import 'stop_marker_icons.dart';
 
 /// Today's pickup order for a trip, drawn as a real timeline (a connecting
 /// line running through every stop, like a metro line) instead of a plain
@@ -59,6 +63,14 @@ class _StopOrderViewState extends State<StopOrderView> {
       .watchBoardedStudents(schoolId: widget.schoolId, tripId: widget.tripId);
   late final Stream<Set<String>> _droppedOffStream = _stopOrderRepository
       .watchDroppedOffStudents(schoolId: widget.schoolId, tripId: widget.tripId);
+  late final Stream<School?> _schoolStream = SchoolsRepository().watchSchool(
+    schoolId: widget.schoolId,
+  );
+  late final Stream<LiveTripPosition?> _positionStream =
+      TripLocationRepository().watchTripPosition(
+        schoolId: widget.schoolId,
+        tripId: widget.tripId,
+      );
 
   /// Students this driver has successfully reported absent during this
   /// session. Held locally rather than read back from Firestore because a
@@ -171,12 +183,25 @@ class _StopOrderViewState extends State<StopOrderView> {
                       );
                     }
 
-                    return _buildContent(
-                      context,
-                      students: students,
-                      order: order,
-                      boarded: boarded,
-                      droppedOff: droppedOffSnapshot.data ?? const <String>{},
+                    return StreamBuilder<School?>(
+                      stream: _schoolStream,
+                      builder: (context, schoolSnapshot) {
+                        return StreamBuilder<LiveTripPosition?>(
+                          stream: _positionStream,
+                          builder: (context, positionSnapshot) {
+                            return _buildContent(
+                              context,
+                              students: students,
+                              order: order,
+                              boarded: boarded,
+                              droppedOff:
+                                  droppedOffSnapshot.data ?? const <String>{},
+                              school: schoolSnapshot.data,
+                              busPosition: positionSnapshot.data,
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 );
@@ -188,12 +213,29 @@ class _StopOrderViewState extends State<StopOrderView> {
     );
   }
 
+  /// The longest run of consecutive *completed* stops from the front of
+  /// [order] — how far along the route the trip has actually gotten, used
+  /// to split the polyline into "already covered" and "still ahead". A
+  /// return trip that starts at school already has that first stop
+  /// completed (see [computeStopProgress]), so the count naturally begins
+  /// at 1 for it rather than 0.
+  int _donePrefixLength(List<String> order, StopProgress progress) {
+    var count = 0;
+    for (final id in order) {
+      if (!progress.completedStopIds.contains(id)) break;
+      count++;
+    }
+    return count;
+  }
+
   Widget _buildContent(
     BuildContext context, {
     required Map<String, Student> students,
     required List<String> order,
     required Set<String> boarded,
     required Set<String> droppedOff,
+    required School? school,
+    required LiveTripPosition? busPosition,
   }) {
     // The single source of truth for "where is this trip up to" — derived
     // from the same two persisted fields the rest of this screen reads, so
@@ -204,24 +246,185 @@ class _StopOrderViewState extends State<StopOrderView> {
       schoolStopId: schoolStopId,
     );
 
+    final ratio = MediaQuery.of(context).devicePixelRatio;
+
+    final schoolPoint = school != null && school.hasLocation
+        ? LatLng(school.latitude!, school.longitude!)
+        : null;
+
+    // The full expected path this trip is walking today, in real
+    // `stopOrder` sequence — school included wherever it actually sits
+    // (first, for a return trip; last, for an outbound one) — so the map
+    // draws exactly the route this screen's own timeline is tracking, not
+    // a decorative reordering of it.
+    final routePoints = <LatLng>[];
+    for (final id in order) {
+      if (id == schoolStopId) {
+        if (schoolPoint != null) routePoints.add(schoolPoint);
+        continue;
+      }
+      final routeStudent = students[id];
+      if (routeStudent != null && routeStudent.hasLocation) {
+        routePoints.add(LatLng(routeStudent.latitude!, routeStudent.longitude!));
+      }
+    }
+
     final markers = <Marker>{};
     for (var i = 0; i < order.length; i++) {
       final id = order[i];
-      if (id == schoolStopId) continue;
+      final isCurrent = progress.currentStopId == id;
+
+      if (id == schoolStopId) {
+        if (schoolPoint == null) continue;
+        final state = isCurrent
+            ? DriverStopMarkerState.current
+            : DriverStopMarkerState.school;
+        final color = isCurrent
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.tertiary;
+        final icon = DriverStopMarkerIcons.cached(
+          number: i + 1,
+          state: state,
+          color: color,
+          devicePixelRatio: ratio,
+        );
+        markers.add(
+          Marker(
+            markerId: const MarkerId(schoolStopId),
+            position: schoolPoint,
+            icon: icon ?? BitmapDescriptor.defaultMarker,
+            anchor: const Offset(0.5, 0.5),
+            zIndexInt: isCurrent ? 2 : 1,
+            infoWindow: InfoWindow(
+              title: const S('School', 'المدرسة').of(context),
+            ),
+          ),
+        );
+        continue;
+      }
+
       final student = students[id];
       if (student == null || !student.hasLocation) continue;
+
+      final state = droppedOff.contains(id)
+          ? DriverStopMarkerState.droppedOff
+          : boarded.contains(id)
+          ? DriverStopMarkerState.boarded
+          : isCurrent
+          ? DriverStopMarkerState.current
+          : DriverStopMarkerState.pending;
+      final color = state == DriverStopMarkerState.droppedOff
+          ? Theme.of(context).colorScheme.tertiary
+          : state == DriverStopMarkerState.boarded
+          ? Colors.green.shade600
+          : Theme.of(context).colorScheme.primary;
+
+      final icon = DriverStopMarkerIcons.cached(
+        number: i + 1,
+        state: state,
+        color: color,
+        devicePixelRatio: ratio,
+      );
+      unawaited(
+        DriverStopMarkerIcons.prepare(
+          number: i + 1,
+          state: state,
+          color: color,
+          devicePixelRatio: ratio,
+        ).then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
+
       markers.add(
         Marker(
           markerId: MarkerId(id),
           position: LatLng(student.latitude!, student.longitude!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            boarded.contains(id)
-                ? BitmapDescriptor.hueGreen
-                : BitmapDescriptor.hueOrange,
-          ),
+          icon: icon ?? BitmapDescriptor.defaultMarker,
+          anchor: const Offset(0.5, 0.5),
+          zIndexInt: isCurrent ? 2 : 1,
           infoWindow: InfoWindow(title: '${i + 1}. ${student.name}'),
         ),
       );
+    }
+
+    // Prepare the school marker's icon too (it's rendered above, but the
+    // `prepare` call needs to sit somewhere that doesn't skip on `continue`)
+    // and the bus icon, both fire-and-forget with a repaint on completion —
+    // the same cache-miss-then-repaint pattern the admin fleet map uses.
+    if (schoolPoint != null) {
+      final schoolIsCurrent = progress.currentStopId == schoolStopId;
+      final schoolColor = schoolIsCurrent
+          ? Theme.of(context).colorScheme.primary
+          : Theme.of(context).colorScheme.tertiary;
+      unawaited(
+        DriverStopMarkerIcons.prepare(
+          number: order.indexOf(schoolStopId) + 1,
+          state: schoolIsCurrent
+              ? DriverStopMarkerState.current
+              : DriverStopMarkerState.school,
+          color: schoolColor,
+          devicePixelRatio: ratio,
+        ).then((_) {
+          if (mounted) setState(() {});
+        }),
+      );
+    }
+
+    final busColor = Theme.of(context).colorScheme.primary;
+    final busIcon = DriverBusMarkerIcon.cached(
+      color: busColor,
+      devicePixelRatio: ratio,
+    );
+    unawaited(
+      DriverBusMarkerIcon.prepare(
+        color: busColor,
+        devicePixelRatio: ratio,
+      ).then((_) {
+        if (mounted) setState(() {});
+      }),
+    );
+
+    final busPoint = busPosition == null
+        ? null
+        : LatLng(busPosition.latitude, busPosition.longitude);
+
+    // Split at how far the trip has actually gotten — same treatment as
+    // the admin fleet map's per-trip polyline — so the ground already
+    // covered reads differently from what's still ahead, instead of one
+    // uniform line for the entire route regardless of progress.
+    final polylines = <Polyline>{};
+    if (routePoints.length >= 2) {
+      final doneCount = _donePrefixLength(order, progress);
+      if (doneCount > 0) {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route-done'),
+            points: routePoints.sublist(
+              0,
+              (doneCount + 1).clamp(0, routePoints.length),
+            ),
+            color: Theme.of(context).colorScheme.outlineVariant,
+            width: 3,
+            patterns: [PatternItem.dash(14), PatternItem.gap(10)],
+            zIndex: 0,
+          ),
+        );
+      }
+      final remaining = routePoints.sublist(
+        doneCount.clamp(0, routePoints.length),
+      );
+      if (remaining.length >= 2) {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route-remaining'),
+            points: remaining,
+            color: Theme.of(context).colorScheme.primary,
+            width: 5,
+            zIndex: 1,
+          ),
+        );
+      }
     }
 
     final studentStops = order.where((id) => id != schoolStopId).toList();
@@ -256,16 +459,55 @@ class _StopOrderViewState extends State<StopOrderView> {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: SizedBox(
-              height: 170,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: markers.first.position,
-                  zoom: 12,
-                ),
-                markers: markers,
-                zoomControlsEnabled: false,
-                myLocationButtonEnabled: false,
-              ),
+              height: 220,
+              child: busPoint == null
+                  ? GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: markers.first.position,
+                        zoom: 12,
+                      ),
+                      markers: markers,
+                      polylines: polylines,
+                      zoomControlsEnabled: false,
+                      myLocationButtonEnabled: false,
+                    )
+                  : TweenAnimationBuilder<LatLng>(
+                      // A new `end` on every GPS tick makes the marker
+                      // glide from wherever it currently sits to the new
+                      // fix instead of jumping there — the same treatment
+                      // the parent app's live map gives the bus it shows.
+                      tween: _LatLngTween(begin: busPoint, end: busPoint),
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeInOut,
+                      builder: (context, animatedBus, _) => GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: animatedBus,
+                          zoom: 13,
+                        ),
+                        markers: {
+                          ...markers,
+                          Marker(
+                            markerId: const MarkerId('self-bus'),
+                            position: animatedBus,
+                            rotation: busPosition!.heading,
+                            flat: true,
+                            anchor: const Offset(0.5, 0.5),
+                            zIndexInt: 3,
+                            icon:
+                                busIcon ??
+                                BitmapDescriptor.defaultMarkerWithHue(
+                                  BitmapDescriptor.hueAzure,
+                                ),
+                            infoWindow: InfoWindow(
+                              title: const S('Your bus', 'أتوبيسك').of(context),
+                            ),
+                          ),
+                        },
+                        polylines: polylines,
+                        zoomControlsEnabled: false,
+                        myLocationButtonEnabled: false,
+                      ),
+                    ),
             ),
           ),
         const SizedBox(height: AppSpacing.md),
@@ -278,17 +520,29 @@ class _StopOrderViewState extends State<StopOrderView> {
           boarded: boarded,
         ),
         const SizedBox(height: AppSpacing.md),
+        // Outbound trips end at school (the historical, still-common case);
+        // a return trip starts there instead — boarding happens at school,
+        // and the final stop is each student's own pickup/drop-off point.
+        // Every row below needs to know which end school actually occupies:
+        // the reorder dropdown's valid range depends on it (school's own
+        // slot is never offered as a target), and so does its label.
         for (var i = 0; i < order.length; i++)
           _TimelineRow(
             index: i,
             total: order.length,
             isFirst: i == 0,
             isLast: i == order.length - 1,
+            schoolIsFirst: order.isNotEmpty && order.first == schoolStopId,
             label: order[i] == schoolStopId
-                ? const S(
-                    'School (final stop)',
-                    'المدرسة (آخر محطة)',
-                  ).of(context)
+                ? (i == 0
+                      ? const S(
+                          'School (starting point)',
+                          'المدرسة (نقطة البداية)',
+                        ).of(context)
+                      : const S(
+                          'School (final stop)',
+                          'المدرسة (آخر محطة)',
+                        ).of(context))
                 : students[order[i]]?.name ??
                       const S('Unknown student', 'طالب غير معروف').of(context),
             isSchool: order[i] == schoolStopId,
@@ -420,6 +674,12 @@ class _NextStopEtaCardState extends State<NextStopEtaCard> {
   /// measure real distances to a fictional place.
   List<TripStopPoint> _stopPoints(School? school) {
     final points = <TripStopPoint>[];
+    // Same asymmetry computeStopProgress accounts for: an outbound trip
+    // ends at school (only "reached" once the trip is completed), but a
+    // return trip starts there (boarding happens at school, so it's
+    // already behind the bus from the first stop onward).
+    final schoolIsFirst =
+        widget.order.isNotEmpty && widget.order.first == schoolStopId;
     for (final id in widget.order) {
       if (id == schoolStopId) {
         if (school == null || !school.hasLocation) continue;
@@ -428,10 +688,7 @@ class _NextStopEtaCardState extends State<NextStopEtaCard> {
             stopId: id,
             latitude: school.latitude!,
             longitude: school.longitude!,
-            // The school is only ever "reached" by the trip being completed,
-            // which is not something boardedStudents records — matching
-            // computeStopProgress's own treatment of the final stop.
-            isCompleted: false,
+            isCompleted: schoolIsFirst,
             isSchool: true,
           ),
         );
@@ -626,6 +883,7 @@ class _TimelineRow extends StatelessWidget {
     required this.total,
     required this.isFirst,
     required this.isLast,
+    required this.schoolIsFirst,
     required this.label,
     required this.isSchool,
     required this.isBoarded,
@@ -644,6 +902,7 @@ class _TimelineRow extends StatelessWidget {
   final int total;
   final bool isFirst;
   final bool isLast;
+  final bool schoolIsFirst;
   final String label;
   final bool isSchool;
   final bool isBoarded;
@@ -825,12 +1084,24 @@ class _TimelineRow extends StatelessWidget {
                         DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: index,
+                            // Reorder targets are every index except
+                            // school's own slot — school sits at index 0
+                            // for a return trip (boarded there, so it's
+                            // never a candidate drop-off position) or at
+                            // `total - 1` for an outbound one. Previously
+                            // this always excluded `total - 1` regardless
+                            // of direction, so a return trip's *last*
+                            // student stop — sitting at `total - 1` while
+                            // school occupied index 0 — had a `value` no
+                            // generated item matched, crashing
+                            // DropdownButton's "exactly one item" assert.
                             items: [
-                              for (var i = 0; i < total - 1; i++)
-                                DropdownMenuItem(
-                                  value: i,
-                                  child: Text('#${i + 1}'),
-                                ),
+                              for (var i = 0; i < total; i++)
+                                if (i != (schoolIsFirst ? 0 : total - 1))
+                                  DropdownMenuItem(
+                                    value: i,
+                                    child: Text('#${i + 1}'),
+                                  ),
                             ],
                             onChanged: (newIndex) {
                               if (newIndex != null && newIndex != index) {
@@ -931,6 +1202,23 @@ class _RowMenu extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Interpolates between two coordinates in a straight line — the same
+/// minimal `Tween<LatLng>` the parent app's own live map uses to animate
+/// its bus marker.
+class _LatLngTween extends Tween<LatLng> {
+  _LatLngTween({required LatLng super.begin, required LatLng super.end});
+
+  @override
+  LatLng lerp(double t) {
+    final b = begin!;
+    final e = end!;
+    return LatLng(
+      b.latitude + (e.latitude - b.latitude) * t,
+      b.longitude + (e.longitude - b.longitude) * t,
     );
   }
 }

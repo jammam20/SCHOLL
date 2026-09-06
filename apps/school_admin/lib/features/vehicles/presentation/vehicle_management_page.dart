@@ -211,9 +211,14 @@ class _VehicleManagementView extends StatelessWidget {
       );
     }
 
-    name.dispose();
-    plate.dispose();
-    capacity.dispose();
+    // Deliberately not disposed here: the dialog's own TextFields are still
+    // mounted and mid-exit-transition when this Future resolves (showDialog
+    // completes as soon as Navigator.pop is called, before the reverse
+    // animation finishes), so an immediate dispose() crashes with "A
+    // TextEditingController was used after being disposed" the next time
+    // those still-animating TextFields rebuild. Short-lived, unowned
+    // controllers with no other resources are safe to just let the GC
+    // collect once this closure returns.
   }
 }
 

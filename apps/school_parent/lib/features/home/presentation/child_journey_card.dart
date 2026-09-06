@@ -15,6 +15,7 @@ import '../../tracking/presentation/live_trip_map_page.dart';
 import '../../trips/data/stop_order_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../trips/domain/journey_stage.dart';
+import '../../trips/domain/pick_active_trip.dart';
 import 'child_avatar.dart';
 import 'child_day_dashboard.dart';
 import 'journey_stage_visuals.dart';
@@ -230,10 +231,13 @@ class _InfoBanner extends StatelessWidget {
 /// [ChildDayDashboard]).
 ///
 /// `watchLatestTripForRoute` has no "today" concept of its own — it returns
-/// the most recently scheduled trip, which could be yesterday's — so the
-/// day check happens here. A *live* status is trusted regardless of the
-/// scheduled date, though: a trip that is `active` right now is happening
-/// right now, whatever day its schedule says.
+/// the route's most recently scheduled candidates, which could include
+/// yesterday's — so the day check happens here. `pickActiveTrip` picks the
+/// right one out of those candidates (see its own doc comment: a live trip
+/// always wins over a later-scheduled cancellation). A *live* status is
+/// trusted regardless of the scheduled date, though: a trip that is
+/// `active` right now is happening right now, whatever day its schedule
+/// says.
 class _TripSection extends StatelessWidget {
   const _TripSection({
     required this.user,
@@ -271,9 +275,10 @@ class _TripSection extends StatelessWidget {
         }
 
         final docs = snapshot.data?.docs ?? const [];
-        final trip = docs.isEmpty
-            ? null
-            : SchoolTrip.fromMap(docs.first.id, docs.first.data());
+        final candidates = docs
+            .map((doc) => SchoolTrip.fromMap(doc.id, doc.data()))
+            .toList();
+        final trip = pickActiveTrip(candidates);
 
         final now = DateTime.now();
         final isTripToday =

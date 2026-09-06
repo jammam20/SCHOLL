@@ -10,6 +10,7 @@ class SchoolMember extends Equatable {
     required this.role,
     required this.status,
     required this.isActive,
+    this.rejectionReason,
   });
 
   final String uid;
@@ -17,6 +18,7 @@ class SchoolMember extends Equatable {
   final UserRole role;
   final MembershipStatus status;
   final bool isActive;
+  final String? rejectionReason;
 
   factory SchoolMember.fromMap(String uid, Map<String, dynamic> data) {
     final role = UserRole.tryParse(data['role']);
@@ -33,12 +35,20 @@ class SchoolMember extends Equatable {
       role: role,
       status: status,
       isActive: data['isActive'] as bool? ?? false,
+      rejectionReason: data['rejectionReason'] as String?,
     );
   }
 
   bool get canAccessApp => isActive && status == MembershipStatus.approved;
 
   @override
-  List<Object> get props => [uid, schoolId, role, status, isActive];
+  List<Object?> get props => [
+    uid,
+    schoolId,
+    role,
+    status,
+    isActive,
+    rejectionReason,
+  ];
 }
 

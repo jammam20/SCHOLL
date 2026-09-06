@@ -68,9 +68,16 @@ void main() {
     });
 
     test('a rejected admin sees the rejected screen, not the dashboard', () {
+      // isActive: false matches what every real reject write sets (see
+      // SuperAdminRepository._setAdminStatus / drivers_repository.dart /
+      // parents_repository.dart, which all tie isActive to the approved
+      // status) — the previous isActive: true default here didn't reflect
+      // real data and masked resolveAuthState checking isDisabled first,
+      // which made this screen unreachable in production.
       final state = resolveAuthState(
         _user(
           role: UserRole.admin,
+          isActive: false,
           approved: false,
           membershipStatus: MembershipStatus.rejected,
         ),

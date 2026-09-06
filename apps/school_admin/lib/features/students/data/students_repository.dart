@@ -98,6 +98,23 @@ class StudentsRepository {
       'parentId': parentId,
       'phone': phone?.trim(),
       'isActive': true,
+      // A student an admin creates directly needs no pending-review step —
+      // unlike StudentsRepository.addChild in the parent app, which writes
+      // `approved: false` for a parent's own self-added child awaiting
+      // admin review. Omitting this field entirely (the previous bug here)
+      // reads back as "approved" everywhere in the app, since
+      // Student.fromMap treats anything other than the literal `false` as
+      // approved (`data['approved'] != false`) — but firestore.rules'
+      // field-restricted parent-write rules (absence, scheduled absences,
+      // authorized pickup persons, location proposals) all require
+      // `resource.data.approved == true` *exactly*, and a genuinely missing
+      // field is not `true`. That mismatch silently rejected every one of
+      // those writes with a permission-denied for every student created
+      // through this normal, everyday path — while the UI showed no
+      // warning and, for authorized-pickup-persons specifically, actively
+      // reported success (a second bug — see child_settings_page.dart's
+      // _addPickupPerson).
+      'approved': true,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

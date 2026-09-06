@@ -1,5 +1,24 @@
 {
   "projects": {
     "default": "sharlok-ef2b4"
-  }
+  },
+  "targets": {
+    "sharlok-ef2b4": {
+      "hosting": {
+        "admin": [
+          "sharlok-ef2b4"
+        ],
+        "driver": [
+          "school-driver-demo"
+        ],
+        "parent": [
+          "school-parent-demo"
+        ],
+        "super-admin": [
+          "school-super-admin-f260f"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

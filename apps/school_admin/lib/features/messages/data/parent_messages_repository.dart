@@ -89,6 +89,84 @@ class ParentMessagesRepository {
     });
   }
 
+  /// The parent's own still-open thread with this school, if one already
+  /// exists — checked before [openThreadWithParent] so clicking "Message
+  /// parent" a second time (from the same post, or a different one by the
+  /// same parent) continues the existing conversation instead of spawning
+  /// a duplicate thread the admin's inbox would then show twice.
+  Future<ParentRequest?> findOpenThreadWithParent({
+    required String schoolId,
+    required String parentUid,
+  }) async {
+    final snapshot = await _requests(schoolId)
+        .where('parentUid', isEqualTo: parentUid)
+        .where('status', isEqualTo: ParentRequestStatus.open.value)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    final requests = snapshot.docs
+        .map((doc) => ParentRequest.fromMap(doc.id, doc.data()))
+        .toList();
+    requests.sort(
+      (a, b) => (b.lastMessageAt ?? b.createdAt).compareTo(a.lastMessageAt ?? a.createdAt),
+    );
+    return requests.first;
+  }
+
+  /// Opens a brand-new thread *from* the admin side — used by Feature:
+  /// Parent Community's "Message Parent" action, where the admin is the
+  /// one initiating contact rather than replying to an existing request.
+  /// firestore.rules grants this create only to an admin targeting a
+  /// parent who is genuinely an approved, active member of their own
+  /// school (see the second `allow create` on `parentRequests`), so a
+  /// tampered `parentUid` for another school's parent is rejected server
+  /// side, not just left to this method's own good behavior.
+  ///
+  /// Two sequential writes for the same reason [ParentRequestsRepository]
+  /// documents on its own `submitRequest`: the message's create rule reads
+  /// the thread doc back, so the thread must actually exist first.
+  Future<ParentRequest> openThreadWithParent({
+    required String schoolId,
+    required String parentUid,
+    required String adminUid,
+    required String subject,
+    required String message,
+  }) async {
+    final trimmed = message.trim();
+    final ref = _requests(schoolId).doc();
+    final now = DateTime.now();
+    await ref.set({
+      'schoolId': schoolId,
+      'parentUid': parentUid,
+      'subject': subject,
+      'message': trimmed,
+      'status': ParentRequestStatus.open.value,
+      'createdAt': FieldValue.serverTimestamp(),
+      'lastMessageAt': FieldValue.serverTimestamp(),
+      'lastMessagePreview': trimmed,
+      'unreadByAdmin': false,
+      'unreadByParent': true,
+    });
+    await ref.collection('messages').doc().set({
+      'senderUid': adminUid,
+      'senderRole': 'admin',
+      'text': trimmed,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    return ParentRequest(
+      id: ref.id,
+      schoolId: schoolId,
+      parentUid: parentUid,
+      subject: subject,
+      message: trimmed,
+      createdAt: now,
+      status: ParentRequestStatus.open,
+      lastMessageAt: now,
+      lastMessagePreview: trimmed,
+      unreadByAdmin: false,
+      unreadByParent: true,
+    );
+  }
+
   CollectionReference<Map<String, dynamic>> _requests(String schoolId) {
     return _firestore
         .collection('schools')
