@@ -331,12 +331,25 @@ class _TripCard extends StatelessWidget {
           : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => TripDetailPage(schoolId: schoolId, trip: trip),
-          ),
-        ),
+        // TripDetailPage is reached via Navigator.push, which puts it on a
+        // brand-new route — outside the BlocProvider<TripsBloc> that only
+        // wraps _TripsTab's own Scaffold. Grabbing the bloc here (still
+        // inside that scope) and re-providing the exact same instance to
+        // the pushed route is what lets the detail page's action buttons
+        // dispatch to it; without this, every one of them throws
+        // ProviderNotFoundException the moment the page opens.
+        onTap: () {
+          final bloc = context.read<TripsBloc>();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: bloc,
+                child: TripDetailPage(schoolId: schoolId, trip: trip),
+              ),
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
