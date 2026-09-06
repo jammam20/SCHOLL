@@ -35,12 +35,21 @@ class StopOrderView extends StatefulWidget {
     required this.tripId,
     required this.routeId,
     required this.tripStatus,
+    required this.direction,
+    this.routePolyline = const [],
   });
 
   final String schoolId;
   final String tripId;
   final String routeId;
   final TripStatus tripStatus;
+  final TripDirection direction;
+  // The real, road-following path for this trip (Feature: real route
+  // lines) — computed server-side (functions/src/index.ts:
+  // onTripStopOrderRouted) whenever stopOrder changes. Empty until that's
+  // run at least once, in which case this view falls back to a straight
+  // line between stops rather than drawing nothing.
+  final List<({double lat, double lng})> routePolyline;
 
   @override
   State<StopOrderView> createState() => _StopOrderViewState();
@@ -49,6 +58,25 @@ class StopOrderView extends StatefulWidget {
 class _StopOrderViewState extends State<StopOrderView> {
   final _stopOrderRepository = StopOrderRepository();
   final _studentsRepository = StudentsRepository();
+  bool _recomputing = false;
+
+  Future<void> _retryComputeOrder() async {
+    if (_recomputing) return;
+    setState(() => _recomputing = true);
+    context.read<TripsBloc>().add(
+      TripStopOrderRecomputeRequested(
+        schoolId: widget.schoolId,
+        tripId: widget.tripId,
+        routeId: widget.routeId,
+        direction: widget.direction,
+      ),
+    );
+    // The order itself arrives via _orderStream once it's written — this
+    // just re-enables the button after a beat so a slow network can't be
+    // mistaken for the tap not registering.
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _recomputing = false);
+  }
 
   // Created once rather than per build: this widget lives inside the trips
   // ListView and rebuilds on every trip snapshot, and re-subscribing four
@@ -157,6 +185,16 @@ class _StopOrderViewState extends State<StopOrderView> {
                     "Computing today's pickup order…",
                     'جارٍ حساب ترتيب الالتقاط لهذا اليوم…',
                   ).of(context),
+                  message: const S(
+                    "Taking longer than expected? This can happen if your "
+                        "GPS fix was slow to arrive — tap below to try again.",
+                    'مستني أكتر من المتوقع؟ ده ممكن يحصل لو تحديد '
+                        'موقعك اتأخر — دوس تحت عشان تجرب تاني.',
+                  ).of(context),
+                  actionLabel: _recomputing
+                      ? const S('Retrying…', 'جارٍ إعادة المحاولة…').of(context)
+                      : const S('Retry', 'إعادة المحاولة').of(context),
+                  onAction: _recomputing ? null : _retryComputeOrder,
                 ),
               );
             }
@@ -389,12 +427,30 @@ class _StopOrderViewState extends State<StopOrderView> {
         ? null
         : LatLng(busPosition.latitude, busPosition.longitude);
 
-    // Split at how far the trip has actually gotten — same treatment as
-    // the admin fleet map's per-trip polyline — so the ground already
-    // covered reads differently from what's still ahead, instead of one
-    // uniform line for the entire route regardless of progress.
     final polylines = <Polyline>{};
-    if (routePoints.length >= 2) {
+    if (widget.routePolyline.length >= 2) {
+      // The real road-following path (Feature: real route lines) — drawn
+      // as a single line rather than split into done/remaining segments
+      // like the straight-line fallback below, since a road polyline has
+      // far more points than there are stops and no cheap way to say
+      // exactly which of them the bus has already passed. Progress still
+      // reads clearly from the numbered/colored stop markers above.
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: [
+            for (final point in widget.routePolyline) LatLng(point.lat, point.lng),
+          ],
+          color: Theme.of(context).colorScheme.primary,
+          width: 5,
+          zIndex: 1,
+        ),
+      );
+    } else if (routePoints.length >= 2) {
+      // Split at how far the trip has actually gotten — same treatment as
+      // the admin fleet map's per-trip polyline — so the ground already
+      // covered reads differently from what's still ahead, instead of one
+      // uniform line for the entire route regardless of progress.
       final doneCount = _donePrefixLength(order, progress);
       if (doneCount > 0) {
         polylines.add(
@@ -523,77 +579,103 @@ class _StopOrderViewState extends State<StopOrderView> {
         // Outbound trips end at school (the historical, still-common case);
         // a return trip starts there instead — boarding happens at school,
         // and the final stop is each student's own pickup/drop-off point.
-        // Every row below needs to know which end school actually occupies:
-        // the reorder dropdown's valid range depends on it (school's own
-        // slot is never offered as a target), and so does its label.
-        for (var i = 0; i < order.length; i++)
-          _TimelineRow(
-            index: i,
-            total: order.length,
-            isFirst: i == 0,
-            isLast: i == order.length - 1,
-            schoolIsFirst: order.isNotEmpty && order.first == schoolStopId,
-            label: order[i] == schoolStopId
-                ? (i == 0
-                      ? const S(
-                          'School (starting point)',
-                          'المدرسة (نقطة البداية)',
-                        ).of(context)
-                      : const S(
-                          'School (final stop)',
-                          'المدرسة (آخر محطة)',
-                        ).of(context))
-                : students[order[i]]?.name ??
-                      const S('Unknown student', 'طالب غير معروف').of(context),
-            isSchool: order[i] == schoolStopId,
-            isBoarded: boarded.contains(order[i]),
-            isDroppedOff: droppedOff.contains(order[i]),
-            isCurrent: progress.currentStopId == order[i],
-            absenceReported: _absenceReported.contains(order[i]),
-            isAbsentToday: students[order[i]]?.isAbsentToday ?? false,
-            onMoveTo: (newIndex) {
-              final updated = [...order];
-              final item = updated.removeAt(i);
-              updated.insert(newIndex, item);
-              context.read<TripsBloc>().add(
-                TripStopOrderChanged(
+        // A pending (not-yet-boarded, not-school) stop can be dragged to a
+        // new position via its own handle — replacing the previous
+        // per-row "#N" dropdown, which worked but didn't read as a real
+        // reorder the way dragging a stop up or down the timeline does.
+        // `ReorderableListView` needs its own non-scrolling slice (this
+        // whole view already lives inside the trips list) and every child
+        // keyed by something stable across reorders — the stop id itself.
+        ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          buildDefaultDragHandles: false,
+          itemCount: order.length,
+          onReorderItem: (oldIndex, newIndex) {
+            if (newIndex == oldIndex) return;
+            final updated = [...order];
+            final item = updated.removeAt(oldIndex);
+            updated.insert(newIndex, item);
+            context.read<TripsBloc>().add(
+              TripStopOrderChanged(
+                schoolId: widget.schoolId,
+                tripId: widget.tripId,
+                order: updated,
+              ),
+            );
+          },
+          itemBuilder: (context, i) {
+            final isSchool = order[i] == schoolStopId;
+            final isBoarded = boarded.contains(order[i]);
+            final isPending = !isSchool && !isBoarded;
+            return _TimelineRow(
+              key: ValueKey(order[i]),
+              index: i,
+              total: order.length,
+              isFirst: i == 0,
+              isLast: i == order.length - 1,
+              schoolIsFirst: order.isNotEmpty && order.first == schoolStopId,
+              label: isSchool
+                  ? (i == 0
+                        ? const S(
+                            'School (starting point)',
+                            'المدرسة (نقطة البداية)',
+                          ).of(context)
+                        : const S(
+                            'School (final stop)',
+                            'المدرسة (آخر محطة)',
+                          ).of(context))
+                  : students[order[i]]?.name ??
+                        const S('Unknown student', 'طالب غير معروف').of(context),
+              isSchool: isSchool,
+              isBoarded: isBoarded,
+              isDroppedOff: droppedOff.contains(order[i]),
+              isCurrent: progress.currentStopId == order[i],
+              absenceReported: _absenceReported.contains(order[i]),
+              isAbsentToday: students[order[i]]?.isAbsentToday ?? false,
+              dragHandle: isPending
+                  ? ReorderableDragStartListener(
+                      index: i,
+                      child: Icon(
+                        Icons.drag_indicator_rounded,
+                        size: 20,
+                        color: context.appColors.textMuted,
+                      ),
+                    )
+                  : null,
+              onBoard: () => context.read<TripsBloc>().add(
+                TripStudentBoarded(
                   schoolId: widget.schoolId,
                   tripId: widget.tripId,
-                  order: updated,
+                  studentId: order[i],
                 ),
-              );
-            },
-            onBoard: () => context.read<TripsBloc>().add(
-              TripStudentBoarded(
-                schoolId: widget.schoolId,
-                tripId: widget.tripId,
-                studentId: order[i],
               ),
-            ),
-            onDropOff: () => context.read<TripsBloc>().add(
-              TripStudentDroppedOff(
-                schoolId: widget.schoolId,
-                tripId: widget.tripId,
-                studentId: order[i],
+              onDropOff: () => context.read<TripsBloc>().add(
+                TripStudentDroppedOff(
+                  schoolId: widget.schoolId,
+                  tripId: widget.tripId,
+                  studentId: order[i],
+                ),
               ),
-            ),
-            onVerifyPickup: students[order[i]] == null
-                ? null
-                : () => showPickupVerificationSheet(
-                    context,
-                    schoolId: widget.schoolId,
-                    tripId: widget.tripId,
-                    student: students[order[i]]!,
-                  ),
-            // Hidden for a student a parent (or the school) has already
-            // marked absent today — reporting an absence that's already on
-            // the student's own record would add a duplicate log entry and
-            // tell the school nothing new.
-            onMarkAbsent:
-                students[order[i]] == null || students[order[i]]!.isAbsentToday
-                ? null
-                : () => _reportAbsence(students[order[i]]!),
-          ),
+              onVerifyPickup: students[order[i]] == null
+                  ? null
+                  : () => showPickupVerificationSheet(
+                      context,
+                      schoolId: widget.schoolId,
+                      tripId: widget.tripId,
+                      student: students[order[i]]!,
+                    ),
+              // Hidden for a student a parent (or the school) has already
+              // marked absent today — reporting an absence that's already on
+              // the student's own record would add a duplicate log entry and
+              // tell the school nothing new.
+              onMarkAbsent:
+                  students[order[i]] == null || students[order[i]]!.isAbsentToday
+                  ? null
+                  : () => _reportAbsence(students[order[i]]!),
+            );
+          },
+        ),
       ],
     );
   }
@@ -879,6 +961,7 @@ String formatEtaDuration(Duration duration, BuildContext context) {
 /// with the three ridership states.
 class _TimelineRow extends StatelessWidget {
   const _TimelineRow({
+    super.key,
     required this.index,
     required this.total,
     required this.isFirst,
@@ -891,7 +974,7 @@ class _TimelineRow extends StatelessWidget {
     required this.isCurrent,
     required this.absenceReported,
     required this.isAbsentToday,
-    required this.onMoveTo,
+    required this.dragHandle,
     required this.onBoard,
     required this.onDropOff,
     required this.onVerifyPickup,
@@ -910,7 +993,11 @@ class _TimelineRow extends StatelessWidget {
   final bool isCurrent;
   final bool absenceReported;
   final bool isAbsentToday;
-  final ValueChanged<int> onMoveTo;
+  // A drag handle for reordering — only ever non-null for a pending
+  // (not-yet-boarded, not-school) stop, matching who could reorder via the
+  // dropdown this replaced. `null` for every other row, which simply
+  // renders with nothing to grab.
+  final Widget? dragHandle;
   final VoidCallback onBoard;
   final VoidCallback onDropOff;
   final VoidCallback? onVerifyPickup;
@@ -1081,36 +1168,10 @@ class _TimelineRow extends StatelessWidget {
                               : StatusTone.warning,
                         ),
                         const Spacer(),
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: index,
-                            // Reorder targets are every index except
-                            // school's own slot — school sits at index 0
-                            // for a return trip (boarded there, so it's
-                            // never a candidate drop-off position) or at
-                            // `total - 1` for an outbound one. Previously
-                            // this always excluded `total - 1` regardless
-                            // of direction, so a return trip's *last*
-                            // student stop — sitting at `total - 1` while
-                            // school occupied index 0 — had a `value` no
-                            // generated item matched, crashing
-                            // DropdownButton's "exactly one item" assert.
-                            items: [
-                              for (var i = 0; i < total; i++)
-                                if (i != (schoolIsFirst ? 0 : total - 1))
-                                  DropdownMenuItem(
-                                    value: i,
-                                    child: Text('#${i + 1}'),
-                                  ),
-                            ],
-                            onChanged: (newIndex) {
-                              if (newIndex != null && newIndex != index) {
-                                onMoveTo(newIndex);
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
+                        if (dragHandle != null) ...[
+                          dragHandle!,
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
                         _RowMenu(
                           onVerifyPickup: onVerifyPickup,
                           onMarkAbsent: absenceReported ? null : onMarkAbsent,

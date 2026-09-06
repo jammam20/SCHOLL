@@ -50,6 +50,26 @@ class TripStopOrderChanged extends TripsEvent {
   final List<String> order;
 }
 
+/// A manual retry for the initial pickup-order computation — surfaced as a
+/// "Retry" action on the driver's "Computing today's pickup order…" empty
+/// state. [TripStartRequested] already fires this once, best-effort,
+/// without blocking the trip from starting; this exists so a trip whose
+/// first attempt genuinely never resolved (a GPS fetch that failed or
+/// never returned) isn't stuck on that empty state forever with no way
+/// forward.
+class TripStopOrderRecomputeRequested extends TripsEvent {
+  TripStopOrderRecomputeRequested({
+    required this.schoolId,
+    required this.tripId,
+    required this.routeId,
+    required this.direction,
+  });
+  final String schoolId;
+  final String tripId;
+  final String routeId;
+  final TripDirection direction;
+}
+
 class TripStudentBoarded extends TripsEvent {
   TripStudentBoarded({
     required this.schoolId,
@@ -171,6 +191,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     on<_TripsSnapshotFailed>(_onFailure);
     on<TripStartRequested>(_onStartRequested);
     on<TripStopOrderChanged>(_onStopOrderChanged);
+    on<TripStopOrderRecomputeRequested>(_onStopOrderRecomputeRequested);
     on<TripStudentBoarded>(_onStudentBoarded);
     on<TripStudentDroppedOff>(_onStudentDroppedOff);
     on<TripPauseRequested>(_onPauseRequested);
@@ -342,6 +363,18 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       schoolId: event.schoolId,
       tripId: event.tripId,
       order: event.order,
+    );
+  });
+
+  Future<void> _onStopOrderRecomputeRequested(
+    TripStopOrderRecomputeRequested event,
+    Emitter<TripsState> emit,
+  ) => _runAction(emit, () async {
+    await _stopOrder.computeInitialOrder(
+      schoolId: event.schoolId,
+      tripId: event.tripId,
+      routeId: event.routeId,
+      direction: event.direction,
     );
   });
 

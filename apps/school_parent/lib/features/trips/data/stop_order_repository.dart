@@ -17,6 +17,7 @@ class TripStopProgress {
     this.stopOrder = const [],
     this.boardedStudents = const {},
     this.droppedOffStudents = const {},
+    this.routePolyline = const [],
   });
 
   /// Student ids in pickup order, ending with [schoolStopId]. Empty until
@@ -29,6 +30,13 @@ class TripStopProgress {
   /// Students the driver has marked as dropped off on this trip — the
   /// mirror image of [boardedStudents] for the return leg.
   final Set<String> droppedOffStudents;
+
+  /// The real, road-following path through every stop on this trip
+  /// (Feature: real route lines) — computed server-side (functions/src/
+  /// index.ts: onTripStopOrderRouted) whenever [stopOrder] changes. Empty
+  /// until that's run at least once, in which case the map falls back to
+  /// a straight line between this child's own stop and the school.
+  final List<({double lat, double lng})> routePolyline;
 
   bool isCompletedStop(String studentId) =>
       boardedStudents.contains(studentId) ||
@@ -53,6 +61,7 @@ class StopOrderRepository {
         stopOrder: _stringList(data?['stopOrder']),
         boardedStudents: _stringList(data?['boardedStudents']).toSet(),
         droppedOffStudents: _stringList(data?['droppedOffStudents']).toSet(),
+        routePolyline: _routePolyline(data?['routePolyline']),
       );
     });
   }
@@ -60,6 +69,19 @@ class StopOrderRepository {
   static List<String> _stringList(Object? value) {
     if (value is! List) return const <String>[];
     return value.whereType<String>().toList();
+  }
+
+  static List<({double lat, double lng})> _routePolyline(Object? value) {
+    if (value is! List) return const [];
+    final points = <({double lat, double lng})>[];
+    for (final entry in value) {
+      if (entry is! Map) continue;
+      final lat = (entry['lat'] as num?)?.toDouble();
+      final lng = (entry['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) continue;
+      points.add((lat: lat, lng: lng));
+    }
+    return points;
   }
 
   DocumentReference<Map<String, dynamic>> _trip(String schoolId, String tripId) {

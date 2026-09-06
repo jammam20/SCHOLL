@@ -408,10 +408,38 @@ class _SchoolsTab extends StatelessWidget {
     if (result == true &&
         name.text.trim().isNotEmpty &&
         code.text.trim().isNotEmpty) {
-      await SuperAdminRepository().createSchool(
-        name: name.text,
-        code: code.text,
-      );
+      try {
+        await SuperAdminRepository().createSchool(
+          name: name.text,
+          code: code.text,
+        );
+        if (context.mounted) {
+          AppSnackbar.success(
+            context,
+            const S('School created.', 'اتعملت المدرسة.').of(context),
+          );
+        }
+      } on SchoolCodeTakenException catch (error) {
+        if (context.mounted) {
+          AppSnackbar.error(
+            context,
+            S(
+              'Join code "${error.code}" is already used by another school '
+                  '— pick a different one.',
+              'كود الانضمام "${error.code}" مستخدم بالفعل لمدرسة تانية — '
+                  'اختار كود مختلف.',
+            ).of(context),
+          );
+        }
+      } catch (_) {
+        if (context.mounted) {
+          AppSnackbar.error(
+            context,
+            const S("Couldn't create the school — try again.", 'معرفناش نعمل المدرسة — جرب تاني.')
+                .of(context),
+          );
+        }
+      }
     }
 
     // Deliberately not disposed here: the dialog's own TextFields are still

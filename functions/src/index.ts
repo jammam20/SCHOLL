@@ -727,6 +727,160 @@ export const onTripAssignmentChanged = onDocumentUpdated(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Real (road-following) route lines
+// ---------------------------------------------------------------------------
+
+// The same key already embedded in every app's web/index.html for the Maps
+// JavaScript SDK (apps/*/web/index.html) — confirmed to also serve the
+// Directions API on this project, so this reuses it rather than
+// provisioning a second one.
+const DIRECTIONS_API_KEY = "AIzaSyD8qnYXkPuq3gEjVgPPC3pfjBaVmeYGcow";
+
+const SCHOOL_STOP_SENTINEL = "__school__";
+
+/// Decodes a Google-encoded polyline string into plain points — the
+/// standard algorithm (Directions API docs §Polyline), reimplemented here
+/// rather than pulling in a package for one function.
+function decodePolyline(encoded: string): { lat: number; lng: number }[] {
+  const points: { lat: number; lng: number }[] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let b: number;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+
+/// Asks the Directions API for the actual road path through `points` in
+/// order — `stopOrder` is already the driver's real sequence, so these are
+/// passed as plain waypoints (no `optimize:true`) rather than letting
+/// Directions reorder them. Returns `null` on anything short of a usable
+/// route (no path exists, API error, fewer than two points) so the caller
+/// can fall back to a straight line instead of erasing a working one.
+async function fetchRoutePolyline(
+  points: { lat: number; lng: number }[],
+): Promise<{ lat: number; lng: number }[] | null> {
+  if (points.length < 2) return null;
+
+  const origin = points[0];
+  const destination = points[points.length - 1];
+  const waypoints = points.slice(1, -1);
+  const params = new URLSearchParams({
+    origin: `${origin.lat},${origin.lng}`,
+    destination: `${destination.lat},${destination.lng}`,
+    key: DIRECTIONS_API_KEY,
+  });
+  if (waypoints.length > 0) {
+    params.set("waypoints", waypoints.map((p) => `${p.lat},${p.lng}`).join("|"));
+  }
+
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/directions/json?${params.toString()}`,
+    );
+    const data = (await response.json()) as {
+      status: string;
+      routes?: { overview_polyline?: { points?: string } }[];
+    };
+    if (data.status !== "OK" || !data.routes?.length) {
+      console.warn("Directions API returned no route", data.status);
+      return null;
+    }
+    const encoded = data.routes[0].overview_polyline?.points;
+    return encoded ? decodePolyline(encoded) : null;
+  } catch (error) {
+    console.error("Directions API call failed", error);
+    return null;
+  }
+}
+
+/// Recomputes a trip's `routePolyline` (Feature: real route lines) every
+/// time its `stopOrder` actually changes — the initial nearest-neighbor
+/// computation when a trip starts, and any manual driver reorder after
+/// that. Every map screen (parent/admin/driver) reads this one shared
+/// field rather than each calling Directions itself, so the three never
+/// disagree and a trip's route is computed exactly once per change instead
+/// of three times.
+///
+/// Resolves each stop id to a coordinate the same way the driver app's own
+/// StopOrderRepository.computeInitialOrder does client-side — a student's
+/// pickup point, or the school itself for the sentinel stop — then writes
+/// the result back onto the same trip document. That write's own
+/// `stopOrder` is unchanged, so the guard below stops this from
+/// retriggering itself.
+export const onTripStopOrderRouted = onDocumentWritten(
+  "schools/{schoolId}/trips/{tripId}",
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!after || after.status === "cancelled") return;
+
+    const beforeOrder = Array.isArray(before?.stopOrder) ? before?.stopOrder : [];
+    const afterOrder: string[] = Array.isArray(after.stopOrder) ? after.stopOrder : [];
+    if (afterOrder.length < 2) return;
+    if (JSON.stringify(beforeOrder) === JSON.stringify(afterOrder)) return;
+
+    const { schoolId } = event.params;
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const school = schoolSnap.data();
+    const schoolLat = typeof school?.latitude === "number" ? school.latitude : null;
+    const schoolLng = typeof school?.longitude === "number" ? school.longitude : null;
+
+    const studentIds = afterOrder.filter((id) => id !== SCHOOL_STOP_SENTINEL);
+    const studentDocs = studentIds.length
+      ? await db.getAll(
+          ...studentIds.map((id) =>
+            db.collection("schools").doc(schoolId).collection("students").doc(id),
+          ),
+        )
+      : [];
+    const studentPoints = new Map<string, { lat: number; lng: number }>();
+    for (const doc of studentDocs) {
+      const data = doc.data();
+      const lat = typeof data?.latitude === "number" ? data.latitude : null;
+      const lng = typeof data?.longitude === "number" ? data.longitude : null;
+      if (lat !== null && lng !== null) studentPoints.set(doc.id, { lat, lng });
+    }
+
+    const points: { lat: number; lng: number }[] = [];
+    for (const id of afterOrder) {
+      if (id === SCHOOL_STOP_SENTINEL) {
+        if (schoolLat !== null && schoolLng !== null) {
+          points.push({ lat: schoolLat, lng: schoolLng });
+        }
+        continue;
+      }
+      const point = studentPoints.get(id);
+      if (point) points.push(point);
+    }
+
+    const polyline = await fetchRoutePolyline(points);
+    await event.data!.after.ref.update({ routePolyline: polyline ?? [] });
+  },
+);
+
 /// A school-wide (or audience-scoped) broadcast an admin sends from the
 /// admin app — Feature: Smart Notifications' "School message" event type.
 /// Written by the admin client to `schools/{schoolId}/messages/{id}` (see

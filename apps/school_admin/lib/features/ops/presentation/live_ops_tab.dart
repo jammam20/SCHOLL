@@ -106,6 +106,22 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
   final Map<String, _BusFix> _fixes = {};
   final Map<String, DeviationRecord> _deviations = {};
 
+  // Created once, not inline in `build()`: every GPS position update from
+  // every bus on the road calls `_updateFix`/`_updateDeviation` below,
+  // which calls `setState` on THIS widget — the top of the whole ops
+  // screen's tree. A stream built fresh inside `build()` is a *new* Stream
+  // instance each call, so these three StreamBuilders were tearing down
+  // and resubscribing their Firestore listeners on every single GPS tick,
+  // which meant the entire screen — map, trip list, everything — flashed
+  // back to its loading spinner and rebuilt from scratch continuously
+  // while any bus was broadcasting, not just the map's own bus marker.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _tripsStream =
+      TripsRepository().watchTrips(widget.schoolId);
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _studentsStream =
+      StudentsRepository().watchStudents(widget.schoolId, limit: 300);
+  late final Stream<DocumentSnapshot<Map<String, dynamic>>> _schoolStream =
+      SchoolsRepository().watchSchool(widget.schoolId);
+
   GoogleMapController? _mapController;
 
   // Filters
@@ -196,7 +212,7 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: TripsRepository().watchTrips(widget.schoolId),
+      stream: _tripsStream,
       builder: (context, tripsSnapshot) {
         if (tripsSnapshot.hasError) {
           return ErrorStateView(onRetry: () => setState(() {}));
@@ -206,13 +222,10 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
         }
 
         return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: StudentsRepository().watchStudents(
-            widget.schoolId,
-            limit: 300,
-          ),
+          stream: _studentsStream,
           builder: (context, studentsSnapshot) {
             return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: SchoolsRepository().watchSchool(widget.schoolId),
+              stream: _schoolStream,
               builder: (context, schoolSnapshot) {
                 final allTrips = (tripsSnapshot.data?.docs ?? const [])
                     .map((doc) => _LiveTrip.fromDoc(doc.id, doc.data()))
@@ -233,8 +246,23 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
                       completedAt.day == now.day;
                 }).toList();
 
+                // Feature: Upcoming/Ongoing/Previous trip split — a
+                // scheduled trip is fetched by `watchTrips` like any other
+                // but was previously never surfaced anywhere on this
+                // screen at all, leaving "what's coming up today" with no
+                // answer short of the admin manually checking each route.
+                final upcomingToday = allTrips.where((t) {
+                  if (t.trip.status != TripStatus.scheduled) return false;
+                  final scheduledAt = t.trip.scheduledAt;
+                  final now = DateTime.now();
+                  return scheduledAt.year == now.year &&
+                      scheduledAt.month == now.month &&
+                      scheduledAt.day == now.day;
+                }).toList()
+                  ..sort((a, b) => a.trip.scheduledAt.compareTo(b.trip.scheduledAt));
+
                 final routeOptions = {
-                  for (final trip in [...onRoad, ...completedToday])
+                  for (final trip in [...onRoad, ...completedToday, ...upcomingToday])
                     trip.trip.routeId: trip.trip.routeName.isEmpty
                         ? trip.trip.routeId
                         : trip.trip.routeName,
@@ -244,9 +272,15 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
                     _routeFilter == null || trip.trip.routeId == _routeFilter;
 
                 final visibleOnRoad = onRoad.where(matchesRoute).toList();
+                // Gates the map's own completed-trip *paths* (a visual
+                // declutter toggle) — the rail's own "Previous" section
+                // below is a different concern and always lists today's
+                // completed trips regardless of this toggle.
                 final visibleCompleted = _showCompleted
                     ? completedToday.where(matchesRoute).toList()
                     : <_LiveTrip>[];
+                final visibleUpcoming = upcomingToday.where(matchesRoute).toList();
+                final railPrevious = completedToday.where(matchesRoute).toList();
 
                 final students = <String, Student>{
                   for (final doc in studentsSnapshot.data?.docs ?? const [])
@@ -293,6 +327,8 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
                   onRoad: onRoad,
                   visibleOnRoad: visibleOnRoad,
                   visibleCompleted: visibleCompleted,
+                  visibleUpcoming: visibleUpcoming,
+                  railPrevious: railPrevious,
                   paths: paths,
                   etas: etas,
                   fixes: _fixes,
@@ -332,6 +368,8 @@ class _LiveOpsScaffold extends StatelessWidget {
     required this.onRoad,
     required this.visibleOnRoad,
     required this.visibleCompleted,
+    required this.visibleUpcoming,
+    required this.railPrevious,
     required this.paths,
     required this.etas,
     required this.fixes,
@@ -357,6 +395,8 @@ class _LiveOpsScaffold extends StatelessWidget {
   final List<_LiveTrip> onRoad;
   final List<_LiveTrip> visibleOnRoad;
   final List<_LiveTrip> visibleCompleted;
+  final List<_LiveTrip> visibleUpcoming;
+  final List<_LiveTrip> railPrevious;
   final Map<String, List<TripPathStop>> paths;
   final Map<String, TripEta> etas;
   final Map<String, _BusFix> fixes;
@@ -405,6 +445,8 @@ class _LiveOpsScaffold extends StatelessWidget {
       schoolId: schoolId,
       readOnly: readOnly,
       trips: visibleOnRoad,
+      upcoming: visibleUpcoming,
+      previous: railPrevious,
       etas: etas,
       fixes: fixes,
       deviations: deviations,
@@ -689,12 +731,18 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
     final ratio = MediaQuery.of(context).devicePixelRatio;
 
     final focused = widget.focusedTripId;
-    // When one trip is focused, only its path is drawn — otherwise a busy
-    // fleet turns the map into spaghetti.
-    final pathTrips = [
-      ...widget.visibleOnRoad,
-      ...widget.visibleCompleted,
-    ].where((trip) => focused == null || trip.trip.id == focused).toList();
+    // With no route selected and no trip focused, the fleet view is
+    // deliberately just moving buses on a clean map — every trip's stops
+    // and expected path drawn at once turns a multi-bus school into
+    // unreadable spaghetti. Picking one route (or focusing one trip from
+    // the rail) is what earns the detail back.
+    final showStopsAndPaths = focused != null || widget.routeFilter != null;
+    final pathTrips = showStopsAndPaths
+        ? [
+            ...widget.visibleOnRoad,
+            ...widget.visibleCompleted,
+          ].where((trip) => focused == null || trip.trip.id == focused).toList()
+        : <_LiveTrip>[];
 
     final allStops = [
       for (final trip in pathTrips) ...?widget.paths[trip.trip.id],
@@ -711,7 +759,30 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
     for (final trip in pathTrips) {
       final path = widget.paths[trip.trip.id] ?? const [];
       final isCompleted = trip.trip.status == TripStatus.completed;
-      if (path.length >= 2) {
+      final routePolyline = trip.trip.routePolyline;
+      if (routePolyline.length >= 2) {
+        // The real road-following path (Feature: real route lines) — one
+        // line rather than the done/remaining split below, for the same
+        // reason the driver app's own map keeps it simple: a road
+        // polyline has far more points than there are stops, with no
+        // cheap way to say exactly which of them are already behind the
+        // bus. The numbered stop markers still carry that progress.
+        polylines.add(
+          Polyline(
+            polylineId: PolylineId('path-${trip.trip.id}'),
+            points: [
+              for (final point in routePolyline) LatLng(point.lat, point.lng),
+            ],
+            color: isCompleted
+                ? palette.completedPath.withValues(alpha: 0.55)
+                : palette.expectedPath.withValues(alpha: 0.9),
+            width: isCompleted ? 3 : 5,
+            patterns: isCompleted
+                ? [PatternItem.dash(18), PatternItem.gap(12)]
+                : const [],
+          ),
+        );
+      } else if (path.length >= 2) {
         if (isCompleted) {
           // The whole journey is history now — one muted, dashed line.
           polylines.add(
@@ -1263,15 +1334,26 @@ class _MapLegend extends StatelessWidget {
 /// numbered stop pins and bus markers this map exists to show. Keeping
 /// them one tap away preserves the map's legibility while still surfacing
 /// them here rather than only on the Incidents tab.
-class _OpenIncidentsOverlay extends StatelessWidget {
+class _OpenIncidentsOverlay extends StatefulWidget {
   const _OpenIncidentsOverlay({required this.schoolId});
 
   final String schoolId;
 
   @override
+  State<_OpenIncidentsOverlay> createState() => _OpenIncidentsOverlayState();
+}
+
+class _OpenIncidentsOverlayState extends State<_OpenIncidentsOverlay> {
+  // Same reasoning as _ActiveEmergenciesPanel: this overlay sits inside the
+  // map, which rebuilds on every GPS tick — a stream built fresh in
+  // `build()` resubscribed on every one of those, flickering this chip.
+  late final Stream<List<SchoolIncident>> _stream =
+      IncidentsRepository().watchOpenIncidents(widget.schoolId);
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<SchoolIncident>>(
-      stream: IncidentsRepository().watchOpenIncidents(schoolId),
+      stream: _stream,
       builder: (context, snapshot) {
         final located = (snapshot.data ?? const [])
             .where((incident) => incident.hasLocation)
@@ -1385,6 +1467,8 @@ class _OpsRail extends StatelessWidget {
     required this.schoolId,
     required this.readOnly,
     required this.trips,
+    required this.upcoming,
+    required this.previous,
     required this.etas,
     required this.fixes,
     required this.deviations,
@@ -1396,6 +1480,13 @@ class _OpsRail extends StatelessWidget {
   final String schoolId;
   final bool readOnly;
   final List<_LiveTrip> trips;
+  // Feature: Upcoming/Ongoing/Previous trip split — today's not-yet-started
+  // and already-finished trips, previously computed elsewhere on this
+  // screen (for the map's own "show completed" toggle) but never actually
+  // listed here, so the rail only ever answered "what's happening right
+  // now" and never "what's coming up" or "what already happened today".
+  final List<_LiveTrip> upcoming;
+  final List<_LiveTrip> previous;
   final Map<String, TripEta> etas;
   final Map<String, _BusFix> fixes;
   final Map<String, DeviationRecord> deviations;
@@ -1422,39 +1513,210 @@ class _OpsRail extends StatelessWidget {
             onFocusTrip: onFocusTrip,
           ),
           const SizedBox(height: AppSpacing.sm),
+          _RailSection(
+            title: const S('Upcoming', 'قادمة').of(context),
+            count: upcoming.length,
+            emptyLabel: const S(
+              'No more trips scheduled today.',
+              'مفيش رحلات تانية متجدولة النهاردة.',
+            ).of(context),
+            children: [
+              for (final trip in upcoming)
+                _TripSummaryTile(
+                  key: ValueKey('upcoming-${trip.trip.id}'),
+                  trip: trip,
+                  tone: StatusTone.neutral,
+                  timeLabel: S(
+                    'Scheduled ${_formatTime(trip.trip.scheduledAt)}',
+                    'متجدولة ${_formatTime(trip.trip.scheduledAt)}',
+                  ).of(context),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _RailSection(
+            title: const S('Ongoing', 'جارية').of(context),
+            count: trips.length,
+            emptyLabel: const S(
+              'No trips on the road.',
+              'مفيش رحلات على الطريق.',
+            ).of(context),
+            children: [
+              for (final trip in trips)
+                _BusRailTile(
+                  key: ValueKey('ongoing-${trip.trip.id}'),
+                  trip: trip,
+                  eta: etas[trip.trip.id],
+                  fix: fixes[trip.trip.id],
+                  deviation: deviations[trip.trip.id],
+                  path: paths[trip.trip.id] ?? const [],
+                  focused: focusedTripId == trip.trip.id,
+                  onTap: () => onFocusTrip(trip.trip.id),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _RailSection(
+            title: const S('Previous', 'سابقة').of(context),
+            count: previous.length,
+            emptyLabel: const S(
+              'No completed trips to show yet.',
+              'مفيش رحلات خلصت نعرضها لسه.',
+            ).of(context),
+            children: [
+              for (final trip in previous)
+                _TripSummaryTile(
+                  key: ValueKey('previous-${trip.trip.id}'),
+                  trip: trip,
+                  tone: StatusTone.success,
+                  timeLabel: trip.trip.completedAt == null
+                      ? null
+                      : S(
+                          'Completed ${_formatTime(trip.trip.completedAt!)}',
+                          'خلصت ${_formatTime(trip.trip.completedAt!)}',
+                        ).of(context),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _formatTime(DateTime time) {
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour < 12 ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
+}
+
+/// One labeled group in the ops rail — a header with a live count and
+/// either its rows or a compact empty state, so "no trips right now" never
+/// reads like the section itself failed to load.
+class _RailSection extends StatelessWidget {
+  const _RailSection({
+    required this.title,
+    required this.count,
+    required this.emptyLabel,
+    required this.children,
+  });
+
+  final String title;
+  final int count;
+  final String emptyLabel;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Row(
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: colors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$count',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (children.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            child: Text(
-              const S('Buses on the road', 'الأتوبيسات على الطريق')
-                  .of(context)
-                  .toUpperCase(),
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: EmptyStateView(compact: true, icon: Icons.directions_bus_outlined, title: emptyLabel),
+          )
+        else
+          ...children,
+      ],
+    );
+  }
+}
+
+/// A non-live trip row for the Upcoming/Previous sections — no GPS fix, no
+/// ETA, nothing to animate; just what the trip is and when it happened or
+/// will happen, styled consistently with [_BusRailTile] without borrowing
+/// any of its live-tracking-specific fields.
+class _TripSummaryTile extends StatelessWidget {
+  const _TripSummaryTile({
+    super.key,
+    required this.trip,
+    required this.tone,
+    required this.timeLabel,
+  });
+
+  final _LiveTrip trip;
+  final StatusTone tone;
+  final String? timeLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final accent = toneColor(colors, tone);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: colors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.directions_bus_outlined, size: 18, color: accent),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  trip.trip.routeName.isEmpty
+                      ? trip.trip.busName
+                      : trip.trip.routeName,
+                  style: theme.textTheme.titleSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${trip.trip.busName} · ${trip.trip.driverName}',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (timeLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    timeLabel!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          if (trips.isEmpty)
-            EmptyStateView(
-              compact: true,
-              icon: Icons.directions_bus_outlined,
-              title: const S(
-                'No trips on the road.',
-                'مفيش رحلات على الطريق.',
-              ).of(context),
-            )
-          else
-            for (final trip in trips)
-              _BusRailTile(
-                key: ValueKey(trip.trip.id),
-                trip: trip,
-                eta: etas[trip.trip.id],
-                fix: fixes[trip.trip.id],
-                deviation: deviations[trip.trip.id],
-                path: paths[trip.trip.id] ?? const [],
-                focused: focusedTripId == trip.trip.id,
-                onTap: () => onFocusTrip(trip.trip.id),
-              ),
         ],
       ),
     );
@@ -1731,15 +1993,27 @@ class _DeviationsPanel extends StatelessWidget {
 /// does not change how an emergency is raised or resolved (that logic is
 /// untouched in EmergenciesRepository), only how loudly an active one
 /// announces itself to an admin glancing at the dashboard.
-class _EmergencyTopBanner extends StatelessWidget {
+class _EmergencyTopBanner extends StatefulWidget {
   const _EmergencyTopBanner({required this.schoolId});
 
   final String schoolId;
 
   @override
+  State<_EmergencyTopBanner> createState() => _EmergencyTopBannerState();
+}
+
+class _EmergencyTopBannerState extends State<_EmergencyTopBanner> {
+  // Same fix as _ActiveEmergenciesPanel/_OpenIncidentsOverlay: this banner
+  // sits at the very top of the ops screen, which rebuilds on every GPS
+  // tick — a stream built fresh in `build()` resubscribed every time,
+  // flickering the one banner that's supposed to be impossible to miss.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _stream =
+      EmergenciesRepository().watchActiveEmergencies(widget.schoolId);
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: EmergenciesRepository().watchActiveEmergencies(schoolId),
+      stream: _stream,
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? const [];
         if (docs.isEmpty) return const SizedBox.shrink();
@@ -1839,7 +2113,7 @@ class _PulsingDotState extends State<_PulsingDot>
 /// resolve call — but visually escalated: a pulsing indicator in the
 /// header, and it now sits at the very top of the operations rail rather
 /// than floating at the bottom of the map where it could be missed.
-class _ActiveEmergenciesPanel extends StatelessWidget {
+class _ActiveEmergenciesPanel extends StatefulWidget {
   const _ActiveEmergenciesPanel({
     required this.schoolId,
     this.readOnly = false,
@@ -1849,9 +2123,27 @@ class _ActiveEmergenciesPanel extends StatelessWidget {
   final bool readOnly;
 
   @override
+  State<_ActiveEmergenciesPanel> createState() => _ActiveEmergenciesPanelState();
+}
+
+class _ActiveEmergenciesPanelState extends State<_ActiveEmergenciesPanel> {
+  // Created once and held for this widget's lifetime rather than fresh on
+  // every build — this panel sits under the ops screen's live GPS tree,
+  // which rebuilds on every single position tick from every bus. A stream
+  // built inline in `build()` is a *new* Stream instance each time, so
+  // StreamBuilder saw its `stream` identity change on every GPS update and
+  // tore down/resubscribed its Firestore listener, flashing back to "no
+  // data yet" (this panel briefly vanishing) each time — every few seconds,
+  // for as long as any bus in the school was broadcasting.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _stream =
+      EmergenciesRepository().watchActiveEmergencies(widget.schoolId);
+
+  @override
   Widget build(BuildContext context) {
+    final schoolId = widget.schoolId;
+    final readOnly = widget.readOnly;
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: EmergenciesRepository().watchActiveEmergencies(schoolId),
+      stream: _stream,
       builder: (context, snapshot) {
         final docs = snapshot.data?.docs ?? const [];
         if (docs.isEmpty) return const SizedBox.shrink();

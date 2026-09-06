@@ -21,6 +21,7 @@ class SchoolTrip {
     this.resumedAt,
     this.cancelledAt,
     this.cancelReason,
+    this.routePolyline = const [],
   });
 
   final String id;
@@ -60,6 +61,17 @@ class SchoolTrip {
   final String busPlateNumber;
   final String driverName;
 
+  // A real, road-following path through this trip's stops in order —
+  // written server-side (functions/src/index.ts: onTripStopOrderRouted)
+  // whenever `stopOrder` changes, via the Google Directions API. Empty
+  // until that function has run at least once for this trip (a brand-new
+  // trip, or a call that failed/found no drivable path), in which case
+  // every map screen falls back to a straight line between stops rather
+  // than showing nothing. Kept as plain `(lat, lng)` records rather than a
+  // maps-package type so this framework-agnostic package never depends on
+  // `google_maps_flutter` — each app converts to its own `LatLng` locally.
+  final List<({double lat, double lng})> routePolyline;
+
   factory SchoolTrip.fromMap(String id, Map<String, dynamic> data) {
     return SchoolTrip(
       id: id,
@@ -80,7 +92,21 @@ class SchoolTrip {
       resumedAt: _asDateTime(data['resumedAt']),
       cancelledAt: _asDateTime(data['cancelledAt']),
       cancelReason: data['cancelReason'] as String?,
+      routePolyline: _asRoutePolyline(data['routePolyline']),
     );
+  }
+
+  static List<({double lat, double lng})> _asRoutePolyline(Object? value) {
+    if (value is! List) return const [];
+    final points = <({double lat, double lng})>[];
+    for (final entry in value) {
+      if (entry is! Map) continue;
+      final lat = (entry['lat'] as num?)?.toDouble();
+      final lng = (entry['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) continue;
+      points.add((lat: lat, lng: lng));
+    }
+    return points;
   }
 
   Map<String, dynamic> toMap() {

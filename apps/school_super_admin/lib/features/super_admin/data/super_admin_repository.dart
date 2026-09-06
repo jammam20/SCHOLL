@@ -17,27 +17,37 @@ class SuperAdminRepository {
   /// Creates a school and its join code together — the code is what a
   /// school's owner then types into the admin app's "Create admin account"
   /// screen to self-register as that school's first (pending) admin.
+  ///
+  /// Runs as a transaction that reads `schoolJoinCodes/{code}` before
+  /// writing it: a plain batch `set()` here previously overwrote whatever
+  /// school already held that code with no check at all, silently
+  /// re-pointing an existing, already-distributed join code at the new
+  /// school — anyone still registering with the old code would land in the
+  /// wrong school entirely. [SchoolCodeTakenException] surfaces that as a
+  /// real, catchable error instead.
   Future<void> createSchool({
     required String name,
     required String code,
   }) async {
     final normalizedCode = code.trim().toUpperCase();
-    final ref = _firestore.collection('schools').doc();
+    final schoolRef = _firestore.collection('schools').doc();
+    final codeRef = _firestore.collection('schoolJoinCodes').doc(normalizedCode);
 
-    final batch = _firestore.batch();
-    batch.set(ref, {
-      'id': ref.id,
-      'name': name.trim(),
-      'code': normalizedCode,
-      'isActive': true,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+    await _firestore.runTransaction((transaction) async {
+      final existing = await transaction.get(codeRef);
+      if (existing.exists) {
+        throw SchoolCodeTakenException(normalizedCode);
+      }
+      transaction.set(schoolRef, {
+        'id': schoolRef.id,
+        'name': name.trim(),
+        'code': normalizedCode,
+        'isActive': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.set(codeRef, {'schoolId': schoolRef.id, 'active': true});
     });
-    batch.set(_firestore.collection('schoolJoinCodes').doc(normalizedCode), {
-      'schoolId': ref.id,
-      'active': true,
-    });
-    await batch.commit();
   }
 
   Future<void> setSchoolActive({
@@ -97,4 +107,11 @@ class SuperAdminRepository {
       reason: reason,
     );
   }
+}
+
+/// Thrown by [SuperAdminRepository.createSchool] when the requested join
+/// code already belongs to another school.
+class SchoolCodeTakenException implements Exception {
+  const SchoolCodeTakenException(this.code);
+  final String code;
 }

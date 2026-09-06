@@ -136,6 +136,32 @@ class ChildJourneyCard extends StatelessWidget {
   }
 
   Widget _body(BuildContext context) {
+    // A school deactivates a student from the admin app (Students list ->
+    // the active/archived switch) when they've stopped using
+    // transportation — withdrawn, moved, service paused, etc. Before this
+    // check existed, that flag only affected the driver's own stop-order
+    // computation (StopOrderRepository.computeInitialOrder filters on it);
+    // nothing here read it, so a parent whose child had just been
+    // deactivated kept seeing the exact same dashboard — live tracking
+    // included — as if nothing had changed.
+    if (!student.isActive) {
+      return _InfoBanner(
+        icon: Icons.pause_circle_outline_rounded,
+        tone: StatusTone.neutral,
+        title: const S(
+          'Transportation paused for this child',
+          'خدمة النقل موقوفة لهذا الطفل',
+        ).of(context),
+        subtitle: const S(
+          'Your school has paused bus service for this child, so they '
+              "won't appear on any route or trip. Contact your school if "
+              "this wasn't expected.",
+          'مدرستك وقفت خدمة الأتوبيس للطفل ده، فمش هيظهر في أي خط أو '
+              'رحلة. كلّم مدرستك لو ده مش متوقع.',
+        ).of(context),
+      );
+    }
+
     if (!student.approved) {
       return _InfoBanner(
         icon: Icons.hourglass_top_rounded,

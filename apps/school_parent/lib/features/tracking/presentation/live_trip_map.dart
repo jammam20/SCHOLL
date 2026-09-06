@@ -34,10 +34,11 @@ import 'map_marker_icons.dart';
 /// still count: "stop 3 of 8" comes from the real order, it's only their
 /// coordinates that are (correctly) absent.
 ///
-/// There is no road-routed path anywhere in this system — no admin draws
-/// one and there's no Directions API — so the line drawn here is explicitly
-/// the straight-line sequence between real stop coordinates, never a
-/// decorative invented route shape.
+/// The line follows the real roads whenever the trip's own
+/// `routePolyline` has been computed (Feature: real route lines — see
+/// functions/src/index.ts: onTripStopOrderRouted), falling back to a
+/// straight sequence between real stop coordinates only until that catches
+/// up — never a decorative invented route shape either way.
 class LiveTripMap extends StatefulWidget {
   const LiveTripMap({
     super.key,
@@ -644,11 +645,25 @@ class _MapSurface extends StatelessWidget {
           ),
       },
       polylines: {
-        // The stop sequence itself. Dashed, and described in the status
-        // card as the stop order rather than "the route", because it is
-        // exactly that: straight lines between real stop coordinates, not
-        // the roads the bus will drive.
-        if (orderedStops.length > 1)
+        if (progress.routePolyline.length > 1)
+          // The real road-following path (Feature: real route lines) —
+          // solid, since it's the actual driving path rather than a
+          // schematic stop sequence.
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: [
+              for (final point in progress.routePolyline)
+                LatLng(point.lat, point.lng),
+            ],
+            color: theme.colorScheme.primary.withValues(alpha: 0.75),
+            width: 4,
+            zIndex: 1,
+          )
+        else if (orderedStops.length > 1)
+          // Fallback until the route is computed: the stop sequence
+          // itself, dashed and described in the status card as the stop
+          // order rather than "the route" — straight lines between real
+          // stop coordinates, not the roads the bus will drive.
           Polyline(
             polylineId: const PolylineId('stop-order'),
             points: orderedStops,

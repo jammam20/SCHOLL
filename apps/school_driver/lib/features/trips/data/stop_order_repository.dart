@@ -91,8 +91,16 @@ class StopOrderRepository {
   ///    driver's (who may not even be there yet), and the school is placed
   ///    *first* rather than last.
   ///
-  /// Silently no-ops if the required starting position isn't available —
-  /// the driver can still set an order by hand from the trip screen.
+  /// Always writes *some* order, even in the worst case — a driver stuck on
+  /// "Computing today's pickup order…" forever with no way to proceed is
+  /// worse than one that isn't perfectly distance-optimized. The
+  /// nearest-neighbor sequence is the ideal path; a GPS fetch that fails or
+  /// times out (previously a silent no-op that left `stopOrder` empty
+  /// forever, even though the driver's continuous location broadcast in
+  /// [DriverTrackingRepository] kept working fine — a one-shot fix and a
+  /// continuous stream can fail independently) falls back to the route's
+  /// own student order instead. The driver can still manually reorder from
+  /// there once the fallback order exists.
   Future<void> computeInitialOrder({
     required String schoolId,
     required String tripId,
@@ -115,31 +123,45 @@ class StopOrderRepository {
         })
         .nonNulls
         .toList();
+    final fallbackOrder = students.map((s) => s.id).toList();
 
     final List<String> order;
     if (direction == TripDirection.returnTrip) {
       final school = await SchoolsRepository().watchSchool(schoolId: schoolId).first;
-      if (school == null || !school.hasLocation) return;
       order = [
         schoolStopId,
-        ..._nearestNeighborOrder(
-          startLat: school.latitude!,
-          startLng: school.longitude!,
-          students: students,
-        ),
+        if (school != null && school.hasLocation)
+          ..._nearestNeighborOrder(
+            startLat: school.latitude!,
+            startLng: school.longitude!,
+            students: students,
+          )
+        else
+          ...fallbackOrder,
       ];
     } else {
-      final Position position;
+      Position? position;
       try {
-        position = await Geolocator.getCurrentPosition();
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
       } catch (_) {
-        return;
+        position = null;
       }
-      order = _nearestNeighborOrder(
-        startLat: position.latitude,
-        startLng: position.longitude,
-        students: students,
-      )..add(schoolStopId);
+      order = [
+        if (position != null)
+          ..._nearestNeighborOrder(
+            startLat: position.latitude,
+            startLng: position.longitude,
+            students: students,
+          )
+        else
+          ...fallbackOrder,
+        schoolStopId,
+      ];
     }
 
     await setStopOrder(schoolId: schoolId, tripId: tripId, order: order);
