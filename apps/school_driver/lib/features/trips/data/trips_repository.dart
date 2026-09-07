@@ -31,6 +31,27 @@ class TripsRepository {
         .snapshots();
   }
 
+  /// One trip, live — for a page reached by pushing a specific trip (see
+  /// TripDetailPage) rather than watching the whole list. Without this,
+  /// a page built from a single point-in-time `SchoolTrip` snapshot never
+  /// finds out about anything written to the trip afterward — most
+  /// notably `routePolyline`, which functions/src/index.ts computes
+  /// *after* the stop order write that opened this page in the first
+  /// place, so the very first snapshot the driver ever sees is always
+  /// before that field exists. The admin and parent apps don't have this
+  /// bug because their own trip screens already watch a live query rather
+  /// than holding a static snapshot.
+  Stream<SchoolTrip?> watchTrip({
+    required String schoolId,
+    required String tripId,
+  }) {
+    return _trip(schoolId, tripId).snapshots().map((snapshot) {
+      final data = snapshot.data();
+      if (data == null) return null;
+      return SchoolTrip.fromMap(snapshot.id, data);
+    });
+  }
+
   // A transaction rather than a blind `.update()`: it re-reads the trip's
   // *current* status from the server at write time and re-validates the
   // transition against it there, inside the same atomic operation — so

@@ -865,6 +865,22 @@ export const onTripStopOrderRouted = onDocumentWritten(
     }
 
     const points: { lat: number; lng: number }[] = [];
+    // Outbound trips otherwise start the drawn route at the first
+    // *student* stop — accurate to `stopOrder`, but it leaves out the bus's
+    // actual first leg: pulling out of the school where it's garaged before
+    // it ever reaches a student. Prepending the school here gives that leg
+    // a real, road-following line instead of the map's route simply
+    // beginning in the middle of a residential street. A return trip
+    // already starts at school (boarding happens there — the school is
+    // `afterOrder`'s own first entry), so this only applies outbound.
+    if (
+      after.direction !== "return" &&
+      afterOrder[0] !== SCHOOL_STOP_SENTINEL &&
+      schoolLat !== null &&
+      schoolLng !== null
+    ) {
+      points.push({ lat: schoolLat, lng: schoolLng });
+    }
     for (const id of afterOrder) {
       if (id === SCHOOL_STOP_SENTINEL) {
         if (schoolLat !== null && schoolLng !== null) {

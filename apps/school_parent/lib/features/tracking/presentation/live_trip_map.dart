@@ -557,6 +557,9 @@ class _MapSurface extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     final colors = context.appColors;
+    final routePolylinePoints = [
+      for (final point in progress.routePolyline) LatLng(point.lat, point.lng),
+    ];
 
     // Camera work is queued for after this frame — animateCamera during a
     // build would run against a controller that is mid-layout.
@@ -645,18 +648,30 @@ class _MapSurface extends StatelessWidget {
           ),
       },
       polylines: {
-        if (progress.routePolyline.length > 1)
-          // The real road-following path (Feature: real route lines) —
-          // solid, since it's the actual driving path rather than a
-          // schematic stop sequence.
+        if (routePolylinePoints.length > 1)
+          // The real road-following path (Feature: real route lines).
+          // Trimmed to what's still ahead of the live bus position —
+          // snapped onto the route's own vertices — so the road already
+          // driven simply disappears (the Uber picture) instead of a
+          // static line for the whole trip regardless of progress; a
+          // straight line from the live GPS dot to the stop looked
+          // jarring once the rest of the path started following actual
+          // roads, so this finds the nearest point on that same road path
+          // to the bus and continues from there instead of a bird's-eye
+          // line cutting across blocks/rivers/highways.
           Polyline(
             polylineId: const PolylineId('route'),
-            points: [
-              for (final point in progress.routePolyline)
-                LatLng(point.lat, point.lng),
-            ],
+            points: animatedBus != null && !_ownStopReached
+                ? [
+                    for (final point in remainingRoute(
+                      progress.routePolyline,
+                      (lat: animatedBus.latitude, lng: animatedBus.longitude),
+                    ))
+                      LatLng(point.lat, point.lng),
+                  ]
+                : routePolylinePoints,
             color: theme.colorScheme.primary.withValues(alpha: 0.75),
-            width: 4,
+            width: 5,
             zIndex: 1,
           )
         else if (orderedStops.length > 1)
@@ -670,16 +685,6 @@ class _MapSurface extends StatelessWidget {
             color: theme.colorScheme.primary.withValues(alpha: 0.45),
             width: 4,
             patterns: [PatternItem.dash(14), PatternItem.gap(9)],
-          ),
-        // The leg the bus is on right now, solid so "where it is heading
-        // next" separates visually from "the rest of the order".
-        if (animatedBus != null && !_ownStopReached)
-          Polyline(
-            polylineId: const PolylineId('live-leg'),
-            points: [animatedBus, orderedStops.first],
-            color: theme.colorScheme.primary,
-            width: 5,
-            zIndex: 1,
           ),
       },
       circles: {

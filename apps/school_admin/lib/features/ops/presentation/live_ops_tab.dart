@@ -761,27 +761,73 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
       final isCompleted = trip.trip.status == TripStatus.completed;
       final routePolyline = trip.trip.routePolyline;
       if (routePolyline.length >= 2) {
-        // The real road-following path (Feature: real route lines) — one
-        // line rather than the done/remaining split below, for the same
-        // reason the driver app's own map keeps it simple: a road
-        // polyline has far more points than there are stops, with no
-        // cheap way to say exactly which of them are already behind the
-        // bus. The numbered stop markers still carry that progress.
-        polylines.add(
-          Polyline(
-            polylineId: PolylineId('path-${trip.trip.id}'),
-            points: [
-              for (final point in routePolyline) LatLng(point.lat, point.lng),
-            ],
-            color: isCompleted
-                ? palette.completedPath.withValues(alpha: 0.55)
-                : palette.expectedPath.withValues(alpha: 0.9),
-            width: isCompleted ? 3 : 5,
-            patterns: isCompleted
-                ? [PatternItem.dash(18), PatternItem.gap(12)]
-                : const [],
-          ),
-        );
+        // The real road-following path (Feature: real route lines). While
+        // the bus is actually moving, trim it to what's still ahead of the
+        // live fix — snapped onto the route's own vertices — so the road
+        // already driven simply disappears (the Uber picture) instead of
+        // staying drawn behind the bus for the whole trip.
+        final liveFix = isCompleted ? null : widget.fixes[trip.trip.id];
+        final remaining = liveFix != null
+            ? remainingRoute(routePolyline, (
+                lat: liveFix.position.latitude,
+                lng: liveFix.position.longitude,
+              ))
+            : routePolyline;
+
+        // The stop the bus is actually heading to right now, if any — used
+        // to split the leg it's on from the rest of the run so "the
+        // student it's going to" reads as visually distinct, not just via
+        // its own marker color.
+        final currentStop = isCompleted
+            ? null
+            : path.where((s) => currentStopIds.contains(s.stopId)).firstOrNull;
+        final splitIndex = currentStop == null
+            ? -1
+            : nearestRouteIndex(remaining, (
+                lat: currentStop.latitude,
+                lng: currentStop.longitude,
+              ));
+
+        if (!isCompleted && splitIndex > 0 && splitIndex < remaining.length - 1) {
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId('path-current-leg-${trip.trip.id}'),
+              points: [
+                for (final point in remaining.sublist(0, splitIndex + 1))
+                  LatLng(point.lat, point.lng),
+              ],
+              color: Colors.amber.shade700,
+              width: 6,
+              zIndex: 2,
+            ),
+          );
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId('path-rest-${trip.trip.id}'),
+              points: [
+                for (final point in remaining.sublist(splitIndex))
+                  LatLng(point.lat, point.lng),
+              ],
+              color: palette.expectedPath.withValues(alpha: 0.5),
+              width: 4,
+              zIndex: 1,
+            ),
+          );
+        } else {
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId('path-${trip.trip.id}'),
+              points: [for (final point in remaining) LatLng(point.lat, point.lng)],
+              color: isCompleted
+                  ? palette.completedPath.withValues(alpha: 0.55)
+                  : palette.expectedPath.withValues(alpha: 0.9),
+              width: isCompleted ? 3 : 5,
+              patterns: isCompleted
+                  ? [PatternItem.dash(18), PatternItem.gap(12)]
+                  : const [],
+            ),
+          );
+        }
       } else if (path.length >= 2) {
         if (isCompleted) {
           // The whole journey is history now — one muted, dashed line.

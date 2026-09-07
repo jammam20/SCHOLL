@@ -14,6 +14,7 @@ import '../../inspections/data/inspections_repository.dart';
 import '../../inspections/domain/inspection_checklist.dart';
 import '../../inspections/presentation/inspection_checklist_page.dart';
 import '../../schools/data/schools_repository.dart';
+import '../../trips/data/trips_repository.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
 import '../../trips/presentation/stop_order_view.dart';
 
@@ -31,51 +32,105 @@ import '../../trips/presentation/stop_order_view.dart';
 /// audience skews toward low literacy: a button that only makes sense once
 /// you've read and understood a label is a worse button here than
 /// elsewhere.
-class TripDetailPage extends StatelessWidget {
+class TripDetailPage extends StatefulWidget {
   const TripDetailPage({super.key, required this.schoolId, required this.trip});
 
   final String schoolId;
+  // The trip as it was the moment this page was opened — used as the very
+  // first frame's content (and as a fallback if the live stream below
+  // hasn't emitted yet) so the page never opens blank, but never read
+  // again after that: see _TripDetailPageState's own doc comment.
   final SchoolTrip trip;
 
   @override
-  Widget build(BuildContext context) {
-    final isEmergency = trip.status == TripStatus.emergency;
+  State<TripDetailPage> createState() => _TripDetailPageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          trip.routeName.isEmpty
-              ? S('Route ${trip.routeId}', 'خط سير ${trip.routeId}').of(context)
-              : trip.routeName,
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          _TripSummaryHeader(trip: trip),
-          const SizedBox(height: AppSpacing.lg),
-          ..._TripActions(schoolId: schoolId, trip: trip).build(context),
-          if (isEmergency) ...[
-            const SizedBox(height: AppSpacing.md),
-            _ActiveEmergencyBanner(schoolId: schoolId, tripId: trip.id),
-          ],
-          if (trip.status == TripStatus.active ||
-              trip.status == TripStatus.starting ||
-              trip.status == TripStatus.paused ||
-              trip.status == TripStatus.emergency) ...[
-            const Divider(height: AppSpacing.xl2),
-            StopOrderView(
-              key: ValueKey('stops-${trip.id}'),
-              schoolId: schoolId,
-              tripId: trip.id,
-              routeId: trip.routeId,
-              tripStatus: trip.status,
-              direction: trip.direction,
-              routePolyline: trip.routePolyline,
+class _TripDetailPageState extends State<TripDetailPage> {
+  // A page reached by pushing one specific trip previously just held that
+  // trip as a static, never-updated snapshot — so `routePolyline`, which
+  // functions/src/index.ts writes *after* the very stop-order change that
+  // opens this page, could never actually reach it: the driver had to
+  // fully back out and reopen the trip to see a route the admin and
+  // parent apps (which both watch a live query, not a static object) show
+  // immediately. Watching the same document here instead is the fix.
+  late final Stream<SchoolTrip?> _tripStream = TripsRepository().watchTrip(
+    schoolId: widget.schoolId,
+    tripId: widget.trip.id,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<SchoolTrip?>(
+      stream: _tripStream,
+      initialData: widget.trip,
+      builder: (context, snapshot) {
+        final trip = snapshot.data ?? widget.trip;
+        final schoolId = widget.schoolId;
+        final isEmergency = trip.status == TripStatus.emergency;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              trip.routeName.isEmpty
+                  ? S('Route ${trip.routeId}', 'خط سير ${trip.routeId}').of(context)
+                  : trip.routeName,
             ),
-          ],
-        ],
-      ),
+          ),
+          // Lost in the move from the old inline trip card to this
+          // dedicated page: the list page's own BlocConsumer showed action
+          // errors as a snackbar, but that page stays mounted *underneath*
+          // this one (it's reached via Navigator.push, not a replacement),
+          // so its snackbar — if it even fires while off-screen — renders
+          // on a Scaffold the driver can't see. A failed "Start trip"
+          // (wrong pre-trip inspection state, a denied location
+          // permission, anything else `_runAction` catches) previously
+          // showed nothing at all here. This is the same error-listening
+          // the list page has, just scoped to whichever page is actually
+          // in front of the driver.
+          body: BlocListener<TripsBloc, TripsState>(
+            listener: (context, state) {
+              if (state is TripsLoaded && state.actionError != null) {
+                AppSnackbar.error(context, state.actionError!);
+              }
+            },
+            // The map is this screen's main content once a trip is moving —
+            // a driver glances at it far more than at any button — so it
+            // sits right under the header, sized generously, with the
+            // (rarely-tapped) actions collapsed into compact rows below it
+            // rather than four full-width buttons pushing the map down and
+            // small (Feature: driver app reorganization).
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [
+                _TripSummaryHeader(trip: trip),
+                if (isEmergency) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _ActiveEmergencyBanner(schoolId: schoolId, tripId: trip.id),
+                ],
+                if (trip.status == TripStatus.active ||
+                    trip.status == TripStatus.starting ||
+                    trip.status == TripStatus.paused ||
+                    trip.status == TripStatus.emergency) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  StopOrderView(
+                    key: ValueKey('stops-${trip.id}'),
+                    schoolId: schoolId,
+                    tripId: trip.id,
+                    routeId: trip.routeId,
+                    tripStatus: trip.status,
+                    direction: trip.direction,
+                    routePolyline: trip.routePolyline,
+                  ),
+                  const Divider(height: AppSpacing.xl2),
+                ] else
+                  const SizedBox(height: AppSpacing.lg),
+                ..._TripActions(schoolId: schoolId, trip: trip).build(context),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -189,87 +244,102 @@ class _TripActions {
     final bloc = context.read<TripsBloc>();
 
     Widget primary(String label, IconData icon, VoidCallback onPressed) =>
-        SizedBox(
-          width: double.infinity,
-          child: AppButton.primary(label: label, icon: icon, onPressed: onPressed),
-        );
+        AppButton.primary(label: label, icon: icon, onPressed: onPressed);
     Widget secondary(String label, IconData icon, VoidCallback onPressed) =>
-        SizedBox(
-          width: double.infinity,
-          child: AppButton.secondary(label: label, icon: icon, onPressed: onPressed),
-        );
+        AppButton.secondary(label: label, icon: icon, onPressed: onPressed);
+    Widget full(Widget button) => SizedBox(width: double.infinity, child: button);
+    // Two buttons side by side rather than stacked — still full-height,
+    // icon-and-label buttons (nothing shrinks below a comfortable tap
+    // target), just half as tall a block, so the map above doesn't have to
+    // give up its space to a wall of buttons the driver taps rarely.
+    Widget row(Widget left, Widget right) => Row(
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: right),
+      ],
+    );
 
     switch (trip.status) {
       case TripStatus.scheduled:
         return [
-          primary(
-            const S('Start trip', 'ابدأ الرحلة').of(context),
-            Icons.play_arrow,
-            () => _startTrip(context, alreadyStarting: false),
+          full(
+            primary(
+              const S('Start trip', 'ابدأ الرحلة').of(context),
+              Icons.play_arrow,
+              () => _startTrip(context, alreadyStarting: false),
+            ),
           ),
         ];
       case TripStatus.starting:
         return [
-          primary(
-            const S('Continue starting', 'كمّل البدء').of(context),
-            Icons.play_arrow,
-            () => _startTrip(context, alreadyStarting: true),
+          full(
+            primary(
+              const S('Continue starting', 'كمّل البدء').of(context),
+              Icons.play_arrow,
+              () => _startTrip(context, alreadyStarting: true),
+            ),
           ),
         ];
       case TripStatus.active:
         return [
-          primary(
-            const S('Complete', 'إنهاء').of(context),
-            Icons.check,
-            () => _completeTrip(context),
+          row(
+            primary(
+              const S('Complete', 'إنهاء').of(context),
+              Icons.check,
+              () => _completeTrip(context),
+            ),
+            secondary(
+              const S('Pause', 'وقف مؤقت').of(context),
+              Icons.pause,
+              () => bloc.add(TripPauseRequested(schoolId: schoolId, tripId: trip.id)),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          secondary(
-            const S('Pause', 'وقف مؤقت').of(context),
-            Icons.pause,
-            () => bloc.add(TripPauseRequested(schoolId: schoolId, tripId: trip.id)),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _incidentButton(context),
-          const SizedBox(height: AppSpacing.sm),
-          _emergencyButton(
-            context,
-            () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
+          row(
+            _incidentButton(context),
+            _emergencyButton(
+              context,
+              () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
+            ),
           ),
         ];
       case TripStatus.paused:
         return [
-          primary(
-            const S('Resume', 'استكمال').of(context),
-            Icons.play_arrow,
-            () => bloc.add(TripResumeRequested(schoolId: schoolId, tripId: trip.id)),
+          row(
+            primary(
+              const S('Resume', 'استكمال').of(context),
+              Icons.play_arrow,
+              () => bloc.add(TripResumeRequested(schoolId: schoolId, tripId: trip.id)),
+            ),
+            secondary(
+              const S('Cancel', 'إلغاء').of(context),
+              Icons.close,
+              () => bloc.add(TripCancelRequested(schoolId: schoolId, tripId: trip.id)),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          secondary(
-            const S('Cancel', 'إلغاء').of(context),
-            Icons.close,
-            () => bloc.add(TripCancelRequested(schoolId: schoolId, tripId: trip.id)),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _incidentButton(context),
-          const SizedBox(height: AppSpacing.sm),
-          _emergencyButton(
-            context,
-            () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
+          row(
+            _incidentButton(context),
+            _emergencyButton(
+              context,
+              () => _reportEmergency(context, bloc: bloc, schoolId: schoolId, tripId: trip.id),
+            ),
           ),
         ];
       case TripStatus.emergency:
         return [
-          primary(
-            const S('Complete', 'إنهاء').of(context),
-            Icons.check,
-            () => _completeTrip(context),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          secondary(
-            const S('Cancel', 'إلغاء').of(context),
-            Icons.close,
-            () => bloc.add(TripCancelRequested(schoolId: schoolId, tripId: trip.id)),
+          row(
+            primary(
+              const S('Complete', 'إنهاء').of(context),
+              Icons.check,
+              () => _completeTrip(context),
+            ),
+            secondary(
+              const S('Cancel', 'إلغاء').of(context),
+              Icons.close,
+              () => bloc.add(TripCancelRequested(schoolId: schoolId, tripId: trip.id)),
+            ),
           ),
         ];
       case TripStatus.completed:
@@ -398,41 +468,60 @@ class _TripActions {
     );
   }
 
+  // A plain OutlinedButton with a hand-built Row rather than
+  // `.icon(...)`'s own — that one lays the label out unconstrained, which
+  // overflows once this button sits in a half-width Expanded slot next to
+  // its sibling (see `row()` above); `Flexible` + ellipsis here matches
+  // the same guard `AppButton` already carries.
+  Widget _outlinedIconButton(
+    BuildContext context, {
+    required BorderSide side,
+    required Color foregroundColor,
+    required IconData icon,
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(foregroundColor: foregroundColor, side: side),
+      onPressed: onPressed,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Flexible(child: Text(label, overflow: TextOverflow.ellipsis, maxLines: 1)),
+        ],
+      ),
+    );
+  }
+
   Widget _incidentButton(BuildContext context) {
     final colors = context.appColors;
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.info,
-          side: BorderSide(color: colors.info.withValues(alpha: 0.6)),
-        ),
-        onPressed: () => showReportIncidentDialog(
-          context,
-          schoolId: schoolId,
-          tripId: trip.id,
-          busId: trip.busId,
-          routeId: trip.routeId,
-        ),
-        icon: const Icon(Icons.assignment_late_outlined),
-        label: Text(const S('Report incident', 'الإبلاغ عن حادثة').of(context)),
+    return _outlinedIconButton(
+      context,
+      side: BorderSide(color: colors.info.withValues(alpha: 0.6)),
+      foregroundColor: colors.info,
+      icon: Icons.assignment_late_outlined,
+      label: const S('Report incident', 'الإبلاغ عن حادثة').of(context),
+      onPressed: () => showReportIncidentDialog(
+        context,
+        schoolId: schoolId,
+        tripId: trip.id,
+        busId: trip.busId,
+        routeId: trip.routeId,
       ),
     );
   }
 
   Widget _emergencyButton(BuildContext context, VoidCallback onPressed) {
     final colors = context.appColors;
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.emergency,
-          side: BorderSide(color: colors.emergency, width: 1.6),
-        ),
-        onPressed: onPressed,
-        icon: const Icon(Icons.warning_amber_rounded),
-        label: Text(const S('Emergency', 'طوارئ').of(context)),
-      ),
+    return _outlinedIconButton(
+      context,
+      side: BorderSide(color: colors.emergency, width: 1.6),
+      foregroundColor: colors.emergency,
+      icon: Icons.warning_amber_rounded,
+      label: const S('Emergency', 'طوارئ').of(context),
+      onPressed: onPressed,
     );
   }
 

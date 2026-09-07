@@ -427,25 +427,83 @@ class _StopOrderViewState extends State<StopOrderView> {
         ? null
         : LatLng(busPosition.latitude, busPosition.longitude);
 
+    // Where the timeline says the bus is headed right now — school for a
+    // return trip's first leg or an outbound trip's last one, otherwise
+    // whichever student's marker above is drawn in the "current" state.
+    // Used below to split the route into "the leg to that stop" versus
+    // "everything after it", so the stop actually being approached reads
+    // as visually distinct from the rest of the run, not just from its own
+    // marker color.
+    LatLng? currentStopPoint;
+    if (progress.currentStopId == schoolStopId) {
+      currentStopPoint = schoolPoint;
+    } else {
+      final currentStudent = students[progress.currentStopId];
+      if (currentStudent != null && currentStudent.hasLocation) {
+        currentStopPoint = LatLng(currentStudent.latitude!, currentStudent.longitude!);
+      }
+    }
+
     final polylines = <Polyline>{};
     if (widget.routePolyline.length >= 2) {
-      // The real road-following path (Feature: real route lines) — drawn
-      // as a single line rather than split into done/remaining segments
-      // like the straight-line fallback below, since a road polyline has
-      // far more points than there are stops and no cheap way to say
-      // exactly which of them the bus has already passed. Progress still
-      // reads clearly from the numbered/colored stop markers above.
-      polylines.add(
-        Polyline(
-          polylineId: const PolylineId('route'),
-          points: [
-            for (final point in widget.routePolyline) LatLng(point.lat, point.lng),
-          ],
-          color: Theme.of(context).colorScheme.primary,
-          width: 5,
-          zIndex: 1,
-        ),
-      );
+      // The real road-following path (Feature: real route lines). Trimmed
+      // to what's still ahead of the live GPS fix — snapped onto the
+      // route's own vertices — so the road already driven disappears (the
+      // Uber picture) instead of drawing the whole route behind the bus
+      // for the entire trip. Progress before tracking starts still reads
+      // from the numbered/colored stop markers above.
+      final remaining = busPoint != null
+          ? remainingRoute(widget.routePolyline, (
+              lat: busPoint.latitude,
+              lng: busPoint.longitude,
+            ))
+          : widget.routePolyline;
+
+      final splitIndex = currentStopPoint == null
+          ? -1
+          : nearestRouteIndex(remaining, (
+              lat: currentStopPoint.latitude,
+              lng: currentStopPoint.longitude,
+            ));
+
+      if (splitIndex > 0 && splitIndex < remaining.length - 1) {
+        // Two legs, two colors: amber for "heading here now", the usual
+        // primary (muted) for the stops still queued up after it.
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route-current-leg'),
+            points: [
+              for (final point in remaining.sublist(0, splitIndex + 1))
+                LatLng(point.lat, point.lng),
+            ],
+            color: Colors.amber.shade700,
+            width: 6,
+            zIndex: 2,
+          ),
+        );
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route-rest'),
+            points: [
+              for (final point in remaining.sublist(splitIndex))
+                LatLng(point.lat, point.lng),
+            ],
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
+            width: 4,
+            zIndex: 1,
+          ),
+        );
+      } else {
+        polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: [for (final point in remaining) LatLng(point.lat, point.lng)],
+            color: Theme.of(context).colorScheme.primary,
+            width: 5,
+            zIndex: 1,
+          ),
+        );
+      }
     } else if (routePoints.length >= 2) {
       // Split at how far the trip has actually gotten — same treatment as
       // the admin fleet map's per-trip polyline — so the ground already
@@ -515,7 +573,12 @@ class _StopOrderViewState extends State<StopOrderView> {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: SizedBox(
-              height: 220,
+              // A third of the screen's height rather than a flat number —
+              // this is the page's main content once a trip is moving, so
+              // it should read as the biggest thing on screen on an actual
+              // phone, not a strip above a wall of buttons (Feature:
+              // driver app reorganization).
+              height: (MediaQuery.sizeOf(context).height * 0.34).clamp(240, 380),
               child: busPoint == null
                   ? GoogleMap(
                       initialCameraPosition: CameraPosition(
