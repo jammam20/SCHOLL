@@ -3,12 +3,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// The driver's own bus marker on their route-overview map: a real bus
-/// silhouette (body, windshield band, wheels), drawn pointing north so
-/// `Marker.rotation` can turn it to the live GPS heading — the same visual
-/// language as the parent app's `MapMarkerIcons.bus` and the admin app's
-/// `BusMarkerIcons.bus`, each its own small file rather than a shared
-/// `google_maps_flutter` dependency added to `school_shared`.
+/// The driver's own bus marker on their route-overview map: a simple,
+/// Uber-style directional puck (a solid colour disc with a plain arrow),
+/// drawn pointing north at rest so `Marker.rotation` can turn it to the
+/// live GPS heading — the same visual language as the parent app's
+/// `MapMarkerIcons.bus` and the admin app's `BusMarkerIcons.bus`, each its
+/// own small file rather than a shared `google_maps_flutter` dependency
+/// added to `school_shared`.
 class DriverBusMarkerIcon {
   DriverBusMarkerIcon._();
 
@@ -85,52 +86,25 @@ class DriverBusMarkerIcon {
     );
 
     canvas.drawCircle(center, 20, Paint()..color = Colors.white);
+    canvas.drawCircle(center, 17, Paint()..color = color);
     canvas.drawCircle(
       center,
-      20,
+      17,
       Paint()
-        ..color = color.withValues(alpha: 0.25)
+        ..color = Colors.white.withValues(alpha: 0.9)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
 
-    final body = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: center, width: 19, height: 25),
-      const Radius.circular(5),
-    );
-    canvas.drawRRect(body, Paint()..color = color);
-    canvas.drawRRect(
-      body.deflate(0.8),
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.9)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2,
-    );
-
-    final windshield = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: center.translate(0, -7.2), width: 13, height: 5.5),
-      const Radius.circular(2),
-    );
-    canvas.drawRRect(windshield, Paint()..color = Colors.white);
-
-    for (final dy in [-0.5, 5.5]) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: center.translate(0, dy), width: 13, height: 4),
-          const Radius.circular(1.5),
-        ),
-        Paint()..color = Colors.white.withValues(alpha: 0.85),
-      );
-    }
-
-    canvas.drawRect(
-      Rect.fromCenter(center: center.translate(0, 10.5), width: 17, height: 1.6),
-      Paint()..color = Colors.white.withValues(alpha: 0.9),
-    );
-
-    final wheelPaint = Paint()..color = const Color(0xFF1F2430);
-    for (final dx in [-7.2, 7.2]) {
-      canvas.drawCircle(center.translate(dx, 10.5), 2.6, wheelPaint);
-    }
+    // One plain arrow, pointing "forward" (north/up) at rest — the only
+    // shape this marker needs, so a rotation always reads as "heading
+    // that way" rather than needing to be decoded from a vehicle shape.
+    final arrow = Path()
+      ..moveTo(center.dx, center.dy - 9)
+      ..lineTo(center.dx + 7, center.dy + 6)
+      ..lineTo(center.dx, center.dy + 2.5)
+      ..lineTo(center.dx - 7, center.dy + 6)
+      ..close();
+    canvas.drawPath(arrow, Paint()..color = Colors.white);
   }
 }

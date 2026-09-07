@@ -37,6 +37,8 @@ class StopOrderView extends StatefulWidget {
     required this.tripStatus,
     required this.direction,
     this.routePolyline = const [],
+    this.mapHeightFraction = 0.34,
+    this.showExpandButton = true,
   });
 
   final String schoolId;
@@ -50,6 +52,13 @@ class StopOrderView extends StatefulWidget {
   // run at least once, in which case this view falls back to a straight
   // line between stops rather than drawing nothing.
   final List<({double lat, double lng})> routePolyline;
+  // How much of the screen's height the map takes up. The full-screen map
+  // page below reuses this same widget with a much larger fraction rather
+  // than duplicating the marker/polyline-building logic.
+  final double mapHeightFraction;
+  // Hidden on the full-screen page itself — there's no need to "expand"
+  // a map that's already expanded.
+  final bool showExpandButton;
 
   @override
   State<StopOrderView> createState() => _StopOrderViewState();
@@ -472,56 +481,96 @@ class _StopOrderViewState extends State<StopOrderView> {
               // this is the page's main content once a trip is moving, so
               // it should read as the biggest thing on screen on an actual
               // phone, not a strip above a wall of buttons (Feature:
-              // driver app reorganization).
-              height: (MediaQuery.sizeOf(context).height * 0.34).clamp(240, 380),
-              child: busPoint == null
-                  ? GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: markers.first.position,
-                        zoom: 12,
-                      ),
-                      markers: markers,
-                      polylines: polylines,
-                      zoomControlsEnabled: false,
-                      myLocationButtonEnabled: false,
-                    )
-                  : TweenAnimationBuilder<LatLng>(
-                      // A new `end` on every GPS tick makes the marker
-                      // glide from wherever it currently sits to the new
-                      // fix instead of jumping there — the same treatment
-                      // the parent app's live map gives the bus it shows.
-                      tween: _LatLngTween(begin: busPoint, end: busPoint),
-                      duration: const Duration(milliseconds: 900),
-                      curve: Curves.easeInOut,
-                      builder: (context, animatedBus, _) => GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: animatedBus,
-                          zoom: 13,
-                        ),
-                        markers: {
-                          ...markers,
-                          Marker(
-                            markerId: const MarkerId('self-bus'),
-                            position: animatedBus,
-                            rotation: busPosition!.heading,
-                            flat: true,
-                            anchor: const Offset(0.5, 0.5),
-                            zIndexInt: 3,
-                            icon:
-                                busIcon ??
-                                BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor.hueAzure,
+              // driver app reorganization). The full-screen map page below
+              // passes a much larger fraction for exactly the same map.
+              height: (MediaQuery.sizeOf(context).height * widget.mapHeightFraction)
+                  .clamp(240, MediaQuery.sizeOf(context).height),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: busPoint == null
+                        ? GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: markers.first.position,
+                              zoom: 12,
+                            ),
+                            markers: markers,
+                            polylines: polylines,
+                            zoomControlsEnabled: true,
+                            myLocationButtonEnabled: false,
+                          )
+                        : TweenAnimationBuilder<LatLng>(
+                            // A new `end` on every GPS tick makes the marker
+                            // glide from wherever it currently sits to the
+                            // new fix instead of jumping there — the same
+                            // treatment the parent app's live map gives the
+                            // bus it shows.
+                            tween: _LatLngTween(begin: busPoint, end: busPoint),
+                            duration: const Duration(milliseconds: 900),
+                            curve: Curves.easeInOut,
+                            builder: (context, animatedBus, _) => GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: animatedBus,
+                                zoom: 13,
+                              ),
+                              markers: {
+                                ...markers,
+                                Marker(
+                                  markerId: const MarkerId('self-bus'),
+                                  position: animatedBus,
+                                  rotation: busPosition!.heading,
+                                  flat: true,
+                                  anchor: const Offset(0.5, 0.5),
+                                  zIndexInt: 3,
+                                  icon:
+                                      busIcon ??
+                                      BitmapDescriptor.defaultMarkerWithHue(
+                                        BitmapDescriptor.hueAzure,
+                                      ),
+                                  infoWindow: InfoWindow(
+                                    title: const S('Your bus', 'أتوبيسك').of(context),
+                                  ),
                                 ),
-                            infoWindow: InfoWindow(
-                              title: const S('Your bus', 'أتوبيسك').of(context),
+                              },
+                              polylines: polylines,
+                              zoomControlsEnabled: true,
+                              myLocationButtonEnabled: false,
                             ),
                           ),
+                  ),
+                  if (widget.showExpandButton)
+                    PositionedDirectional(
+                      top: AppSpacing.sm,
+                      end: AppSpacing.sm,
+                      child: _MapExpandButton(
+                        onTap: () {
+                          // The pushed route sits outside this page's own
+                          // BlocProvider scope — captured here and
+                          // re-provided below, same fix as
+                          // TripDetailPage's own push (see its doc
+                          // comment) for the same ProviderNotFoundException.
+                          final bloc = context.read<TripsBloc>();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: bloc,
+                                child: _FullScreenMapPage(
+                                  schoolId: widget.schoolId,
+                                  tripId: widget.tripId,
+                                  routeId: widget.routeId,
+                                  tripStatus: widget.tripStatus,
+                                  direction: widget.direction,
+                                  routePolyline: widget.routePolyline,
+                                ),
+                              ),
+                            ),
+                          );
                         },
-                        polylines: polylines,
-                        zoomControlsEnabled: false,
-                        myLocationButtonEnabled: false,
                       ),
                     ),
+                ],
+              ),
             ),
           ),
         const SizedBox(height: AppSpacing.md),
@@ -1242,6 +1291,77 @@ class _LatLngTween extends Tween<LatLng> {
     return LatLng(
       b.latitude + (e.latitude - b.latitude) * t,
       b.longitude + (e.longitude - b.longitude) * t,
+    );
+  }
+}
+
+/// The small "open bigger" affordance overlaid on the compact map — a
+/// clipped `SizedBox` inside a scrolling page previously had no way to pan
+/// or zoom past the fold, so a driver squinting at a cluster of stops had
+/// no way to actually see them (Feature: driver map expand).
+class _MapExpandButton extends StatelessWidget {
+  const _MapExpandButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.55),
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.all(8),
+          child: Icon(Icons.fullscreen_rounded, color: Colors.white, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+/// The same live map and stop timeline, just given nearly the whole
+/// screen — reached by tapping [_MapExpandButton]. Reuses [StopOrderView]
+/// itself rather than re-deriving markers/polylines here, so this can
+/// never drift out of sync with the compact map's own logic.
+class _FullScreenMapPage extends StatelessWidget {
+  const _FullScreenMapPage({
+    required this.schoolId,
+    required this.tripId,
+    required this.routeId,
+    required this.tripStatus,
+    required this.direction,
+    required this.routePolyline,
+  });
+
+  final String schoolId;
+  final String tripId;
+  final String routeId;
+  final TripStatus tripStatus;
+  final TripDirection direction;
+  final List<({double lat, double lng})> routePolyline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(const S("Today's route", 'مسار اليوم').of(context)),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: StopOrderView(
+          key: ValueKey('stops-fullscreen-$tripId'),
+          schoolId: schoolId,
+          tripId: tripId,
+          routeId: routeId,
+          tripStatus: tripStatus,
+          direction: direction,
+          routePolyline: routePolyline,
+          mapHeightFraction: 0.65,
+          showExpandButton: false,
+        ),
+      ),
     );
   }
 }

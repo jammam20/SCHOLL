@@ -42,9 +42,13 @@ enum StopMarkerState {
 class MapMarkerIcons {
   MapMarkerIcons._();
 
-  /// The bus itself: a real bus silhouette (body, windshield band, wheels)
-  /// on a soft halo disc, drawn pointing north so the map's own
-  /// `Marker.rotation` can turn it to the driver's real GPS heading.
+  /// The bus itself — a simple, Uber-style directional puck: a solid
+  /// color disc on a soft halo, with a plain arrow pointing north so the
+  /// map's own `Marker.rotation` can turn it to the driver's real GPS
+  /// heading. Deliberately not a detailed bus silhouette: a rotated bus
+  /// body reads as "an odd tilted bus", not "turning that way", whereas a
+  /// plain arrow's direction is unambiguous at a glance even mid-turn —
+  /// the same reason a ride-hailing app's live map uses one.
   static Future<BitmapDescriptor> bus({
     required Color color,
     required Color onColor,
@@ -54,7 +58,7 @@ class MapMarkerIcons {
     return _render(size, devicePixelRatio, (canvas) {
       const center = Offset(size / 2, size / 2);
 
-      // Soft ground shadow so the bus reads as being *above* the map,
+      // Soft ground shadow so the puck reads as being *above* the map,
       // not painted onto it.
       canvas.drawCircle(
         center.translate(0, 2),
@@ -65,64 +69,26 @@ class MapMarkerIcons {
       );
 
       canvas.drawCircle(center, 20, Paint()..color = onColor);
+      canvas.drawCircle(center, 17, Paint()..color = color);
       canvas.drawCircle(
         center,
-        20,
+        17,
         Paint()
-          ..color = color.withValues(alpha: 0.25)
+          ..color = onColor.withValues(alpha: 0.9)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
 
-      // The bus body: a rounded rectangle, long axis vertical, so
-      // "forward" is unambiguous once rotated to the real heading.
-      final body = RRect.fromRectAndRadius(
-        Rect.fromCenter(center: center, width: 19, height: 25),
-        const Radius.circular(5),
-      );
-      canvas.drawRRect(body, Paint()..color = color);
-      canvas.drawRRect(
-        body.deflate(0.8),
-        Paint()
-          ..color = onColor.withValues(alpha: 0.9)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2,
-      );
-
-      // Windshield band at the front (top).
-      final windshield = RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: center.translate(0, -7.2),
-          width: 13,
-          height: 5.5,
-        ),
-        const Radius.circular(2),
-      );
-      canvas.drawRRect(windshield, Paint()..color = onColor);
-
-      // Two side windows.
-      for (final dy in [-0.5, 5.5]) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromCenter(center: center.translate(0, dy), width: 13, height: 4),
-            const Radius.circular(1.5),
-          ),
-          Paint()..color = onColor.withValues(alpha: 0.85),
-        );
-      }
-
-      // A thin waistline stripe, the way a real school-bus livery reads
-      // even at this scale.
-      canvas.drawRect(
-        Rect.fromCenter(center: center.translate(0, 10.5), width: 17, height: 1.6),
-        Paint()..color = onColor.withValues(alpha: 0.9),
-      );
-
-      // Wheels, peeking out from under the body.
-      final wheelPaint = Paint()..color = const Color(0xFF1F2430);
-      for (final dx in [-7.2, 7.2]) {
-        canvas.drawCircle(center.translate(dx, 10.5), 2.6, wheelPaint);
-      }
+      // One plain arrow, pointing "forward" (north/up) at rest — the only
+      // shape this marker needs, so a rotation always reads as "heading
+      // that way" rather than needing to be decoded from a vehicle shape.
+      final arrow = Path()
+        ..moveTo(center.dx, center.dy - 9)
+        ..lineTo(center.dx + 7, center.dy + 6)
+        ..lineTo(center.dx, center.dy + 2.5)
+        ..lineTo(center.dx - 7, center.dy + 6)
+        ..close();
+      canvas.drawPath(arrow, Paint()..color = onColor);
     });
   }
 
