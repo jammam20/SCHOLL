@@ -57,17 +57,57 @@ int nearestRouteIndex(List<GeoPoint> route, GeoPoint target) {
   return bestIndex;
 }
 
-/// The part of a road-following [route] that is still ahead of [from] (a
-/// live GPS position) — the Uber-style picture where the road behind the
-/// moving marker simply isn't drawn any more, only what's left to drive.
+/// The single road-following segment between [from] (typically the bus's
+/// live position) and [to] (typically the specific stop it's heading to
+/// right now) — deliberately just this one leg, not the rest of the trip's
+/// route past [to], so the map reads as "the drive to get there" rather
+/// than a full itinerary redrawn on every GPS tick.
 ///
-/// Snaps [from] onto the nearest vertex of [route] and returns [from]
-/// followed by every vertex after that one, so the line starts exactly at
-/// the live position rather than jumping to the snapped point first.
-/// Returns just `[from]` when [route] has fewer than two points (nothing
-/// to trim against).
-List<GeoPoint> remainingRoute(List<GeoPoint> route, GeoPoint from) {
-  if (route.length < 2) return [from];
-  final index = nearestRouteIndex(route, from);
-  return [from, ...route.sublist(index + 1)];
+/// Both ends are snapped onto the nearest vertex of [route] first (a
+/// nearest-vertex approximation, not a true point-to-segment projection —
+/// fine here since a road polyline already carries many closely-spaced
+/// points), then the path is built from [from] through every vertex
+/// between the two snapped points and finishing at [to] itself, so the
+/// line still visually touches the two real coordinates it connects
+/// instead of the approximated snap points. Falls back to the bare
+/// two-point line when [route] has fewer than two points to snap onto.
+List<GeoPoint> currentLegRoute(
+  List<GeoPoint> route,
+  GeoPoint from,
+  GeoPoint to,
+) {
+  if (route.length < 2) return [from, to];
+  final fromIndex = nearestRouteIndex(route, from);
+  final toIndex = nearestRouteIndex(route, to);
+  final start = fromIndex < toIndex ? fromIndex : toIndex;
+  final end = fromIndex < toIndex ? toIndex : fromIndex;
+  final segment = route.sublist(start, end + 1);
+  return fromIndex <= toIndex
+      ? [from, ...segment, to]
+      : [from, ...segment.reversed, to];
+}
+
+/// The real, road-following distance (in meters) from [from] to [to],
+/// along [route] — sums each leg of [currentLegRoute]'s own path instead
+/// of measuring [from]-to-[to] as the crow flies, which noticeably over-
+/// or under-states distance once the road bends around a block, a river,
+/// or a highway interchange rather than running straight between the two.
+/// Falls back to the straight-line distance when [route] doesn't have
+/// enough points to snap onto (see [currentLegRoute]).
+double routeDistanceMeters(
+  List<GeoPoint> route,
+  GeoPoint from,
+  GeoPoint to,
+) {
+  final path = currentLegRoute(route, from, to);
+  var total = 0.0;
+  for (var i = 0; i < path.length - 1; i++) {
+    total += haversineMeters(
+      path[i].lat,
+      path[i].lng,
+      path[i + 1].lat,
+      path[i + 1].lng,
+    );
+  }
+  return total;
 }

@@ -37,6 +37,24 @@ class StudentsRepository {
     return _students(schoolId).orderBy('name').limit(limit).snapshots();
   }
 
+  // A server-side count (not a full document fetch) of how many active
+  // students are currently assigned to [routeId] — Feature: bus capacity
+  // check, used by the admin's "Add trip" dialog to warn when the chosen
+  // bus seats fewer students than the route actually carries. `isActive`
+  // only, matching every other "who's really riding this route today"
+  // count elsewhere (an archived student was never going to board). A
+  // one-shot count rather than a live stream — this only ever backs a
+  // save-time guard in a dialog, not something that needs to react to a
+  // student being reassigned by someone else while it happens to be open.
+  Future<int> countRouteStudents(String schoolId, String routeId) async {
+    final snapshot = await _students(schoolId)
+        .where('routeId', isEqualTo: routeId)
+        .where('isActive', isEqualTo: true)
+        .count()
+        .get();
+    return snapshot.count ?? 0;
+  }
+
   // Uses the same (role ASC, displayName ASC) composite index as the
   // driver list — 'approved' filtering happens client-side so this doesn't
   // need its own index.

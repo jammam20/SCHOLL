@@ -318,6 +318,7 @@ class _LiveOpsTabState extends State<LiveOpsTab> {
                       busSpeedMetersPerSecond:
                           _fixes[trip.trip.id]?.speedMetersPerSecond,
                       busPositionUpdatedAt: _fixes[trip.trip.id]?.updatedAt,
+                      routePolyline: trip.trip.routePolyline,
                     ),
                 };
 
@@ -697,24 +698,6 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
     for (final trip in trips) ?widget.etas[trip.trip.id]?.nextStopId,
   };
 
-  /// The longest run of consecutive *done* stops from the front of [path] —
-  /// how far along the expected path the bus has actually gotten, used to
-  /// split the line into "already covered" and "still ahead" rather than
-  /// drawing the whole expected path in one style regardless of progress.
-  /// A plain count of done stops (as the ETA engine's own `stopsCompleted`
-  /// is) would mis-split a route where a stop was boarded out of order; a
-  /// front-anchored run can't.
-  int _donePrefixLength(List<TripPathStop> path) {
-    var count = 0;
-    for (final stop in path) {
-      final done =
-          stop.progress == TripStopProgress.boarded ||
-          stop.progress == TripStopProgress.droppedOff;
-      if (!done) break;
-      count++;
-    }
-    return count;
-  }
 
   Color _stopColor(TripPathStop stop, _MapPalette palette) =>
       switch (stop.progress) {
@@ -760,124 +743,53 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
       final path = widget.paths[trip.trip.id] ?? const [];
       final isCompleted = trip.trip.status == TripStatus.completed;
       final routePolyline = trip.trip.routePolyline;
-      if (routePolyline.length >= 2) {
-        // The real road-following path (Feature: real route lines). While
-        // the bus is actually moving, trim it to what's still ahead of the
-        // live fix — snapped onto the route's own vertices — so the road
-        // already driven simply disappears (the Uber picture) instead of
-        // staying drawn behind the bus for the whole trip.
-        final liveFix = isCompleted ? null : widget.fixes[trip.trip.id];
-        final remaining = liveFix != null
-            ? remainingRoute(routePolyline, (
-                lat: liveFix.position.latitude,
-                lng: liveFix.position.longitude,
-              ))
-            : routePolyline;
-
-        // The stop the bus is actually heading to right now, if any — used
-        // to split the leg it's on from the rest of the run so "the
-        // student it's going to" reads as visually distinct, not just via
-        // its own marker color.
-        final currentStop = isCompleted
-            ? null
-            : path.where((s) => currentStopIds.contains(s.stopId)).firstOrNull;
-        final splitIndex = currentStop == null
-            ? -1
-            : nearestRouteIndex(remaining, (
-                lat: currentStop.latitude,
-                lng: currentStop.longitude,
-              ));
-
-        if (!isCompleted && splitIndex > 0 && splitIndex < remaining.length - 1) {
-          polylines.add(
-            Polyline(
-              polylineId: PolylineId('path-current-leg-${trip.trip.id}'),
-              points: [
-                for (final point in remaining.sublist(0, splitIndex + 1))
-                  LatLng(point.lat, point.lng),
-              ],
-              color: Colors.amber.shade700,
-              width: 6,
-              zIndex: 2,
-            ),
-          );
-          polylines.add(
-            Polyline(
-              polylineId: PolylineId('path-rest-${trip.trip.id}'),
-              points: [
-                for (final point in remaining.sublist(splitIndex))
-                  LatLng(point.lat, point.lng),
-              ],
-              color: palette.expectedPath.withValues(alpha: 0.5),
-              width: 4,
-              zIndex: 1,
-            ),
-          );
-        } else {
+      if (isCompleted) {
+        // A finished trip is history, not something to navigate by — one
+        // muted, dashed line over its whole path is what's useful to
+        // review, not a "current leg" (there isn't one).
+        final points = routePolyline.length >= 2
+            ? [for (final point in routePolyline) LatLng(point.lat, point.lng)]
+            : (path.length >= 2
+                ? [for (final stop in path) LatLng(stop.latitude, stop.longitude)]
+                : const <LatLng>[]);
+        if (points.length >= 2) {
           polylines.add(
             Polyline(
               polylineId: PolylineId('path-${trip.trip.id}'),
-              points: [for (final point in remaining) LatLng(point.lat, point.lng)],
-              color: isCompleted
-                  ? palette.completedPath.withValues(alpha: 0.55)
-                  : palette.expectedPath.withValues(alpha: 0.9),
-              width: isCompleted ? 3 : 5,
-              patterns: isCompleted
-                  ? [PatternItem.dash(18), PatternItem.gap(12)]
-                  : const [],
-            ),
-          );
-        }
-      } else if (path.length >= 2) {
-        if (isCompleted) {
-          // The whole journey is history now — one muted, dashed line.
-          polylines.add(
-            Polyline(
-              polylineId: PolylineId('path-${trip.trip.id}'),
-              points: [
-                for (final stop in path) LatLng(stop.latitude, stop.longitude),
-              ],
+              points: points,
               color: palette.completedPath.withValues(alpha: 0.55),
               width: 3,
               patterns: [PatternItem.dash(18), PatternItem.gap(12)],
             ),
           );
-        } else {
-          // Still on the road: split at how far the bus has actually
-          // gotten, so "ground already covered" and "what's still ahead"
-          // read differently at a glance instead of one uniform line for
-          // the entire expected path regardless of progress.
-          final doneCount = _donePrefixLength(path);
-          final points = [
-            for (final stop in path) LatLng(stop.latitude, stop.longitude),
-          ];
-          if (doneCount > 0) {
-            polylines.add(
-              Polyline(
-                polylineId: PolylineId('path-done-${trip.trip.id}'),
-                points: points.sublist(
-                  0,
-                  (doneCount + 1).clamp(0, points.length),
-                ),
-                color: palette.completedPath.withValues(alpha: 0.6),
-                width: 3,
-                patterns: [PatternItem.dash(14), PatternItem.gap(10)],
-                zIndex: 0,
-              ),
-            );
-          }
-          final remaining = points.sublist(doneCount.clamp(0, points.length));
-          if (remaining.length >= 2) {
-            polylines.add(
-              Polyline(
-                polylineId: PolylineId('path-remaining-${trip.trip.id}'),
-                points: remaining,
-                color: palette.expectedPath.withValues(alpha: 0.9),
-                width: 5,
-                zIndex: 1,
-              ),
-            );
-          }
+        }
+      } else {
+        // A trip still on the road only ever gets the one leg it's
+        // actually driving right now — the live fix to whichever stop is
+        // current — not the rest of the run past that point. Road-
+        // following via currentLegRoute when the real route polyline is
+        // in yet, otherwise a straight line between the two real points.
+        final liveFix = widget.fixes[trip.trip.id];
+        final currentStop =
+            path.where((s) => currentStopIds.contains(s.stopId)).firstOrNull;
+        if (liveFix != null && currentStop != null) {
+          final from = (
+            lat: liveFix.position.latitude,
+            lng: liveFix.position.longitude,
+          );
+          final to = (lat: currentStop.latitude, lng: currentStop.longitude);
+          final legPoints = routePolyline.length >= 2
+              ? currentLegRoute(routePolyline, from, to)
+              : [from, to];
+          polylines.add(
+            Polyline(
+              polylineId: PolylineId('path-current-leg-${trip.trip.id}'),
+              points: [for (final point in legPoints) LatLng(point.lat, point.lng)],
+              color: palette.expectedPath.withValues(alpha: 0.9),
+              width: 5,
+              zIndex: 1,
+            ),
+          );
         }
       }
 

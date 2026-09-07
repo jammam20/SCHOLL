@@ -2797,6 +2797,19 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
   String? _busId;
   String _busName = '';
   String _busPlateNumber = '';
+  // Feature: bus capacity check — captured alongside the bus's other
+  // denormalized fields at selection time, purely to compare against the
+  // route's student count below. Null means the bus has no capacity set,
+  // in which case there's nothing to warn about (matches every school that
+  // predates this field).
+  int? _busCapacity;
+  // Fetched once per route selection (not streamed — this is a save-time
+  // guard, not something that needs to react to a student being reassigned
+  // by someone else while this dialog happens to be open). Reset to null
+  // the moment the route changes so a stale count from the previous route
+  // is never compared against the newly-selected one while the fetch for
+  // it is still in flight.
+  int? _routeStudentCount;
   String? _driverId;
   String _driverName = '';
   DateTime _scheduledAt = DateTime.now().add(const Duration(minutes: 30));
@@ -2820,6 +2833,11 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
   // calendar doesn't change mid-dialog) purely so _scheduledDates() can
   // skip configured weekly/special holidays when repeating.
   School? _school;
+
+  bool get _isOverCapacity =>
+      _busCapacity != null &&
+      _routeStudentCount != null &&
+      _routeStudentCount! > _busCapacity!;
 
   @override
   void initState() {
@@ -2870,6 +2888,15 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                       setState(() {
                         _routeId = id;
                         _routeName = doc.data()['name']?.toString() ?? '';
+                        _routeStudentCount = null;
+                      });
+                      if (id == null) return;
+                      StudentsRepository()
+                          .countRouteStudents(widget.schoolId, id)
+                          .then((studentCount) {
+                        if (mounted && _routeId == id) {
+                          setState(() => _routeStudentCount = studentCount);
+                        }
                       });
                     },
                   );
@@ -2908,11 +2935,45 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                         _busName = doc.data()['name']?.toString() ?? '';
                         _busPlateNumber =
                             doc.data()['plateNumber']?.toString() ?? '';
+                        _busCapacity = (doc.data()['capacity'] as num?)?.toInt();
                       });
                     },
                   );
                 },
               ),
+              // Feature: bus capacity check — a route this bus can't
+              // actually seat used to save silently; this compares the
+              // selected bus's capacity against how many active students
+              // the selected route already carries and blocks Save (see
+              // _isOverCapacity below) with a specific, actionable message
+              // instead.
+              if (_isOverCapacity)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.error_outline, size: 18, color: context.appColors.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          S(
+                            'This bus seats $_busCapacity, but '
+                                '$_routeStudentCount students are assigned to '
+                                'this route. Pick a bigger bus or move some '
+                                'students first.',
+                            'الأتوبيس ده سعته $_busCapacity راكب، لكن '
+                                '$_routeStudentCount طالب متحددين على الخط ده. '
+                                'اختار أتوبيس أكبر أو انقل بعض الطلاب الأول.',
+                          ).of(context),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.appColors.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 12),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: DriversRepository().watchDrivers(widget.schoolId),
@@ -3076,7 +3137,8 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
           child: Text(const S('Cancel', 'إلغاء').of(context)),
         ),
         FilledButton(
-          onPressed: _routeId == null || _busId == null || _driverId == null
+          onPressed:
+              _routeId == null || _busId == null || _driverId == null || _isOverCapacity
               ? null
               : () {
                   for (final date in _scheduledDates()) {

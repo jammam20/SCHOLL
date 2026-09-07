@@ -88,12 +88,13 @@ class TripEta {
 /// logic) so parent/driver/admin apps all get identical numbers for the
 /// same trip instead of three separate ad-hoc calculations.
 ///
-/// Distance is great-circle (haversine) between consecutive stop points,
-/// not a road-routing distance — this project has no Directions API
-/// integration, and adding one would mean a new paid dependency; the
-/// straight-line estimate is the same approach LiveTripMap already used
-/// for its single-stop ETA, just generalized to the whole remaining route
-/// and given explicit "why is this unavailable" reasoning.
+/// Distance is measured along [routePolyline] (Feature: real route lines)
+/// whenever one is available — [routeDistanceMeters] snaps the bus and the
+/// target stop onto that road-following path and sums the real driving
+/// distance between them, rather than the great-circle distance straight
+/// through whatever's between them (a building, a river, a highway median).
+/// Falls back to the older straight-line haversine estimate when no
+/// polyline has been computed yet for this trip.
 TripEta computeTripEta({
   required TripStatus tripStatus,
   required List<TripStopPoint> stopOrder,
@@ -101,6 +102,7 @@ TripEta computeTripEta({
   double? busLongitude,
   double? busSpeedMetersPerSecond,
   DateTime? busPositionUpdatedAt,
+  List<GeoPoint> routePolyline = const [],
   DateTime? now,
 }) {
   final nowTime = now ?? DateTime.now();
@@ -156,26 +158,45 @@ TripEta computeTripEta({
           ? busSpeedMetersPerSecond
           : fallbackSpeedMetersPerSecond;
 
-  final distanceToNext = haversineMeters(
-    busLatitude!,
-    busLongitude!,
-    nextStop.latitude,
-    nextStop.longitude,
-  );
+  final busPoint = (lat: busLatitude!, lng: busLongitude!);
+  final hasRoute = routePolyline.length >= 2;
+
+  final distanceToNext = hasRoute
+      ? routeDistanceMeters(
+          routePolyline,
+          busPoint,
+          (lat: nextStop.latitude, lng: nextStop.longitude),
+        )
+      : haversineMeters(
+          busLatitude,
+          busLongitude,
+          nextStop.latitude,
+          nextStop.longitude,
+        );
   final etaToNext = Duration(seconds: (distanceToNext / speed).round());
 
-  // Distance to the final remaining stop = distance to next stop + the
-  // sum of each subsequent leg along the remaining stop order — a
-  // reasonable approximation of "how far is left on this trip" given we
-  // have no road-routing distance to fall back on.
-  var distanceToFinal = distanceToNext;
-  for (var i = 0; i < remaining.length - 1; i++) {
-    distanceToFinal += haversineMeters(
-      remaining[i].latitude,
-      remaining[i].longitude,
-      remaining[i + 1].latitude,
-      remaining[i + 1].longitude,
+  // Distance to the final remaining stop. With a real route polyline this
+  // is one call — the polyline already threads through every intermediate
+  // stop in order, so the distance from the bus to the last remaining
+  // stop *is* the distance covering all the legs in between. Without one,
+  // fall back to summing each leg's straight-line distance instead.
+  double distanceToFinal;
+  if (hasRoute) {
+    distanceToFinal = routeDistanceMeters(
+      routePolyline,
+      busPoint,
+      (lat: finalStop.latitude, lng: finalStop.longitude),
     );
+  } else {
+    distanceToFinal = distanceToNext;
+    for (var i = 0; i < remaining.length - 1; i++) {
+      distanceToFinal += haversineMeters(
+        remaining[i].latitude,
+        remaining[i].longitude,
+        remaining[i + 1].latitude,
+        remaining[i + 1].longitude,
+      );
+    }
   }
   final etaToFinal = Duration(seconds: (distanceToFinal / speed).round());
 

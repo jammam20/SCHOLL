@@ -380,6 +380,10 @@ class _MapSurface extends StatelessWidget {
     final busPoint = busPosition == null
         ? null
         : LatLng(busPosition!.latitude, busPosition!.longitude);
+    // Straight-line, deliberately — this feeds the "has the bus physically
+    // reached the stop" proximity check below, which is about real-world
+    // closeness (the same fixed-radius circle drawn on the map), not how
+    // far the bus still has to drive.
     final distanceToStudent = busPosition == null
         ? null
         : haversineMeters(
@@ -388,6 +392,20 @@ class _MapSurface extends StatelessWidget {
             studentPoint.latitude,
             studentPoint.longitude,
           );
+    // What the status card actually displays as "X away" — the real
+    // road-following distance when a route polyline exists, so it agrees
+    // with the line drawn on the map and with the ETA panel elsewhere,
+    // instead of a straight-line number that can read as "500m" while the
+    // drawn road clearly loops around a block.
+    final roadDistanceToStudent = busPosition == null
+        ? null
+        : progress.routePolyline.length >= 2
+        ? routeDistanceMeters(
+            progress.routePolyline,
+            (lat: busPosition!.latitude, lng: busPosition!.longitude),
+            (lat: studentPoint.latitude, lng: studentPoint.longitude),
+          )
+        : distanceToStudent;
 
     // The stops this parent may see, in their real `stopOrder` sequence —
     // the only honest basis for a line on this map.
@@ -510,7 +528,7 @@ class _MapSurface extends StatelessWidget {
               status: status,
               updatedAt: busPosition?.updatedAt,
               speedMetersPerSecond: busPosition?.speedMetersPerSecond,
-              distanceToStudentMeters: ownStopDone ? null : distanceToStudent,
+              distanceToStudentMeters: ownStopDone ? null : roadDistanceToStudent,
             ),
           ),
         ],
@@ -560,6 +578,18 @@ class _MapSurface extends StatelessWidget {
     final routePolylinePoints = [
       for (final point in progress.routePolyline) LatLng(point.lat, point.lng),
     ];
+
+    // Wherever the bus is actually heading right now, from this parent's
+    // own honest view of the trip: this child's own stop before they're
+    // aboard, the school once they are, or nowhere once they've already
+    // been dropped off.
+    final hasBoarded = progress.boardedStudents.contains(student.id);
+    final hasBeenDroppedOff = progress.droppedOffStudents.contains(student.id);
+    final currentTargetPoint = hasBeenDroppedOff
+        ? null
+        : hasBoarded
+        ? schoolPoint
+        : LatLng(student.latitude!, student.longitude!);
 
     // Camera work is queued for after this frame — animateCamera during a
     // build would run against a controller that is mid-layout.
@@ -648,28 +678,35 @@ class _MapSurface extends StatelessWidget {
           ),
       },
       polylines: {
-        if (routePolylinePoints.length > 1)
-          // The real road-following path (Feature: real route lines).
-          // Trimmed to what's still ahead of the live bus position —
-          // snapped onto the route's own vertices — so the road already
-          // driven simply disappears (the Uber picture) instead of a
-          // static line for the whole trip regardless of progress; a
-          // straight line from the live GPS dot to the stop looked
-          // jarring once the rest of the path started following actual
-          // roads, so this finds the nearest point on that same road path
-          // to the bus and continues from there instead of a bird's-eye
-          // line cutting across blocks/rivers/highways.
+        if (animatedBus != null && currentTargetPoint != null)
+          // Only the one leg — the bus's live position to wherever it's
+          // actually heading right now (this child's own stop, or the
+          // school once they're aboard), not the rest of the trip's
+          // stop-to-stop route. Road-following via currentLegRoute when
+          // the real route polyline is in yet (Feature: real route
+          // lines), otherwise a straight line between the two real
+          // points — never nothing.
           Polyline(
-            polylineId: const PolylineId('route'),
-            points: animatedBus != null && !_ownStopReached
-                ? [
-                    for (final point in remainingRoute(
+            polylineId: const PolylineId('current-leg'),
+            points: [
+              for (final point in routePolylinePoints.length > 1
+                  ? currentLegRoute(
                       progress.routePolyline,
                       (lat: animatedBus.latitude, lng: animatedBus.longitude),
-                    ))
-                      LatLng(point.lat, point.lng),
-                  ]
-                : routePolylinePoints,
+                      (
+                        lat: currentTargetPoint.latitude,
+                        lng: currentTargetPoint.longitude,
+                      ),
+                    )
+                  : [
+                      (lat: animatedBus.latitude, lng: animatedBus.longitude),
+                      (
+                        lat: currentTargetPoint.latitude,
+                        lng: currentTargetPoint.longitude,
+                      ),
+                    ])
+                LatLng(point.lat, point.lng),
+            ],
             color: theme.colorScheme.primary.withValues(alpha: 0.75),
             width: 5,
             zIndex: 1,

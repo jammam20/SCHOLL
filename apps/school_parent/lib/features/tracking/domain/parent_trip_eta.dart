@@ -24,8 +24,9 @@ import 'live_bus_position.dart';
 /// guards and its explicit "why not" reason), while "stop 3 of 8" comes
 /// from the real order.
 ///
-/// Distances are great-circle, not road distances — see [computeTripEta]'s
-/// own note on why this project has no road-routing dependency.
+/// Distances are measured along the trip's real route polyline
+/// ([TripStopProgress.routePolyline]) when one is available — see
+/// [computeTripEta]'s own note — falling back to great-circle otherwise.
 class ParentTripEta {
   const ParentTripEta({
     required this.eta,
@@ -129,6 +130,7 @@ ParentTripEta computeParentTripEta({
       busLongitude: busPosition?.longitude,
       busSpeedMetersPerSecond: busPosition?.speedMetersPerSecond,
       busPositionUpdatedAt: busPosition?.updatedAt,
+      routePolyline: progress.routePolyline,
       now: now,
     ),
     stopNumber: indexInOrder >= 0 ? indexInOrder + 1 : null,

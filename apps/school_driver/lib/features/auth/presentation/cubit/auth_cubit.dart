@@ -76,6 +76,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
   final FirebaseAuthRepository _repository;
 
   StreamSubscription<AppUser?>? _subscription;
+  Timer? _pendingApprovalPoll;
 
   void start() {
     _subscription ??= _repository.watchUser().listen(
@@ -114,11 +115,37 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
 
   void _handleUser(AppUser? user) {
     if (user == null) {
+      _setPendingApprovalPolling(false);
       emit(const AuthSignedOut());
       return;
     }
 
-    emit(resolveAuthState(user));
+    final next = resolveAuthState(user);
+    _setPendingApprovalPolling(next is AuthPendingApproval);
+    emit(next);
+  }
+
+  // Firestore's realtime listener is the source of truth, but on some
+  // devices (seen on Android emulators, not just the browser-tab-throttling
+  // case _refreshNow's own doc comment covers) that listener's underlying
+  // stream can go quietly stale while the app sits on this screen — the
+  // admin's approval write never arrives until something else (a full app
+  // restart) opens a fresh connection. A driver stuck on "waiting for
+  // approval" has no way to trigger that themselves, so this polls the same
+  // one-shot fetch every 15s for as long as they're on this screen — a
+  // cheap self-heal that needs no manual restart, on top of (not instead
+  // of) the live subscription and the resume-nudge above.
+  void _setPendingApprovalPolling(bool shouldPoll) {
+    if (shouldPoll == (_pendingApprovalPoll != null)) return;
+    if (shouldPoll) {
+      _pendingApprovalPoll = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => _refreshNow(),
+      );
+    } else {
+      _pendingApprovalPoll?.cancel();
+      _pendingApprovalPoll = null;
+    }
   }
 
   Future<void> signIn(
@@ -168,6 +195,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
         password: password,
         schoolCode: schoolCode,
       );
+      _setPendingApprovalPolling(true);
       emit(AuthPendingApproval(user));
     } catch (_) {
       emit(
@@ -183,6 +211,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
   @override
   Future<void> close() async {
     WidgetsBinding.instance.removeObserver(this);
+    _pendingApprovalPoll?.cancel();
     await _subscription?.cancel();
     return super.close();
   }

@@ -252,20 +252,6 @@ class _StopOrderViewState extends State<StopOrderView> {
   }
 
   /// The longest run of consecutive *completed* stops from the front of
-  /// [order] — how far along the route the trip has actually gotten, used
-  /// to split the polyline into "already covered" and "still ahead". A
-  /// return trip that starts at school already has that first stop
-  /// completed (see [computeStopProgress]), so the count naturally begins
-  /// at 1 for it rather than 0.
-  int _donePrefixLength(List<String> order, StopProgress progress) {
-    var count = 0;
-    for (final id in order) {
-      if (!progress.completedStopIds.contains(id)) break;
-      count++;
-    }
-    return count;
-  }
-
   Widget _buildContent(
     BuildContext context, {
     required Map<String, Student> students,
@@ -290,22 +276,6 @@ class _StopOrderViewState extends State<StopOrderView> {
         ? LatLng(school.latitude!, school.longitude!)
         : null;
 
-    // The full expected path this trip is walking today, in real
-    // `stopOrder` sequence — school included wherever it actually sits
-    // (first, for a return trip; last, for an outbound one) — so the map
-    // draws exactly the route this screen's own timeline is tracking, not
-    // a decorative reordering of it.
-    final routePoints = <LatLng>[];
-    for (final id in order) {
-      if (id == schoolStopId) {
-        if (schoolPoint != null) routePoints.add(schoolPoint);
-        continue;
-      }
-      final routeStudent = students[id];
-      if (routeStudent != null && routeStudent.hasLocation) {
-        routePoints.add(LatLng(routeStudent.latitude!, routeStudent.longitude!));
-      }
-    }
 
     final markers = <Marker>{};
     for (var i = 0; i < order.length; i++) {
@@ -430,10 +400,6 @@ class _StopOrderViewState extends State<StopOrderView> {
     // Where the timeline says the bus is headed right now — school for a
     // return trip's first leg or an outbound trip's last one, otherwise
     // whichever student's marker above is drawn in the "current" state.
-    // Used below to split the route into "the leg to that stop" versus
-    // "everything after it", so the stop actually being approached reads
-    // as visually distinct from the rest of the run, not just from its own
-    // marker color.
     LatLng? currentStopPoint;
     if (progress.currentStopId == schoolStopId) {
       currentStopPoint = schoolPoint;
@@ -444,101 +410,30 @@ class _StopOrderViewState extends State<StopOrderView> {
       }
     }
 
+    // Only ever the one leg — the bus's live position to whichever stop
+    // it's heading to right now, not the rest of the trip past that point.
+    // A driver watching this screen cares about "how do I get to the next
+    // stop", not a full itinerary redrawn on every GPS tick; the numbered
+    // markers above already carry the full stop order. Road-following via
+    // currentLegRoute when the real route polyline is in yet, otherwise a
+    // straight line between the two real points — never nothing, and
+    // never the old two-tone "current + rest of route" line.
     final polylines = <Polyline>{};
-    if (widget.routePolyline.length >= 2) {
-      // The real road-following path (Feature: real route lines). Trimmed
-      // to what's still ahead of the live GPS fix — snapped onto the
-      // route's own vertices — so the road already driven disappears (the
-      // Uber picture) instead of drawing the whole route behind the bus
-      // for the entire trip. Progress before tracking starts still reads
-      // from the numbered/colored stop markers above.
-      final remaining = busPoint != null
-          ? remainingRoute(widget.routePolyline, (
-              lat: busPoint.latitude,
-              lng: busPoint.longitude,
-            ))
-          : widget.routePolyline;
-
-      final splitIndex = currentStopPoint == null
-          ? -1
-          : nearestRouteIndex(remaining, (
-              lat: currentStopPoint.latitude,
-              lng: currentStopPoint.longitude,
-            ));
-
-      if (splitIndex > 0 && splitIndex < remaining.length - 1) {
-        // Two legs, two colors: amber for "heading here now", the usual
-        // primary (muted) for the stops still queued up after it.
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route-current-leg'),
-            points: [
-              for (final point in remaining.sublist(0, splitIndex + 1))
-                LatLng(point.lat, point.lng),
-            ],
-            color: Colors.amber.shade700,
-            width: 6,
-            zIndex: 2,
-          ),
-        );
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route-rest'),
-            points: [
-              for (final point in remaining.sublist(splitIndex))
-                LatLng(point.lat, point.lng),
-            ],
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.55),
-            width: 4,
-            zIndex: 1,
-          ),
-        );
-      } else {
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route'),
-            points: [for (final point in remaining) LatLng(point.lat, point.lng)],
-            color: Theme.of(context).colorScheme.primary,
-            width: 5,
-            zIndex: 1,
-          ),
-        );
-      }
-    } else if (routePoints.length >= 2) {
-      // Split at how far the trip has actually gotten — same treatment as
-      // the admin fleet map's per-trip polyline — so the ground already
-      // covered reads differently from what's still ahead, instead of one
-      // uniform line for the entire route regardless of progress.
-      final doneCount = _donePrefixLength(order, progress);
-      if (doneCount > 0) {
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route-done'),
-            points: routePoints.sublist(
-              0,
-              (doneCount + 1).clamp(0, routePoints.length),
-            ),
-            color: Theme.of(context).colorScheme.outlineVariant,
-            width: 3,
-            patterns: [PatternItem.dash(14), PatternItem.gap(10)],
-            zIndex: 0,
-          ),
-        );
-      }
-      final remaining = routePoints.sublist(
-        doneCount.clamp(0, routePoints.length),
+    if (busPoint != null && currentStopPoint != null) {
+      final from = (lat: busPoint.latitude, lng: busPoint.longitude);
+      final to = (lat: currentStopPoint.latitude, lng: currentStopPoint.longitude);
+      final legPoints = widget.routePolyline.length >= 2
+          ? currentLegRoute(widget.routePolyline, from, to)
+          : [from, to];
+      polylines.add(
+        Polyline(
+          polylineId: const PolylineId('current-leg'),
+          points: [for (final point in legPoints) LatLng(point.lat, point.lng)],
+          color: Theme.of(context).colorScheme.primary,
+          width: 5,
+          zIndex: 1,
+        ),
       );
-      if (remaining.length >= 2) {
-        polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route-remaining'),
-            points: remaining,
-            color: Theme.of(context).colorScheme.primary,
-            width: 5,
-            zIndex: 1,
-          ),
-        );
-      }
     }
 
     final studentStops = order.where((id) => id != schoolStopId).toList();
@@ -637,6 +532,7 @@ class _StopOrderViewState extends State<StopOrderView> {
           order: order,
           students: students,
           boarded: boarded,
+          routePolyline: widget.routePolyline,
         ),
         const SizedBox(height: AppSpacing.md),
         // Outbound trips end at school (the historical, still-common case);
@@ -762,6 +658,7 @@ class NextStopEtaCard extends StatefulWidget {
     required this.order,
     required this.students,
     required this.boarded,
+    this.routePolyline = const [],
   });
 
   final String schoolId;
@@ -770,6 +667,7 @@ class NextStopEtaCard extends StatefulWidget {
   final List<String> order;
   final Map<String, Student> students;
   final Set<String> boarded;
+  final List<({double lat, double lng})> routePolyline;
 
   @override
   State<NextStopEtaCard> createState() => _NextStopEtaCardState();
@@ -801,6 +699,7 @@ class _NextStopEtaCardState extends State<NextStopEtaCard> {
               busLongitude: position?.longitude,
               busSpeedMetersPerSecond: position?.speedMetersPerSecond,
               busPositionUpdatedAt: position?.updatedAt,
+              routePolyline: widget.routePolyline,
             );
             return _EtaPanel(
               eta: eta,
