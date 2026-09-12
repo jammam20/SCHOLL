@@ -51,6 +51,7 @@ void main() {
         tripStatus: TripStatus.active,
         stopOrder: stopOrder,
         boardedStudents: {},
+        droppedOffStudents: {},
         studentId: 'student-1',
         studentIsAbsentToday: false,
       );
@@ -62,6 +63,7 @@ void main() {
         tripStatus: TripStatus.active,
         stopOrder: stopOrder,
         boardedStudents: {'student-1'},
+        droppedOffStudents: {},
         studentId: 'student-1',
         studentIsAbsentToday: false,
       );
@@ -73,6 +75,7 @@ void main() {
         tripStatus: TripStatus.active,
         stopOrder: stopOrder,
         boardedStudents: {},
+        droppedOffStudents: {},
         studentId: 'student-1',
         studentIsAbsentToday: true,
       );
@@ -92,6 +95,7 @@ void main() {
           tripStatus: status,
           stopOrder: stopOrder,
           boardedStudents: {},
+          droppedOffStudents: {},
           studentId: 'student-1',
           studentIsAbsentToday: false,
         );
@@ -104,6 +108,7 @@ void main() {
         tripStatus: TripStatus.active,
         stopOrder: stopOrder,
         boardedStudents: {},
+        droppedOffStudents: {},
         studentId: 'someone-elses-kid',
         studentIsAbsentToday: false,
       );
@@ -117,6 +122,7 @@ void main() {
           tripStatus: TripStatus.active,
           stopOrder: stopOrder,
           boardedStudents: boarded,
+          droppedOffStudents: {},
           studentId: 'student-1',
           studentIsAbsentToday: false,
         ),
@@ -127,11 +133,113 @@ void main() {
           tripStatus: TripStatus.active,
           stopOrder: stopOrder,
           boardedStudents: boarded,
+          droppedOffStudents: {},
           studentId: 'student-2',
           studentIsAbsentToday: false,
         ),
         BoardingEligibility.eligible,
       );
+    });
+
+    group('bus capacity (production hardening)', () {
+      test('no configured capacity never blocks boarding', () {
+        final result = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: stopOrder,
+          boardedStudents: {'student-1'},
+          droppedOffStudents: {},
+          studentId: 'student-2',
+          studentIsAbsentToday: false,
+          busCapacity: null,
+        );
+        expect(result, BoardingEligibility.eligible);
+      });
+
+      test('capacity of 1: the first boarding is eligible', () {
+        final result = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: stopOrder,
+          boardedStudents: {},
+          droppedOffStudents: {},
+          studentId: 'student-1',
+          studentIsAbsentToday: false,
+          busCapacity: 1,
+        );
+        expect(result, BoardingEligibility.eligible);
+      });
+
+      test('capacity of 1: a second boarding while the first is still aboard is refused', () {
+        final result = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: stopOrder,
+          boardedStudents: {'student-1'},
+          droppedOffStudents: {},
+          studentId: 'student-2',
+          studentIsAbsentToday: false,
+          busCapacity: 1,
+        );
+        expect(result, BoardingEligibility.busAtCapacity);
+      });
+
+      test('exactly at capacity (29 of 30) allows the 30th boarding', () {
+        final boarded = {for (var i = 0; i < 29; i++) 'student-$i'};
+        final result = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: [...boarded, 'student-29', '__school__'],
+          boardedStudents: boarded,
+          droppedOffStudents: {},
+          studentId: 'student-29',
+          studentIsAbsentToday: false,
+          busCapacity: 30,
+        );
+        expect(result, BoardingEligibility.eligible);
+      });
+
+      test('one student over capacity (30 of 30) is refused', () {
+        final boarded = {for (var i = 0; i < 30; i++) 'student-$i'};
+        final result = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: [...boarded, 'student-30', '__school__'],
+          boardedStudents: boarded,
+          droppedOffStudents: {},
+          studentId: 'student-30',
+          studentIsAbsentToday: false,
+          busCapacity: 30,
+        );
+        expect(result, BoardingEligibility.busAtCapacity);
+      });
+
+      test('a drop-off frees a seat for the next boarding', () {
+        // 2 boarded, 1 already dropped off -> 1 truly onboard right now,
+        // so a bus with capacity 2 has exactly one free seat left.
+        final freedSeatResult = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: [...stopOrder, 'student-3'],
+          boardedStudents: {'student-1', 'student-2'},
+          droppedOffStudents: {'student-1'},
+          studentId: 'student-3',
+          studentIsAbsentToday: false,
+          busCapacity: 2,
+        );
+        expect(freedSeatResult, BoardingEligibility.eligible);
+      });
+
+      test('capacity is checked before the absence check', () {
+        // Documents precedence: an absent student at a full bus is still
+        // reported as busAtCapacity-irrelevant since absence is checked
+        // first in the function body — this test pins that order so a
+        // future reorder is a deliberate choice, not an accident.
+        final result = checkBoardingEligibility(
+          tripStatus: TripStatus.active,
+          stopOrder: stopOrder,
+          boardedStudents: {'student-1'},
+          droppedOffStudents: {},
+          studentId: 'student-2',
+          studentIsAbsentToday: true,
+          busCapacity: 1,
+        );
+        expect(result, BoardingEligibility.absent);
+      });
     });
   });
 

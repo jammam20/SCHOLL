@@ -34,6 +34,14 @@ class StopOrderRepository {
         .doc(studentId);
   }
 
+  DocumentReference<Map<String, dynamic>> _bus(String schoolId, String busId) {
+    return _firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('buses')
+        .doc(busId);
+  }
+
   Stream<List<String>> watchStopOrder({
     required String schoolId,
     required String tripId,
@@ -251,57 +259,94 @@ class StopOrderRepository {
     final tripRef = _trip(schoolId, tripId);
     final studentRef = _student(schoolId, studentId);
 
-    await _firestore.runTransaction((transaction) async {
+    // Firestore Web's transaction callback does not propagate a thrown Dart
+    // exception cleanly across the JS-interop boundary — it surfaces to the
+    // caller as a generic boxed "Dart exception thrown from converted
+    // Future" error instead of this TripOperationException. So every
+    // expected rejection is returned here as data instead of thrown, and
+    // only actually thrown once execution is back in plain Dart, after the
+    // transaction has settled.
+    final failure = await _firestore.runTransaction<TripOperationException?>((
+      transaction,
+    ) async {
       final tripSnapshot = await transaction.get(tripRef);
       final tripData = tripSnapshot.data();
       if (!tripSnapshot.exists || tripData == null) {
-        throw const TripOperationException(
+        return const TripOperationException(
           TripOperationError.tripNotFound,
           'This trip could not be found.',
         );
       }
 
-      assertOwnership(
-        tripDriverId: tripData['driverId'] as String? ?? '',
-        currentUserId: driverId,
-      );
+      try {
+        assertOwnership(
+          tripDriverId: tripData['driverId'] as String? ?? '',
+          currentUserId: driverId,
+        );
+      } on TripOperationException catch (e) {
+        return e;
+      }
 
       final trip = SchoolTrip.fromMap(tripSnapshot.id, tripData);
       final stopOrder =
           (tripData['stopOrder'] as List?)?.whereType<String>().toList() ?? const [];
       final boarded =
           (tripData['boardedStudents'] as List?)?.whereType<String>().toSet() ?? const {};
+      final droppedOff =
+          (tripData['droppedOffStudents'] as List?)?.whereType<String>().toSet() ?? const {};
 
       final studentSnapshot = await transaction.get(studentRef);
       final studentData = studentSnapshot.data();
       final isAbsentToday = studentData != null &&
           Student.fromMap(studentSnapshot.id, studentData).isAbsentToday;
 
+      // Bus capacity is re-read from the server on every single boarding
+      // attempt (never trusted from a cached client value) — this
+      // `transaction.get` is what makes two simultaneous boarding requests
+      // for the last open seat resolve safely: Firestore aborts and
+      // retries a transaction whose reads were invalidated by another
+      // transaction's commit, so the second call to reach the server sees
+      // the *other* driver tap's already-boarded student and re-evaluates
+      // eligibility against the fresh count rather than racing past it.
+      final busId = trip.busId;
+      int? busCapacity;
+      if (busId.isNotEmpty) {
+        final busSnapshot = await transaction.get(_bus(schoolId, busId));
+        busCapacity = (busSnapshot.data()?['capacity'] as num?)?.toInt();
+      }
+
       final eligibility = checkBoardingEligibility(
         tripStatus: trip.status,
         stopOrder: stopOrder,
         boardedStudents: boarded,
+        droppedOffStudents: droppedOff,
         studentId: studentId,
         studentIsAbsentToday: isAbsentToday,
+        busCapacity: busCapacity,
       );
 
       switch (eligibility) {
         case BoardingEligibility.alreadyBoarded:
-          return; // Idempotent: nothing left to do.
+          return null; // Idempotent: nothing left to do.
         case BoardingEligibility.absent:
-          throw const TripOperationException(
+          return const TripOperationException(
             TripOperationError.studentAbsent,
             'This student is marked absent today and cannot be boarded.',
           );
         case BoardingEligibility.tripNotActive:
-          throw const TripOperationException(
+          return const TripOperationException(
             TripOperationError.tripNotActive,
             'Boarding can only be recorded while the trip is active.',
           );
         case BoardingEligibility.studentNotOnTrip:
-          throw const TripOperationException(
+          return const TripOperationException(
             TripOperationError.studentNotOnTrip,
             "This student isn't on this trip's stop order.",
+          );
+        case BoardingEligibility.busAtCapacity:
+          return const TripOperationException(
+            TripOperationError.busCapacityExceeded,
+            'Bus capacity reached.',
           );
         case BoardingEligibility.eligible:
           break;
@@ -317,7 +362,10 @@ class StopOrderRepository {
         'driverId': driverId,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      return null;
     });
+
+    if (failure != null) throw failure;
   }
 
   /// Marks [studentId] dropped off for this trip — the mirror image of
@@ -350,20 +398,30 @@ class StopOrderRepository {
 
     final tripRef = _trip(schoolId, tripId);
 
-    await _firestore.runTransaction((transaction) async {
+    // See the matching comment in markBoarded: expected rejections are
+    // returned as data from the transaction, not thrown inside it, because
+    // Firestore Web's transaction callback does not propagate a thrown Dart
+    // exception cleanly across the JS-interop boundary.
+    final failure = await _firestore.runTransaction<TripOperationException?>((
+      transaction,
+    ) async {
       final tripSnapshot = await transaction.get(tripRef);
       final tripData = tripSnapshot.data();
       if (!tripSnapshot.exists || tripData == null) {
-        throw const TripOperationException(
+        return const TripOperationException(
           TripOperationError.tripNotFound,
           'This trip could not be found.',
         );
       }
 
-      assertOwnership(
-        tripDriverId: tripData['driverId'] as String? ?? '',
-        currentUserId: driverId,
-      );
+      try {
+        assertOwnership(
+          tripDriverId: tripData['driverId'] as String? ?? '',
+          currentUserId: driverId,
+        );
+      } on TripOperationException catch (e) {
+        return e;
+      }
 
       final trip = SchoolTrip.fromMap(tripSnapshot.id, tripData);
       final stopOrder =
@@ -384,19 +442,19 @@ class StopOrderRepository {
 
       switch (eligibility) {
         case DropOffEligibility.alreadyDroppedOff:
-          return; // Idempotent: nothing left to do.
+          return null; // Idempotent: nothing left to do.
         case DropOffEligibility.notBoarded:
-          throw const TripOperationException(
+          return const TripOperationException(
             TripOperationError.studentNotBoarded,
             "This student hasn't been picked up on this trip yet.",
           );
         case DropOffEligibility.tripNotActive:
-          throw const TripOperationException(
+          return const TripOperationException(
             TripOperationError.tripNotActive,
             'Drop-off can only be recorded while the trip is active.',
           );
         case DropOffEligibility.studentNotOnTrip:
-          throw const TripOperationException(
+          return const TripOperationException(
             TripOperationError.studentNotOnTrip,
             "This student isn't on this trip's stop order.",
           );
@@ -414,7 +472,10 @@ class StopOrderRepository {
         'driverId': driverId,
         'createdAt': FieldValue.serverTimestamp(),
       });
+      return null;
     });
+
+    if (failure != null) throw failure;
   }
 
   List<String> _nearestNeighborOrder({

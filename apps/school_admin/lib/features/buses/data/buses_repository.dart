@@ -1,10 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
+
+import '../../audit/data/audit_log_repository.dart';
 
 class BusesRepository {
-  BusesRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  BusesRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> _buses(String schoolId) {
     return _firestore.collection('schools').doc(schoolId).collection('buses');
@@ -33,6 +38,15 @@ class BusesRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.busCreated,
+      entityType: 'bus',
+      entityId: ref.id,
+      busId: ref.id,
+      metadata: {'plateNumber': plateNumber.trim(), 'capacity': ?capacity},
+    );
+
     return ref.id;
   }
 
@@ -40,20 +54,35 @@ class BusesRepository {
     required String schoolId,
     required String busId,
     required Map<String, dynamic> data,
-  }) {
-    return _buses(schoolId)
+  }) async {
+    await _buses(schoolId)
         .doc(busId)
         .update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.busUpdated,
+      entityType: 'bus',
+      entityId: busId,
+      busId: busId,
+      metadata: {'fields': data.keys.toList()},
+    );
   }
 
   Future<void> setBusActive({
     required String schoolId,
     required String busId,
     required bool active,
-  }) {
-    return _buses(schoolId).doc(busId).update({
+  }) async {
+    await _buses(schoolId).doc(busId).update({
       'isActive': active,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: active ? AuditActions.busRestored : AuditActions.busArchived,
+      entityType: 'bus',
+      entityId: busId,
+      busId: busId,
+    );
   }
 }

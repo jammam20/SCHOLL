@@ -2417,16 +2417,33 @@ class _TripsTab extends StatelessWidget {
             current is TripsActionFailure || current is TripsActionSucceeded,
         listener: (context, state) {
           if (state is TripsActionFailure) {
-            AppSnackbar.error(context, state.message);
+            final localized = switch (state.reason) {
+              TripConflictReason.busAlreadyActive => const S(
+                'Bus is already assigned to another trip.',
+                'الأتوبيس ده متخصص لرحلة تانية بالفعل.',
+              ).of(context),
+              TripConflictReason.driverAlreadyActive => const S(
+                'Driver is already assigned to another trip.',
+                'السائق ده متخصص لرحلة تانية بالفعل.',
+              ).of(context),
+              null => null,
+            };
+            AppSnackbar.error(context, localized ?? state.message);
           } else if (state is TripsActionSucceeded) {
             AppSnackbar.success(
               context,
-              const S(
-                'Trip reassigned. Affected parents and the new driver have '
-                    'been notified.',
-                'تم تغيير تخصيص الرحلة. أولياء الأمور المعنيين والسائق '
-                    'الجديد اتبلغوا.',
-              ).of(context),
+              switch (state.kind) {
+                TripActionKind.reassigned => const S(
+                  'Trip reassigned. Affected parents and the new driver have '
+                      'been notified.',
+                  'تم تغيير تخصيص الرحلة. أولياء الأمور المعنيين والسائق '
+                      'الجديد اتبلغوا.',
+                ).of(context),
+                TripActionKind.cancelled => const S(
+                  'Trip cancelled.',
+                  'تم إلغاء الرحلة.',
+                ).of(context),
+              },
             );
           }
         },

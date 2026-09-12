@@ -123,11 +123,23 @@ class StudentsRepository {
     required String schoolId,
     required String studentId,
     required List<AuthorizedPickupPerson> persons,
-  }) {
-    return _students(schoolId).doc(studentId).update({
+  }) async {
+    await _students(schoolId).doc(studentId).update({
       'authorizedPickupPersons': persons.map((p) => p.toMap()).toList(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    // Production hardening: who may collect a child is security-sensitive
+    // (Feature: Secure Student Pickup) — a durable record of *who set the
+    // list to what* matters for exactly the same reason a pickup
+    // verification attempt itself is recorded.
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.authorizedPickupPersonsUpdated,
+      entityType: 'student',
+      entityId: studentId,
+      studentId: studentId,
+      metadata: {'count': persons.length},
+    );
   }
 
   /// Replaces the whole `scheduledAbsenceDates` list on a student — future

@@ -1,14 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
+
+import '../../audit/data/audit_log_repository.dart';
 
 /// Everything the Super Admin panel needs: creating schools (without ever
 /// touching the Firebase Console) and approving the very first admin of
 /// each one. Every write here is only reachable by an active
 /// `systemAdmins/{uid}` document — see firestore.rules.
 class SuperAdminRepository {
-  SuperAdminRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  SuperAdminRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   Stream<QuerySnapshot<Map<String, dynamic>>> watchSchools() {
     return _firestore.collection('schools').orderBy('name').snapshots();
@@ -48,16 +53,33 @@ class SuperAdminRepository {
       });
       transaction.set(codeRef, {'schoolId': schoolRef.id, 'active': true});
     });
+
+    // The school document now exists (this transaction just created it),
+    // so it's a valid target for its own auditLog subcollection even
+    // though this is the very first thing ever recorded against it.
+    await _auditLog.recordSafely(
+      schoolId: schoolRef.id,
+      action: AuditActions.schoolCreated,
+      entityType: 'school',
+      entityId: schoolRef.id,
+      metadata: {'name': name.trim(), 'code': normalizedCode},
+    );
   }
 
   Future<void> setSchoolActive({
     required String schoolId,
     required bool active,
-  }) {
-    return _firestore.collection('schools').doc(schoolId).update({
+  }) async {
+    await _firestore.collection('schools').doc(schoolId).update({
       'isActive': active,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: active ? AuditActions.schoolActivated : AuditActions.schoolDeactivated,
+      entityType: 'school',
+      entityId: schoolId,
+    );
   }
 
   /// Every pending 'admin' membership across every school — a collection
@@ -76,9 +98,10 @@ class SuperAdminRepository {
     required String schoolId,
     required String uid,
     required String status,
+    required String auditAction,
     String? reason,
-  }) {
-    return _firestore
+  }) async {
+    await _firestore
         .collection('schools')
         .doc(schoolId)
         .collection('members')
@@ -89,10 +112,22 @@ class SuperAdminRepository {
           'updatedAt': FieldValue.serverTimestamp(),
           if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
         });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: auditAction,
+      entityType: 'schoolAdmin',
+      entityId: uid,
+      metadata: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
   }
 
   Future<void> approveAdmin({required String schoolId, required String uid}) {
-    return _setAdminStatus(schoolId: schoolId, uid: uid, status: 'approved');
+    return _setAdminStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'approved',
+      auditAction: AuditActions.schoolAdminApproved,
+    );
   }
 
   Future<void> rejectAdmin({
@@ -104,6 +139,7 @@ class SuperAdminRepository {
       schoolId: schoolId,
       uid: uid,
       status: 'rejected',
+      auditAction: AuditActions.schoolAdminRejected,
       reason: reason,
     );
   }

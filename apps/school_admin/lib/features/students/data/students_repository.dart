@@ -137,6 +137,14 @@ class StudentsRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.studentCreated,
+      entityType: 'student',
+      entityId: ref.id,
+      studentId: ref.id,
+    );
+
     return ref.id;
   }
 
@@ -144,21 +152,36 @@ class StudentsRepository {
     required String schoolId,
     required String studentId,
     required Map<String, dynamic> data,
-  }) {
-    return _students(schoolId)
+  }) async {
+    await _students(schoolId)
         .doc(studentId)
         .update({...data, 'updatedAt': FieldValue.serverTimestamp()});
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.studentUpdated,
+      entityType: 'student',
+      entityId: studentId,
+      studentId: studentId,
+      metadata: {'fields': data.keys.toList()},
+    );
   }
 
   Future<void> setStudentActive({
     required String schoolId,
     required String studentId,
     required bool active,
-  }) {
-    return _students(schoolId).doc(studentId).update({
+  }) async {
+    await _students(schoolId).doc(studentId).update({
       'isActive': active,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: active ? AuditActions.studentRestored : AuditActions.studentArchived,
+      entityType: 'student',
+      entityId: studentId,
+      studentId: studentId,
+    );
   }
 
   Future<void> approveStudent({

@@ -98,4 +98,35 @@ class AuditLogRepository {
       ),
     );
   }
+
+  /// [record], with any failure swallowed — mirrors the admin app's own
+  /// `AuditLogRepository.recordSafely`. Use this at every call site that
+  /// logs an action which has *already* succeeded, so a transient audit
+  /// write failure can never roll back or fail-surface a real action (a
+  /// completed trip, a recorded boarding) that already committed.
+  Future<void> recordSafely({
+    required String schoolId,
+    required String action,
+    String? entityType,
+    String? entityId,
+    String? tripId,
+    String? busId,
+    String? studentId,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    try {
+      await record(
+        schoolId: schoolId,
+        action: action,
+        entityType: entityType,
+        entityId: entityId,
+        tripId: tripId,
+        busId: busId,
+        studentId: studentId,
+        metadata: metadata,
+      );
+    } catch (_) {
+      // Intentionally ignored — see the class doc comment.
+    }
+  }
 }

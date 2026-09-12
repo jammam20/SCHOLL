@@ -98,14 +98,31 @@ class _LiveTripMapState extends State<LiveTripMap> {
   final Map<String, BitmapDescriptor> _icons = {};
   final Set<String> _iconsBuilding = {};
 
+  // The staleness check inside computeParentTripEta compares the bus's
+  // last-known position timestamp against DateTime.now() — but that
+  // comparison only actually runs when this widget rebuilds, and nothing
+  // rebuilds it once the RTDB location stream genuinely stops emitting
+  // (a real GPS/connectivity outage, not just a slow one). Without this
+  // ticker, a bus whose feed died outright would freeze on its last
+  // "X min away" estimate forever instead of ever crossing into
+  // staleGps — a parent watching would see confident-looking live
+  // tracking that stopped being true minutes ago. This exists purely to
+  // force that re-check on a clock instead of on data arrival.
+  Timer? _stalenessTicker;
+
   @override
   void initState() {
     super.initState();
     AppAnalytics.logTrackingOpened(tripId: widget.tripId);
+    _stalenessTicker = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => setState(() {}),
+    );
   }
 
   @override
   void dispose() {
+    _stalenessTicker?.cancel();
     try {
       _controller?.dispose();
     } catch (_) {

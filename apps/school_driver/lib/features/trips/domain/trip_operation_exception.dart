@@ -19,6 +19,14 @@ enum TripOperationError {
   emergencyNotFound,
   emergencyAlreadyResolved,
   locationUnavailable,
+  // Production hardening: bus capacity server enforcement — the boarding
+  // transaction re-reads the assigned bus's capacity and the trip's live
+  // onboard count from the server on every attempt (see
+  // StopOrderRepository.markBoarded), so this can never be bypassed by a
+  // stale client count, and Firestore's own transaction retry-on-conflict
+  // behavior makes two simultaneous boarding requests resolve one-at-a-time
+  // rather than racing past each other.
+  busCapacityExceeded,
 }
 
 class TripOperationException implements Exception {
@@ -63,19 +71,48 @@ void assertOwnership({required String tripDriverId, required String currentUserI
 /// [BoardingEligibility.alreadyBoarded] is not an error — the caller
 /// treats it as a no-op success, which is what makes a repeated tap/retry
 /// idempotent instead of failing on the second attempt.
-enum BoardingEligibility { eligible, alreadyBoarded, absent, tripNotActive, studentNotOnTrip }
+enum BoardingEligibility {
+  eligible,
+  alreadyBoarded,
+  absent,
+  tripNotActive,
+  studentNotOnTrip,
+  // Production hardening: bus capacity server enforcement.
+  busAtCapacity,
+}
 
+/// [busCapacity] and [droppedOffStudents] back the bus-capacity check
+/// (Production hardening: previously this was a client-only warning in the
+/// admin app's "Add trip" dialog — see admin_home_page.dart's
+/// `_isOverCapacity` — with nothing stopping a direct write from exceeding
+/// it). [busCapacity] of `null` means the bus has no configured capacity,
+/// which is treated as unlimited (matching `SchoolBus.capacity`'s own
+/// optional-field semantics) rather than silently blocking every boarding
+/// on a bus nobody ever set a seat count for.
+///
+/// The onboard count is `boardedStudents.length - droppedOffStudents.length`
+/// rather than a separately-tracked counter: `droppedOffStudents` is always
+/// a subset of `boardedStudents` (see [checkDropOffEligibility] — a student
+/// can't be dropped off without having boarded first), so this is exactly
+/// "how many students are physically on the bus right now", recomputed
+/// fresh from the trip document on every single boarding attempt.
 BoardingEligibility checkBoardingEligibility({
   required TripStatus tripStatus,
   required List<String> stopOrder,
   required Set<String> boardedStudents,
+  required Set<String> droppedOffStudents,
   required String studentId,
   required bool studentIsAbsentToday,
+  int? busCapacity,
 }) {
   if (tripStatus != TripStatus.active) return BoardingEligibility.tripNotActive;
   if (!stopOrder.contains(studentId)) return BoardingEligibility.studentNotOnTrip;
   if (boardedStudents.contains(studentId)) return BoardingEligibility.alreadyBoarded;
   if (studentIsAbsentToday) return BoardingEligibility.absent;
+  if (busCapacity != null) {
+    final onboardNow = boardedStudents.length - droppedOffStudents.length;
+    if (onboardNow >= busCapacity) return BoardingEligibility.busAtCapacity;
+  }
   return BoardingEligibility.eligible;
 }
 

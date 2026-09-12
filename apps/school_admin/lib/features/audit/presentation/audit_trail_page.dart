@@ -227,18 +227,32 @@ class _AuditFilters extends StatelessWidget {
           child: DropdownButtonFormField<String?>(
             initialValue: actionFilter,
             isDense: true,
+            // Production hardening: without this, the field sizes itself to
+            // the *widest* item across the whole menu rather than the
+            // selected value, and this hardening pass added several action
+            // labels (e.g. "Boarding rejected — bus full") long enough to
+            // overflow the fixed 260px SizedBox below — isExpanded makes the
+            // field fill that width instead and let the selected text clip,
+            // matching how the field actually renders either way.
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: const S('Action', 'الإجراء').of(context),
             ),
             items: [
               DropdownMenuItem<String?>(
                 value: null,
-                child: Text(const S('All actions', 'كل الإجراءات').of(context)),
+                child: Text(
+                  const S('All actions', 'كل الإجراءات').of(context),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               for (final action in actions)
                 DropdownMenuItem<String?>(
                   value: action,
-                  child: Text(auditActionLabel(action, context)),
+                  child: Text(
+                    auditActionLabel(action, context),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
             ],
             onChanged: onActionChanged,
@@ -249,6 +263,7 @@ class _AuditFilters extends StatelessWidget {
           child: DropdownButtonFormField<String?>(
             initialValue: entityTypeFilter,
             isDense: true,
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: const S('Entity', 'العنصر').of(context),
             ),
@@ -257,10 +272,14 @@ class _AuditFilters extends StatelessWidget {
                 value: null,
                 child: Text(
                   const S('All entities', 'كل العناصر').of(context),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               for (final type in entityTypes)
-                DropdownMenuItem<String?>(value: type, child: Text(type)),
+                DropdownMenuItem<String?>(
+                  value: type,
+                  child: Text(type, overflow: TextOverflow.ellipsis),
+                ),
             ],
             onChanged: onEntityTypeChanged,
           ),

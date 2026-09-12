@@ -17,6 +17,8 @@ import '../../schools/data/schools_repository.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
 import '../../trips/presentation/stop_order_view.dart';
+import '../../../tracking/domain/driver_tracking_status.dart';
+import '../../../tracking/presentation/driver_tracking_banner.dart';
 
 /// One trip's real workspace (Feature: driver app reorganization) — a full
 /// screen rather than a card buried in a scrolling stack of every other
@@ -89,9 +91,30 @@ class _TripDetailPageState extends State<TripDetailPage> {
           // the list page has, just scoped to whichever page is actually
           // in front of the driver.
           body: BlocListener<TripsBloc, TripsState>(
+            listenWhen: (previous, current) {
+              final prevTracking =
+                  previous is TripsLoaded ? previous.trackingStatus : DriverTrackingStatus.stopped;
+              final currTracking =
+                  current is TripsLoaded ? current.trackingStatus : DriverTrackingStatus.stopped;
+              final hasNewError = current is TripsLoaded && current.actionError != null;
+              return hasNewError || prevTracking != currTracking;
+            },
             listener: (context, state) {
-              if (state is TripsLoaded && state.actionError != null) {
-                AppSnackbar.error(context, state.actionError!);
+              if (state is! TripsLoaded) return;
+              if (state.actionError != null) {
+                final localized = tripOperationErrorMessage(state.actionErrorCode, context);
+                AppSnackbar.error(context, localized ?? state.actionError!);
+                return;
+              }
+              final presentation = driverTrackingStatusPresentation(state.trackingStatus, context);
+              if (presentation == null) return;
+              switch (presentation.tone) {
+                case DriverTrackingTone.error:
+                  AppSnackbar.error(context, presentation.message);
+                case DriverTrackingTone.warning:
+                  AppSnackbar.warning(context, presentation.message);
+                case DriverTrackingTone.success:
+                  AppSnackbar.success(context, presentation.message);
               }
             },
             // The map is this screen's main content once a trip is moving —

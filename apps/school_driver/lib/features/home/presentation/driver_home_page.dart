@@ -11,6 +11,8 @@ import 'package:school_shared/school_shared.dart';
 import '../../../app/notification_routing.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../../tracking/data/driver_tracking_repository.dart';
+import '../../../tracking/domain/driver_tracking_status.dart';
+import '../../../tracking/presentation/driver_tracking_banner.dart';
 import '../../trips/data/trips_repository.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
 import 'trip_detail_page.dart';
@@ -126,9 +128,30 @@ class _TripsTab extends StatelessWidget {
           },
         ),
         body: BlocConsumer<TripsBloc, TripsState>(
+          listenWhen: (previous, current) {
+            final prevTracking =
+                previous is TripsLoaded ? previous.trackingStatus : DriverTrackingStatus.stopped;
+            final currTracking =
+                current is TripsLoaded ? current.trackingStatus : DriverTrackingStatus.stopped;
+            final hasNewError = current is TripsLoaded && current.actionError != null;
+            return hasNewError || prevTracking != currTracking;
+          },
           listener: (context, state) {
-            if (state is TripsLoaded && state.actionError != null) {
-              AppSnackbar.error(context, state.actionError!);
+            if (state is! TripsLoaded) return;
+            if (state.actionError != null) {
+              final localized = tripOperationErrorMessage(state.actionErrorCode, context);
+              AppSnackbar.error(context, localized ?? state.actionError!);
+              return;
+            }
+            final presentation = driverTrackingStatusPresentation(state.trackingStatus, context);
+            if (presentation == null) return;
+            switch (presentation.tone) {
+              case DriverTrackingTone.error:
+                AppSnackbar.error(context, presentation.message);
+              case DriverTrackingTone.warning:
+                AppSnackbar.warning(context, presentation.message);
+              case DriverTrackingTone.success:
+                AppSnackbar.success(context, presentation.message);
             }
           },
           builder: (context, state) {

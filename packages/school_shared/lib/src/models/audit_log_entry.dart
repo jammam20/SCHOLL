@@ -97,6 +97,9 @@ abstract final class AuditActions {
   static const pickupVerificationPending = 'pickup_verification_pending';
   static const inspectionCompleted = 'inspection_completed';
   static const inspectionFailed = 'inspection_failed';
+  // Feature: Secure Student Pickup — who a parent has authorized to
+  // collect their child (Production hardening: complete audit trail).
+  static const authorizedPickupPersonsUpdated = 'authorized_pickup_persons_updated';
   // Feature: Parent can add child location.
   static const studentLocationRequestSubmitted = 'student_location_request_submitted';
   static const studentLocationRequestAccepted = 'student_location_request_accepted';
@@ -109,4 +112,62 @@ abstract final class AuditActions {
   static const communityPostArchived = 'community_post_archived';
   static const communityPostDeleted = 'community_post_deleted';
   static const communityReportResolved = 'community_report_resolved';
+
+  // Driver-triggered trip lifecycle (Production hardening: complete audit
+  // trail). Distinct from the trip's own write-only `events` subcollection
+  // — that one is a per-trip technical log; these are the school-wide,
+  // filterable audit-trail entries an admin actually reviews.
+  static const tripPaused = 'trip_paused';
+  static const tripResumed = 'trip_resumed';
+
+  // Bus capacity enforcement (Production hardening).
+  static const boardingRejectedCapacity = 'boarding_rejected_capacity';
+
+  // Admin-driven membership lifecycle (Production hardening: complete audit
+  // trail) — approve/suspend/reject already had a UI promise ("visible in
+  // the audit log") that these repositories previously never fulfilled.
+  static const driverApproved = 'driver_approved';
+  static const driverSuspended = 'driver_suspended';
+  static const driverRejected = 'driver_rejected';
+  static const parentApproved = 'parent_approved';
+  static const parentSuspended = 'parent_suspended';
+  static const parentRejected = 'parent_rejected';
+
+  // Admin-driven student lifecycle (Production hardening).
+  static const studentApproved = 'student_approved';
+  static const studentCreated = 'student_created';
+  static const studentUpdated = 'student_updated';
+  static const studentArchived = 'student_archived';
+  static const studentRestored = 'student_restored';
+
+  // Fleet/route configuration (Production hardening).
+  static const busCreated = 'bus_created';
+  static const busUpdated = 'bus_updated';
+  static const busArchived = 'bus_archived';
+  static const busRestored = 'bus_restored';
+  static const routeCreated = 'route_created';
+  static const routeUpdated = 'route_updated';
+  static const routeArchived = 'route_archived';
+  static const routeRestored = 'route_restored';
+
+  // Admin-driven trip lifecycle (Production hardening) — `tripStarted`/
+  // `tripCompleted`/`tripCancelled` above are the driver's own transitions;
+  // these cover the two operations only an admin performs.
+  static const tripCreated = 'trip_created';
+  static const tripCancelledByAdmin = 'trip_cancelled_by_admin';
+
+  // School operational configuration (Production hardening).
+  static const schoolSettingsUpdated = 'school_settings_updated';
+  static const schoolLocationUpdated = 'school_location_updated';
+
+  // Super Admin platform-level actions (Production hardening) — written
+  // into the *target* school's own auditLog (actorRole 'systemAdmin')
+  // rather than a second audit system; see firestore.rules' auditLog
+  // create rule, which grants isSystemAdmin() the same append access every
+  // active member of that school already has for their own actions.
+  static const schoolCreated = 'school_created';
+  static const schoolActivated = 'school_activated';
+  static const schoolDeactivated = 'school_deactivated';
+  static const schoolAdminApproved = 'school_admin_approved';
+  static const schoolAdminRejected = 'school_admin_rejected';
 }

@@ -104,18 +104,34 @@ class TripsFailure extends TripsState {
 /// alongside the last good snapshot so a failed action shows as a snackbar
 /// without blanking the trips list an admin is working in.
 class TripsActionFailure extends TripsState {
-  TripsActionFailure(this.message, this.snapshot, {required this.hasMore});
+  TripsActionFailure(this.message, this.snapshot, {required this.hasMore, this.reason});
   final String message;
   final QuerySnapshot<Map<String, dynamic>>? snapshot;
   final bool hasMore;
+  // Production hardening: see TripConflictReason's own doc comment — lets
+  // the presentation layer localize the specific conflict reasons this
+  // pass adds (Arabic) without touching every other exception message in
+  // this app.
+  final TripConflictReason? reason;
 }
 
-/// A reassignment that succeeded — emitted once so the page can confirm it
+/// Which action [TripsActionSucceeded] is confirming — the UI shows a
+/// different message per kind (Production hardening: a cancellation was
+/// previously unconditionally shown the reassignment's own "new driver
+/// notified" copy).
+enum TripActionKind { reassigned, cancelled }
+
+/// An action that succeeded — emitted once so the page can confirm it
 /// without claiming success before the write landed.
 class TripsActionSucceeded extends TripsState {
-  TripsActionSucceeded(this.snapshot, {required this.hasMore});
+  TripsActionSucceeded(
+    this.snapshot, {
+    required this.hasMore,
+    this.kind = TripActionKind.reassigned,
+  });
   final QuerySnapshot<Map<String, dynamic>>? snapshot;
   final bool hasMore;
+  final TripActionKind kind;
 }
 
 class TripsBloc extends Bloc<TripsEvent, TripsState> {
@@ -203,7 +219,14 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       // outcome once the bus/driver conflict check landed) is just as
       // recoverable as a failed reassign, and shouldn't blank a trips list
       // the admin is actively working in.
-      emit(TripsActionFailure(e.toString(), _lastSnapshot, hasMore: _hasMore));
+      emit(
+        TripsActionFailure(
+          e.toString(),
+          _lastSnapshot,
+          hasMore: _hasMore,
+          reason: e is DuplicateActiveTripException ? e.reason : null,
+        ),
+      );
     }
   }
 
@@ -217,8 +240,21 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
         tripId: event.tripId,
         status: 'cancelled',
       );
+      emit(
+        TripsActionSucceeded(
+          _lastSnapshot,
+          hasMore: _hasMore,
+          kind: TripActionKind.cancelled,
+        ),
+      );
     } catch (e) {
-      emit(TripsFailure(e.toString()));
+      // Production hardening: cancelling one trip failing (e.g. a
+      // just-completed status change from another admin) is exactly as
+      // recoverable as a failed create/reassign — see _onCreated's own
+      // comment on why TripsFailure's full-page error view is wrong here.
+      // Previously this used TripsFailure, which wiped the entire visible
+      // trip list over a single scoped failure.
+      emit(TripsActionFailure(e.toString(), _lastSnapshot, hasMore: _hasMore));
     }
   }
 
@@ -239,7 +275,14 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       );
       emit(TripsActionSucceeded(_lastSnapshot, hasMore: _hasMore));
     } catch (e) {
-      emit(TripsActionFailure(e.toString(), _lastSnapshot, hasMore: _hasMore));
+      emit(
+        TripsActionFailure(
+          e.toString(),
+          _lastSnapshot,
+          hasMore: _hasMore,
+          reason: e is TripReassignmentException ? e.reason : null,
+        ),
+      );
     }
   }
 

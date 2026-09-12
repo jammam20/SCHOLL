@@ -345,6 +345,13 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
         schoolId: event.schoolId,
         studentId: event.studentId,
       );
+      await _auditLog.recordSafely(
+        schoolId: event.schoolId,
+        action: AuditActions.studentApproved,
+        entityType: 'student',
+        entityId: event.studentId,
+        studentId: event.studentId,
+      );
     } catch (e) {
       emit(StudentsFailure(e.toString()));
     }

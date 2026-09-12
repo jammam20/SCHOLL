@@ -141,6 +141,28 @@ service cloud.firestore {
               duration.value(cutoffMinutes, 'm');
     }
 
+    // Production hardening: bus capacity server enforcement. A bus's
+    // `capacity` field is optional (SchoolBus.capacity) — unset means no
+    // limit is enforced, matching the client-side eligibility check in the
+    // driver app's checkBoardingEligibility, so the two can never disagree
+    // about what "no configured capacity" means.
+    function busCapacityFor(schoolId, busId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/buses/$(busId)).data.get('capacity', null);
+    }
+
+    // How many students would be physically on the bus right after this
+    // write — `droppedOffStudents` is always a subset of `boardedStudents`
+    // (a student can't be dropped off before boarding), so this is exactly
+    // "boarded minus already-handed-over", recomputed from the resulting
+    // document on every single write that touches `boardedStudents`. Mirrors
+    // the identical calculation in the driver app's
+    // checkBoardingEligibility so a client transaction and this rule can
+    // never disagree about the current onboard count.
+    function boardedOnboardCount() {
+      return request.resource.data.get('boardedStudents', []).size() -
+          request.resource.data.get('droppedOffStudents', []).size();
+    }
+
     match /users/{uid} {
       allow read: if isSelf(uid) || isSystemAdmin();
       allow create: if isSelf(uid) &&
@@ -485,7 +507,13 @@ service cloud.firestore {
       }
 
       match /buses/{busId} {
-        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
+        // Production hardening: bus capacity server enforcement — the
+        // driver app's own markBoarded transaction reads its assigned
+        // bus's capacity (StopOrderRepository.markBoarded) to enforce it
+        // server-side; before this, a driver had no read access to buses
+        // at all, so that transaction failed outright for every driver.
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() ||
+            isSchoolStaff(schoolId) || isSchoolDriver(schoolId);
         allow write: if isSchoolAdmin(schoolId) || isSystemAdmin();
 
         // Itemized maintenance/document records (Feature: Vehicle
@@ -596,10 +624,42 @@ service cloud.firestore {
       // records" and "queryable by authorized Admin/Staff" requirements.
       match /auditLog/{entryId} {
         allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolStaff(schoolId);
-        allow create: if isActiveMember(schoolId) &&
+        // Production hardening: Super Admin platform-level actions (school
+        // creation, activation, admin approval/rejection) are logged into
+        // the *target* school's own auditLog rather than a second audit
+        // system — a system admin is, by definition, never a member of the
+        // school they're acting on (their privilege comes from the
+        // top-level `systemAdmins/{uid}` doc, not a `members` entry), so
+        // `isActiveMember(schoolId)` alone would wrongly exclude them.
+        allow create: if (isActiveMember(schoolId) || isSystemAdmin()) &&
             request.resource.data.schoolId == schoolId &&
             request.resource.data.actorUid == request.auth.uid;
         allow update, delete: if false;
+      }
+
+      // Production hardening: concurrency — a lock document's mere
+      // existence at a deterministic id (`bus_{busId}` / `driver_{driverId}`)
+      // means "this bus/driver is already committed to a still-open trip".
+      // Existence is checked *inside* the same Firestore transaction that
+      // creates/reassigns a trip (see the admin app's TripsRepository), so
+      // two concurrent trip-creation attempts for the same bus are
+      // serialized by Firestore's own optimistic-concurrency transaction
+      // retry rather than racing past a plain query-based check. Only an
+      // admin creates a trip (and therefore a lock) or reassigns one (which
+      // moves a lock to a new bus/driver); a lock is released by whichever
+      // party is allowed to move that specific trip to a terminal status —
+      // the assigned driver (completing/cancelling their own trip, verified
+      // by re-reading the trip the lock names) or a school admin (any trip).
+      match /activeTripLocks/{lockId} {
+        allow read: if isSchoolAdmin(schoolId) || isSystemAdmin() || isSchoolDriver(schoolId);
+        allow create: if isSchoolAdmin(schoolId) &&
+            request.resource.data.schoolId == schoolId &&
+            request.resource.data.tripId is string;
+        allow delete: if isSchoolAdmin(schoolId) || isSystemAdmin() ||
+            (isActiveMember(schoolId) &&
+                get(/databases/$(database)/documents/schools/$(schoolId)/trips/$(resource.data.tripId))
+                    .data.driverId == request.auth.uid);
+        allow update: if false;
       }
 
       match /trips/{tripId} {
@@ -640,7 +700,9 @@ service cloud.firestore {
                     (request.resource.data.status != 'starting' ||
                         isWithinTripStartWindow(schoolId, resource.data.scheduledAt)))) &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['boardedStudents']) ||
-                resource.data.status == 'active') &&
+                (resource.data.status == 'active' &&
+                    (busCapacityFor(schoolId, resource.data.busId) == null ||
+                        boardedOnboardCount() <= busCapacityFor(schoolId, resource.data.busId)))) &&
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['droppedOffStudents']) ||
                 resource.data.status == 'active');
 

@@ -227,6 +227,19 @@ class _HomeTabState extends State<_HomeTab> {
 
   AppUser get user => widget.user;
 
+  // Created once for the lifetime of this State rather than inline in
+  // build() — the enclosing AuthPage rebuilds ParentHomePage on every
+  // AuthCubit emission (including redundant re-emissions of the same
+  // signed-in state), and a fresh `.snapshots()` stream on each of those
+  // rebuilds would make StreamBuilder tear down and resubscribe, which
+  // resets it to ConnectionState.waiting — flashing the loading skeleton
+  // back over already-loaded content every time.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _studentsStream =
+      TripsRepository().watchMyStudents(
+        schoolId: user.schoolId,
+        parentUid: user.uid,
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -249,10 +262,7 @@ class _HomeTabState extends State<_HomeTab> {
         label: Text(const S('Add child', 'إضافة طفل').of(context)),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: TripsRepository().watchMyStudents(
-          schoolId: user.schoolId,
-          parentUid: user.uid,
-        ),
+        stream: _studentsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return _centered(

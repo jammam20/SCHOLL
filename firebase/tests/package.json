@@ -1,0 +1,14 @@
+{
+  "name": "jammam-track-rules-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Production hardening: Firebase Emulator Suite tests for Firestore/RTDB security rules and concurrency (bus capacity, trip-lock double-booking, audit-trail tenant isolation). Never touches the real sharlok-ef2b4 project — @firebase/rules-unit-testing only ever talks to a local emulator host/port.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "^11.0.0"
+  }
+}

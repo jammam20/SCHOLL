@@ -16,6 +16,14 @@ class TripsRepository {
     return _firestore.collection('schools').doc(schoolId).collection('trips').doc(tripId);
   }
 
+  DocumentReference<Map<String, dynamic>> _lock(String schoolId, String id) {
+    return _firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('activeTripLocks')
+        .doc(id);
+  }
+
   // Matches the composite index (driverId ASC, scheduledAt DESC) in
   // firebase/firestore.indexes.json.
   Stream<QuerySnapshot<Map<String, dynamic>>> watchMyTrips({
@@ -106,6 +114,22 @@ class TripsRepository {
         'driverId': driverId,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // Production hardening: concurrency — a completed/cancelled trip is
+      // finished business, so this is where its bus/driver lock (see the
+      // admin app's TripsRepository.createTrip, which creates it) is
+      // released. This is the primary release path in the whole system —
+      // a driver finishing an ordinary trip, not an admin cancelling one —
+      // so without it every bus/driver would stay locked out of a new
+      // trip forever after their very first completed run.
+      if (status == TripStatus.completed || status == TripStatus.cancelled) {
+        if (trip.busId.isNotEmpty) {
+          transaction.delete(_lock(schoolId, 'bus_${trip.busId}'));
+        }
+        if (trip.driverId.isNotEmpty) {
+          transaction.delete(_lock(schoolId, 'driver_${trip.driverId}'));
+        }
+      }
     });
   }
 }

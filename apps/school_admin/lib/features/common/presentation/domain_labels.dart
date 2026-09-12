@@ -154,6 +154,43 @@ String auditActionLabel(String action, BuildContext context) =>
         const S('Location request rejected', 'تم رفض طلب الموقع').of(context),
       AuditActions.studentRequestRejected =>
         const S('Student request rejected', 'تم رفض طلب الطالب').of(context),
+      AuditActions.tripPaused => const S('Trip paused', 'توقفت الرحلة مؤقتًا').of(context),
+      AuditActions.tripResumed => const S('Trip resumed', 'استؤنفت الرحلة').of(context),
+      AuditActions.boardingRejectedCapacity =>
+        const S('Boarding rejected — bus full', 'رُفض الركوب — الأتوبيس ممتلئ').of(context),
+      AuditActions.driverApproved => const S('Driver approved', 'تمت الموافقة على السائق').of(context),
+      AuditActions.driverSuspended => const S('Driver suspended', 'تم إيقاف السائق').of(context),
+      AuditActions.driverRejected => const S('Driver rejected', 'تم رفض السائق').of(context),
+      AuditActions.parentApproved => const S('Parent approved', 'تمت الموافقة على ولي الأمر').of(context),
+      AuditActions.parentSuspended => const S('Parent suspended', 'تم إيقاف ولي الأمر').of(context),
+      AuditActions.parentRejected => const S('Parent rejected', 'تم رفض ولي الأمر').of(context),
+      AuditActions.studentApproved => const S('Student approved', 'تمت الموافقة على الطالب').of(context),
+      AuditActions.studentCreated => const S('Student created', 'تم إنشاء طالب').of(context),
+      AuditActions.studentUpdated => const S('Student updated', 'تم تعديل بيانات الطالب').of(context),
+      AuditActions.studentArchived => const S('Student archived', 'تمت أرشفة الطالب').of(context),
+      AuditActions.studentRestored => const S('Student restored', 'تمت استعادة الطالب').of(context),
+      AuditActions.busCreated => const S('Bus created', 'تم إنشاء أتوبيس').of(context),
+      AuditActions.busUpdated => const S('Bus updated', 'تم تعديل بيانات الأتوبيس').of(context),
+      AuditActions.busArchived => const S('Bus archived', 'تمت أرشفة الأتوبيس').of(context),
+      AuditActions.busRestored => const S('Bus restored', 'تمت استعادة الأتوبيس').of(context),
+      AuditActions.routeCreated => const S('Route created', 'تم إنشاء خط').of(context),
+      AuditActions.routeUpdated => const S('Route updated', 'تم تعديل الخط').of(context),
+      AuditActions.routeArchived => const S('Route archived', 'تمت أرشفة الخط').of(context),
+      AuditActions.routeRestored => const S('Route restored', 'تمت استعادة الخط').of(context),
+      AuditActions.tripCreated => const S('Trip created', 'تم إنشاء رحلة').of(context),
+      AuditActions.tripCancelledByAdmin =>
+        const S('Trip cancelled by admin', 'ألغى الأدمن الرحلة').of(context),
+      AuditActions.schoolSettingsUpdated =>
+        const S('School settings updated', 'تم تعديل إعدادات المدرسة').of(context),
+      AuditActions.schoolLocationUpdated =>
+        const S('School location updated', 'تم تعديل موقع المدرسة').of(context),
+      AuditActions.schoolCreated => const S('School created', 'تم إنشاء مدرسة').of(context),
+      AuditActions.schoolActivated => const S('School activated', 'تم تفعيل المدرسة').of(context),
+      AuditActions.schoolDeactivated => const S('School deactivated', 'تم إيقاف المدرسة').of(context),
+      AuditActions.schoolAdminApproved =>
+        const S('School admin approved', 'تمت الموافقة على أدمن المدرسة').of(context),
+      AuditActions.schoolAdminRejected =>
+        const S('School admin rejected', 'تم رفض أدمن المدرسة').of(context),
       _ => action.replaceAll('_', ' '),
     };
 
@@ -175,7 +212,20 @@ StatusTone auditActionTone(String action) => switch (action) {
   AuditActions.incidentAcknowledged ||
   AuditActions.studentLocationRequestAccepted => StatusTone.info,
   AuditActions.studentLocationRequestRejected ||
-  AuditActions.studentRequestRejected => StatusTone.warning,
+  AuditActions.studentRequestRejected ||
+  AuditActions.boardingRejectedCapacity ||
+  AuditActions.driverRejected ||
+  AuditActions.driverSuspended ||
+  AuditActions.parentRejected ||
+  AuditActions.parentSuspended ||
+  AuditActions.tripCancelledByAdmin ||
+  AuditActions.schoolDeactivated ||
+  AuditActions.schoolAdminRejected => StatusTone.warning,
+  AuditActions.driverApproved ||
+  AuditActions.parentApproved ||
+  AuditActions.studentApproved ||
+  AuditActions.schoolActivated ||
+  AuditActions.schoolAdminApproved => StatusTone.success,
   _ => StatusTone.neutral,
 };
 

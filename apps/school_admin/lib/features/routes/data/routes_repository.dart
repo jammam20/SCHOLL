@@ -1,10 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
+
+import '../../audit/data/audit_log_repository.dart';
 
 class RoutesRepository {
-  RoutesRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  RoutesRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> _routes(String schoolId) {
     return _firestore.collection('schools').doc(schoolId).collection('routes');
@@ -43,6 +48,14 @@ class RoutesRepository {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.routeCreated,
+      entityType: 'route',
+      entityId: ref.id,
+      metadata: {'name': name.trim()},
+    );
+
     return ref.id;
   }
 
@@ -65,8 +78,8 @@ class RoutesRepository {
     // computed from it).
     int? outboundScheduledMinutes,
     int? returnScheduledMinutes,
-  }) {
-    return _routes(schoolId).doc(routeId).update({
+  }) async {
+    await _routes(schoolId).doc(routeId).update({
       'name': name.trim(),
       'description': description?.trim(),
       'deviationToleranceMeters': deviationToleranceMeters,
@@ -75,17 +88,29 @@ class RoutesRepository {
       'returnScheduledMinutes': returnScheduledMinutes,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.routeUpdated,
+      entityType: 'route',
+      entityId: routeId,
+    );
   }
 
   Future<void> setRouteActive({
     required String schoolId,
     required String routeId,
     required bool active,
-  }) {
-    return _routes(schoolId).doc(routeId).update({
+  }) async {
+    await _routes(schoolId).doc(routeId).update({
       'isActive': active,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: active ? AuditActions.routeRestored : AuditActions.routeArchived,
+      entityType: 'route',
+      entityId: routeId,
+    );
   }
 }
 

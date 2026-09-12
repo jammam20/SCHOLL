@@ -1,10 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
+
+import '../../audit/data/audit_log_repository.dart';
 
 class ParentsRepository {
-  ParentsRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  ParentsRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> _members(String schoolId) {
     return _firestore.collection('schools').doc(schoolId).collection('members');
@@ -35,18 +40,34 @@ class ParentsRepository {
     required String schoolId,
     required String uid,
     required String status,
+    required String auditAction,
     String? reason,
-  }) {
-    return _members(schoolId).doc(uid).update({
+  }) async {
+    await _members(schoolId).doc(uid).update({
       'status': status,
       'isActive': status == 'approved',
       'updatedAt': FieldValue.serverTimestamp(),
       if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
     });
+    // Production hardening: the suspend/reject confirmation dialog's own
+    // copy ("Reason — visible in the audit log") was previously false for
+    // this repository, since nothing here ever wrote to auditLog.
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: auditAction,
+      entityType: 'parent',
+      entityId: uid,
+      metadata: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
   }
 
   Future<void> approveParent({required String schoolId, required String uid}) {
-    return _setStatus(schoolId: schoolId, uid: uid, status: 'approved');
+    return _setStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'approved',
+      auditAction: AuditActions.parentApproved,
+    );
   }
 
   Future<void> suspendParent({
@@ -58,6 +79,7 @@ class ParentsRepository {
       schoolId: schoolId,
       uid: uid,
       status: 'suspended',
+      auditAction: AuditActions.parentSuspended,
       reason: reason,
     );
   }
@@ -71,6 +93,7 @@ class ParentsRepository {
       schoolId: schoolId,
       uid: uid,
       status: 'rejected',
+      auditAction: AuditActions.parentRejected,
       reason: reason,
     );
   }

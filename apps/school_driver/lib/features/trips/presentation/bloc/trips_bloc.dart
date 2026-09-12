@@ -6,6 +6,7 @@ import 'package:school_shared/school_shared.dart';
 
 import '../../../../app/analytics.dart';
 import '../../../../tracking/data/driver_tracking_repository.dart';
+import '../../../../tracking/domain/driver_tracking_status.dart';
 import '../../../audit/data/audit_log_repository.dart';
 import '../../../emergencies/data/emergencies_repository.dart';
 import '../../data/stop_order_repository.dart';
@@ -156,6 +157,16 @@ class _TripsSnapshotFailed extends TripsEvent {
   final String message;
 }
 
+/// Production hardening: GPS failure handling — forwards
+/// DriverTrackingRepository.statusStream into the bloc so the UI can react
+/// to it through the same BlocListener pattern it already uses for
+/// `actionError`, rather than the driver app needing a second, parallel
+/// state-management mechanism just for tracking health.
+class _TrackingStatusChanged extends TripsEvent {
+  _TrackingStatusChanged(this.status);
+  final DriverTrackingStatus status;
+}
+
 abstract class TripsState {
   const TripsState();
 }
@@ -165,9 +176,22 @@ class TripsInitial extends TripsState {}
 class TripsLoading extends TripsState {}
 
 class TripsLoaded extends TripsState {
-  TripsLoaded(this.snapshot, {this.actionError});
+  TripsLoaded(
+    this.snapshot, {
+    this.actionError,
+    this.actionErrorCode,
+    this.trackingStatus = DriverTrackingStatus.stopped,
+  });
   final QuerySnapshot<Map<String, dynamic>> snapshot;
   final String? actionError;
+  // Production hardening: carried alongside the plain-English [actionError]
+  // so the presentation layer can localize specific, newly-added error
+  // codes (bus capacity, in Arabic) without having to retrofit l10n onto
+  // every pre-existing TripOperationException message in this app — see
+  // driver_tracking_banner.dart's sibling handling of tracking status for
+  // the same pattern.
+  final TripOperationError? actionErrorCode;
+  final DriverTrackingStatus trackingStatus;
 }
 
 class TripsFailure extends TripsState {
@@ -189,6 +213,7 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     on<TripsStarted>(_onStarted);
     on<_TripsSnapshotReceived>(_onSnapshot);
     on<_TripsSnapshotFailed>(_onFailure);
+    on<_TrackingStatusChanged>(_onTrackingStatusChanged);
     on<TripStartRequested>(_onStartRequested);
     on<TripStopOrderChanged>(_onStopOrderChanged);
     on<TripStopOrderRecomputeRequested>(_onStopOrderRecomputeRequested);
@@ -200,6 +225,9 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     on<TripEmergencyRequested>(_onEmergencyRequested);
     on<TripEmergencyResolveRequested>(_onEmergencyResolveRequested);
     on<TripCancelRequested>(_onCancelRequested);
+    _trackingStatusSubscription = _tracking.statusStream.listen(
+      (status) => add(_TrackingStatusChanged(status)),
+    );
   }
 
   final TripsRepository _repository;
@@ -209,6 +237,14 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
   final AuditLogRepository _auditLog;
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subscription;
+  StreamSubscription<DriverTrackingStatus>? _trackingStatusSubscription;
+
+  /// Carried forward into every freshly-emitted [TripsLoaded] (from
+  /// [_onSnapshot] and every [_runAction] outcome) so a boarding action or a
+  /// new Firestore snapshot never resets the tracking banner back to
+  /// "stopped" — tracking health and the trip list are two independent
+  /// facts folded into one state object for the UI's convenience.
+  DriverTrackingStatus _lastTrackingStatus = DriverTrackingStatus.stopped;
 
   /// The trip id [_reconcileTracking] last started tracking for, so a
   /// still-active trip's GPS stream isn't torn down and rebuilt on every
@@ -231,8 +267,19 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
   }
 
   void _onSnapshot(_TripsSnapshotReceived event, Emitter<TripsState> emit) {
-    emit(TripsLoaded(event.snapshot));
+    emit(TripsLoaded(event.snapshot, trackingStatus: _lastTrackingStatus));
     _reconcileTracking(event.snapshot);
+  }
+
+  void _onTrackingStatusChanged(
+    _TrackingStatusChanged event,
+    Emitter<TripsState> emit,
+  ) {
+    _lastTrackingStatus = event.status;
+    final current = state;
+    if (current is TripsLoaded) {
+      emit(TripsLoaded(current.snapshot, trackingStatus: event.status));
+    }
   }
 
   /// Makes the GPS stream match what the trip list actually says is
@@ -302,9 +349,16 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     try {
       await action();
     } on TripOperationException catch (e) {
-      emit(TripsLoaded(snapshot, actionError: e.message));
+      emit(
+        TripsLoaded(
+          snapshot,
+          actionError: e.message,
+          actionErrorCode: e.error,
+          trackingStatus: _lastTrackingStatus,
+        ),
+      );
     } catch (e) {
-      emit(TripsLoaded(snapshot, actionError: e.toString()));
+      emit(TripsLoaded(snapshot, actionError: e.toString(), trackingStatus: _lastTrackingStatus));
     }
   }
 
@@ -353,6 +407,13 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       ),
     );
     AppAnalytics.logTripStarted(tripId: event.tripId);
+    await _auditLog.recordSafely(
+      schoolId: event.schoolId,
+      action: AuditActions.tripStarted,
+      entityType: 'trip',
+      entityId: event.tripId,
+      tripId: event.tripId,
+    );
   });
 
   Future<void> _onStopOrderChanged(
@@ -382,12 +443,39 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
     TripStudentBoarded event,
     Emitter<TripsState> emit,
   ) => _runAction(emit, () async {
-    await _stopOrder.markBoarded(
+    try {
+      await _stopOrder.markBoarded(
+        schoolId: event.schoolId,
+        tripId: event.tripId,
+        studentId: event.studentId,
+      );
+    } on TripOperationException catch (e) {
+      // Production hardening: a capacity rejection is itself an
+      // operationally meaningful event (a driver kept trying to over-board
+      // a bus) worth a durable record, not just a snackbar that vanishes —
+      // logged before rethrowing so `_runAction`'s existing catch still
+      // handles the driver-facing error exactly as before.
+      if (e.error == TripOperationError.busCapacityExceeded) {
+        await _auditLog.recordSafely(
+          schoolId: event.schoolId,
+          action: AuditActions.boardingRejectedCapacity,
+          entityType: 'trip',
+          entityId: event.tripId,
+          tripId: event.tripId,
+          studentId: event.studentId,
+        );
+      }
+      rethrow;
+    }
+    AppAnalytics.logStudentBoarded(tripId: event.tripId);
+    await _auditLog.recordSafely(
       schoolId: event.schoolId,
+      action: AuditActions.studentBoarded,
+      entityType: 'trip',
+      entityId: event.tripId,
       tripId: event.tripId,
       studentId: event.studentId,
     );
-    AppAnalytics.logStudentBoarded(tripId: event.tripId);
   });
 
   Future<void> _onStudentDroppedOff(
@@ -400,6 +488,14 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       studentId: event.studentId,
     );
     AppAnalytics.logStudentDroppedOff(tripId: event.tripId);
+    await _auditLog.recordSafely(
+      schoolId: event.schoolId,
+      action: AuditActions.studentDroppedOff,
+      entityType: 'trip',
+      entityId: event.tripId,
+      tripId: event.tripId,
+      studentId: event.studentId,
+    );
   });
 
   Future<void> _onPauseRequested(
@@ -414,6 +510,13 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       extra: {'pausedAt': FieldValue.serverTimestamp()},
     );
     await _tracking.stopTracking();
+    await _auditLog.recordSafely(
+      schoolId: event.schoolId,
+      action: AuditActions.tripPaused,
+      entityType: 'trip',
+      entityId: event.tripId,
+      tripId: event.tripId,
+    );
   });
 
   Future<void> _onResumeRequested(
@@ -426,6 +529,13 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       tripId: event.tripId,
       status: TripStatus.active,
       extra: {'resumedAt': FieldValue.serverTimestamp()},
+    );
+    await _auditLog.recordSafely(
+      schoolId: event.schoolId,
+      action: AuditActions.tripResumed,
+      entityType: 'trip',
+      entityId: event.tripId,
+      tripId: event.tripId,
     );
     await _tracking.startTracking(
       schoolId: event.schoolId,
@@ -450,6 +560,13 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       tripId: event.tripId,
     );
     AppAnalytics.logTripCompleted(tripId: event.tripId);
+    await _auditLog.recordSafely(
+      schoolId: event.schoolId,
+      action: AuditActions.tripCompleted,
+      entityType: 'trip',
+      entityId: event.tripId,
+      tripId: event.tripId,
+    );
   });
 
   Future<void> _onEmergencyRequested(
@@ -532,13 +649,22 @@ class TripsBloc extends Bloc<TripsEvent, TripsState> {
       schoolId: event.schoolId,
       tripId: event.tripId,
     );
+    await _auditLog.recordSafely(
+      schoolId: event.schoolId,
+      action: AuditActions.tripCancelled,
+      entityType: 'trip',
+      entityId: event.tripId,
+      tripId: event.tripId,
+      metadata: {if (event.reason != null) 'reason': event.reason},
+    );
   });
 
   @override
   Future<void> close() async {
     await _subscription?.cancel();
+    await _trackingStatusSubscription?.cancel();
     _trackedTripId = null;
-    await _tracking.stopTracking();
+    await _tracking.dispose();
     return super.close();
   }
 }

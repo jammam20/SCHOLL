@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../audit/data/audit_log_repository.dart';
+
 class SchoolLocationException implements Exception {
   const SchoolLocationException(this.message);
   final String message;
@@ -9,10 +11,12 @@ class SchoolLocationException implements Exception {
 }
 
 class SchoolsRepository {
-  SchoolsRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  SchoolsRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> get _schools =>
       _firestore.collection('schools');
@@ -103,6 +107,12 @@ class SchoolsRepository {
         "Couldn't save the school's location. Please try again.",
       );
     }
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.schoolLocationUpdated,
+      entityType: 'school',
+      entityId: schoolId,
+    );
   }
 
   /// Operational settings — trip start window, absence cutoff, calendar
@@ -115,13 +125,19 @@ class SchoolsRepository {
     int? absenceCutoffMinutes,
     required List<int> weeklyHolidays,
     required List<String> specialHolidays,
-  }) {
-    return _schools.doc(schoolId).update({
+  }) async {
+    await _schools.doc(schoolId).update({
       'tripStartWindowMinutes': tripStartWindowMinutes,
       'absenceCutoffMinutes': absenceCutoffMinutes,
       'weeklyHolidays': weeklyHolidays,
       'specialHolidays': specialHolidays,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: AuditActions.schoolSettingsUpdated,
+      entityType: 'school',
+      entityId: schoolId,
+    );
   }
 }

@@ -1,10 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_shared/school_shared.dart';
+
+import '../../audit/data/audit_log_repository.dart';
 
 class DriversRepository {
-  DriversRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  DriversRepository({FirebaseFirestore? firestore, AuditLogRepository? auditLog})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auditLog = auditLog ?? AuditLogRepository();
 
   final FirebaseFirestore _firestore;
+  final AuditLogRepository _auditLog;
 
   CollectionReference<Map<String, dynamic>> _members(String schoolId) {
     return _firestore.collection('schools').doc(schoolId).collection('members');
@@ -37,9 +42,10 @@ class DriversRepository {
     required String schoolId,
     required String uid,
     required String status,
+    required String auditAction,
     String? reason,
-  }) {
-    return _members(schoolId).doc(uid).update({
+  }) async {
+    await _members(schoolId).doc(uid).update({
       'status': status,
       'isActive': status == 'approved',
       'updatedAt': FieldValue.serverTimestamp(),
@@ -48,10 +54,26 @@ class DriversRepository {
       // rather than only living in the moment's audit-log entry.
       if (reason != null && reason.isNotEmpty) 'rejectionReason': reason,
     });
+    // Production hardening: the suspend/reject confirmation dialog's own
+    // copy ("Reason — visible in the audit log") was previously false for
+    // this repository, since nothing here ever wrote to auditLog.
+    await _auditLog.recordSafely(
+      schoolId: schoolId,
+      action: auditAction,
+      entityType: 'driver',
+      entityId: uid,
+      driverId: uid,
+      metadata: {if (reason != null && reason.isNotEmpty) 'reason': reason},
+    );
   }
 
   Future<void> approveDriver({required String schoolId, required String uid}) {
-    return _setStatus(schoolId: schoolId, uid: uid, status: 'approved');
+    return _setStatus(
+      schoolId: schoolId,
+      uid: uid,
+      status: 'approved',
+      auditAction: AuditActions.driverApproved,
+    );
   }
 
   Future<void> suspendDriver({
@@ -63,6 +85,7 @@ class DriversRepository {
       schoolId: schoolId,
       uid: uid,
       status: 'suspended',
+      auditAction: AuditActions.driverSuspended,
       reason: reason,
     );
   }
@@ -76,6 +99,7 @@ class DriversRepository {
       schoolId: schoolId,
       uid: uid,
       status: 'rejected',
+      auditAction: AuditActions.driverRejected,
       reason: reason,
     );
   }

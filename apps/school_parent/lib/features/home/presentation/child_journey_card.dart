@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -264,7 +266,7 @@ class _InfoBanner extends StatelessWidget {
 /// trusted regardless of the scheduled date, though: a trip that is
 /// `active` right now is happening right now, whatever day its schedule
 /// says.
-class _TripSection extends StatelessWidget {
+class _TripSection extends StatefulWidget {
   const _TripSection({
     required this.user,
     required this.student,
@@ -280,12 +282,31 @@ class _TripSection extends StatelessWidget {
   final VoidCallback? onFocusRequested;
 
   @override
+  State<_TripSection> createState() => _TripSectionState();
+}
+
+class _TripSectionState extends State<_TripSection> {
+  AppUser get user => widget.user;
+  Student get student => widget.student;
+  bool get expanded => widget.expanded;
+  VoidCallback? get onFocusRequested => widget.onFocusRequested;
+
+  // See the matching comment on _HomeTabState._studentsStream: created once
+  // per State rather than inline in build(), so an ancestor rebuild (this
+  // card is reconstructed fresh every time the parent's own stream emits or
+  // its enclosing AuthCubit re-fires) can't make StreamBuilder tear down and
+  // resubscribe mid-trip, which would otherwise flash this section back to
+  // its loading skeleton.
+  late final Stream<QuerySnapshot<Map<String, dynamic>>> _tripStream =
+      TripsRepository().watchLatestTripForRoute(
+        schoolId: user.schoolId,
+        routeId: widget.routeId,
+      );
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: TripsRepository().watchLatestTripForRoute(
-        schoolId: user.schoolId,
-        routeId: routeId,
-      ),
+      stream: _tripStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const _TripSkeleton();
@@ -529,7 +550,7 @@ class _CompactFooterAction extends StatelessWidget {
 /// driver's live RTDB position to drive the status header, the timeline and
 /// the map — all from the one [computeJourneyStage], so this card and
 /// [LiveTripMap] can never disagree about where the trip is.
-class _ActiveJourney extends StatelessWidget {
+class _ActiveJourney extends StatefulWidget {
   const _ActiveJourney({
     required this.user,
     required this.trip,
@@ -545,12 +566,69 @@ class _ActiveJourney extends StatelessWidget {
   final VoidCallback? onFocusRequested;
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<TripStopProgress>(
-      stream: StopOrderRepository().watchStopProgress(
+  State<_ActiveJourney> createState() => _ActiveJourneyState();
+}
+
+class _ActiveJourneyState extends State<_ActiveJourney> {
+  AppUser get user => widget.user;
+  SchoolTrip get trip => widget.trip;
+  Student get student => widget.student;
+  bool get expanded => widget.expanded;
+  VoidCallback? get onFocusRequested => widget.onFocusRequested;
+
+  // See the matching comment on _HomeTabState._studentsStream — all three
+  // created once per State rather than inline in build(), for the same
+  // reason: this widget is reconstructed fresh on every ancestor rebuild,
+  // and a fresh stream each time would make every StreamBuilder below
+  // (stop progress, the live RTDB position, and the school doc) tear down
+  // and resubscribe, flashing the whole live-tracking view back to loading
+  // — the map and ETA — on every unrelated rebuild, not just when the data
+  // actually changes. The RTDB/school streams are created unconditionally
+  // (unlike the original inline version, which only built them once
+  // `trip.status == TripStatus.active`) so a paused-then-resumed trip
+  // doesn't need this State recreated to pick location back up; the extra
+  // idle listener while the trip isn't active is negligible.
+  late final Stream<TripStopProgress> _progressStream =
+      StopOrderRepository().watchStopProgress(
         schoolId: user.schoolId,
         tripId: trip.id,
-      ),
+      );
+  late final Stream<DatabaseEvent> _locationStream =
+      ParentTrackingRepository().watchTripLocation(
+        schoolId: user.schoolId,
+        tripId: trip.id,
+      );
+  late final Stream<School?> _schoolStream = SchoolsRepository().watchSchool(
+    user.schoolId,
+  );
+
+  // See the matching comment in LiveTripMap._stalenessTicker: the eta's
+  // staleGps check only gets re-evaluated when this widget rebuilds, and a
+  // dead location feed stops producing rebuilds entirely — without this,
+  // the status header would freeze on its last "N min away" reading
+  // forever rather than ever surfacing as stale once the clock actually
+  // passes the threshold.
+  Timer? _stalenessTicker;
+
+  @override
+  void initState() {
+    super.initState();
+    _stalenessTicker = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => setState(() {}),
+    );
+  }
+
+  @override
+  void dispose() {
+    _stalenessTicker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<TripStopProgress>(
+      stream: _progressStream,
       builder: (context, progressSnapshot) {
         if (progressSnapshot.hasError) {
           return ErrorStateView(
@@ -582,10 +660,7 @@ class _ActiveJourney extends StatelessWidget {
         }
 
         return StreamBuilder<DatabaseEvent>(
-          stream: ParentTrackingRepository().watchTripLocation(
-            schoolId: user.schoolId,
-            tripId: trip.id,
-          ),
+          stream: _locationStream,
           builder: (context, locationSnapshot) {
             // A failed RTDB read leaves us in exactly the situation of a
             // bus that hasn't broadcast yet: no position to reason from.
@@ -598,7 +673,7 @@ class _ActiveJourney extends StatelessWidget {
                   );
 
             return StreamBuilder<School?>(
-              stream: SchoolsRepository().watchSchool(user.schoolId),
+              stream: _schoolStream,
               builder: (context, schoolSnapshot) {
                 final school = schoolSnapshot.data;
 

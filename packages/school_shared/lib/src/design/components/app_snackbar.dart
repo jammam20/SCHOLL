@@ -17,6 +17,9 @@ class AppSnackbar {
   static void info(BuildContext context, String message) =>
       _show(context, message, Icons.info_rounded, context.appColors.info);
 
+  static void warning(BuildContext context, String message) =>
+      _show(context, message, Icons.warning_rounded, context.appColors.warning);
+
   static void _show(
     BuildContext context,
     String message,
