@@ -813,7 +813,7 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
               title: '${stop.sequence}. ${stop.label}',
               snippet: isCurrent
                   ? '${_stopStateLabel(stop.progress, context)} · '
-                        '${const S('Next stop', 'المحطة الجاية').of(context)}'
+                        '${const S('Next stop', 'المحطة الجاية', fr: "Prochain arrêt", es: "Próxima parada").of(context)}'
                   : _stopStateLabel(stop.progress, context),
             ),
           ),
@@ -955,13 +955,22 @@ class _OpsMapState extends State<_OpsMap> with SingleTickerProviderStateMixin {
         S(
           'OFF ROUTE by ${deviation.currentDeviationMeters.round()} m',
           'خارج المسار بـ ${deviation.currentDeviationMeters.round()} متر',
+          fr: "HORS ITINÉRAIRE de ${deviation.currentDeviationMeters.round()} m",
+          es: "FUERA DE RUTA por ${deviation.currentDeviationMeters.round()} m",
         ).of(context),
       );
     }
 
     final etaLabel = formatEtaMinutes(eta?.etaToNextStop);
     if (etaLabel != null) {
-      parts.add(S('Next stop $etaLabel', 'المحطة الجاية $etaLabel').of(context));
+      parts.add(
+        S(
+          'Next stop $etaLabel',
+          'المحطة الجاية $etaLabel',
+          fr: "Prochain arrêt $etaLabel",
+          es: "Próxima parada $etaLabel",
+        ).of(context),
+      );
     } else if (eta?.unavailableReason != null) {
       parts.add(_etaUnavailableLabel(eta!.unavailableReason!, context));
     }
@@ -980,13 +989,18 @@ void unawaitedPrepare(Future<void> Function() action) {
 String _stopStateLabel(TripStopProgress progress, BuildContext context) =>
     switch (progress) {
       TripStopProgress.pending =>
-        const S('Not yet reached', 'لسه موصلش').of(context),
+        const S(
+          'Not yet reached',
+          'لسه موصلش',
+          fr: "Pas encore atteint",
+          es: "Aún no alcanzado",
+        ).of(context),
       TripStopProgress.boarded =>
-        const S('Boarded', 'ركب').of(context),
+        const S('Boarded', 'ركب', fr: "Monté", es: "Abordado").of(context),
       TripStopProgress.droppedOff =>
-        const S('Dropped off', 'نزل').of(context),
+        const S('Dropped off', 'نزل', fr: "Déposé", es: "Bajado").of(context),
       TripStopProgress.school =>
-        const S('School', 'المدرسة').of(context),
+        const S('School', 'المدرسة', fr: "École", es: "Escuela").of(context),
     };
 
 String _etaUnavailableLabel(
@@ -994,15 +1008,40 @@ String _etaUnavailableLabel(
   BuildContext context,
 ) => switch (reason) {
   EtaUnavailableReason.tripNotActive =>
-    const S('Trip not moving yet', 'الرحلة لسه مبدأتش').of(context),
+    const S(
+      'Trip not moving yet',
+      'الرحلة لسه مبدأتش',
+      fr: "Trajet pas encore en mouvement",
+      es: "El viaje aún no se mueve",
+    ).of(context),
   EtaUnavailableReason.noGpsSignal =>
-    const S('No GPS signal', 'مفيش إشارة GPS').of(context),
+    const S(
+      'No GPS signal',
+      'مفيش إشارة GPS',
+      fr: "Pas de signal GPS",
+      es: "Sin señal GPS",
+    ).of(context),
   EtaUnavailableReason.staleGps =>
-    const S('GPS out of date', 'إشارة GPS قديمة').of(context),
+    const S(
+      'GPS out of date',
+      'إشارة GPS قديمة',
+      fr: "GPS obsolète",
+      es: "GPS desactualizado",
+    ).of(context),
   EtaUnavailableReason.allStopsCompleted =>
-    const S('All stops done', 'كل المحطات خلصت').of(context),
+    const S(
+      'All stops done',
+      'كل المحطات خلصت',
+      fr: "Tous les arrêts terminés",
+      es: "Todas las paradas completadas",
+    ).of(context),
   EtaUnavailableReason.noRemainingStops =>
-    const S('No stop order set', 'مفيش ترتيب محطات').of(context),
+    const S(
+      'No stop order set',
+      'مفيش ترتيب محطات',
+      fr: "Aucun ordre d'arrêts défini",
+      es: "Sin orden de paradas definido",
+    ).of(context),
 };
 
 /// "N of M broadcasting", plus the map's own filters. A genuinely floating
@@ -1058,10 +1097,14 @@ class _MapFiltersCard extends StatelessWidget {
                       ? const S(
                           'No trips on the road right now.',
                           'مفيش رحلات على الطريق دلوقتي.',
+                          fr: "Aucun trajet en cours actuellement.",
+                          es: "No hay viajes en curso en este momento.",
                         ).of(context)
                       : S(
                           '$broadcasting of $total bus(es) broadcasting',
                           '$broadcasting من $total باص بيبث موقعه',
+                          fr: "$broadcasting sur $total bus en diffusion",
+                          es: "$broadcasting de $total autobús(es) transmitiendo",
                         ).of(context),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colors.textPrimary,
@@ -1078,13 +1121,23 @@ class _MapFiltersCard extends StatelessWidget {
               isExpanded: true,
               decoration: InputDecoration(
                 isDense: true,
-                labelText: const S('Route', 'الخط').of(context),
+                labelText: const S(
+                  'Route',
+                  'الخط',
+                  fr: "Itinéraire",
+                  es: "Ruta",
+                ).of(context),
               ),
               items: [
                 DropdownMenuItem<String?>(
                   value: null,
                   child: Text(
-                    const S('All routes', 'كل الخطوط').of(context),
+                    const S(
+                      'All routes',
+                      'كل الخطوط',
+                      fr: "Tous les itinéraires",
+                      es: "Todas las rutas",
+                    ).of(context),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -1110,6 +1163,8 @@ class _MapFiltersCard extends StatelessWidget {
                   const S(
                     "Show today's completed",
                     'إظهار المكتملة النهارده',
+                    fr: "Afficher les trajets terminés aujourd'hui",
+                    es: "Mostrar los completados hoy",
                   ).of(context),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colors.textSecondary,
@@ -1142,7 +1197,12 @@ class _RecenterButton extends StatelessWidget {
         boxShadow: AppShadows.level1(colors.textPrimary),
       ),
       child: IconButton(
-        tooltip: const S('Fit all buses', 'عرض كل الباصات').of(context),
+        tooltip: const S(
+          'Fit all buses',
+          'عرض كل الباصات',
+          fr: "Afficher tous les bus",
+          es: "Ajustar todos los autobuses",
+        ).of(context),
         icon: Icon(
           Icons.center_focus_strong_rounded,
           color: onPressed == null ? colors.disabled : colors.textPrimary,
@@ -1179,7 +1239,12 @@ class _MapLegend extends StatelessWidget {
           boxShadow: AppShadows.level1(colors.textPrimary),
         ),
         child: IconButton(
-          tooltip: const S('Show legend', 'إظهار المفتاح').of(context),
+          tooltip: const S(
+            'Show legend',
+            'إظهار المفتاح',
+            fr: "Afficher la légende",
+            es: "Mostrar leyenda",
+          ).of(context),
           icon: const Icon(Icons.info_outline),
           onPressed: onToggle,
         ),
@@ -1227,7 +1292,12 @@ class _MapLegend extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  const S('Legend', 'مفتاح الخريطة').of(context),
+                  const S(
+                    'Legend',
+                    'مفتاح الخريطة',
+                    fr: "Légende",
+                    es: "Leyenda",
+                  ).of(context),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colors.textSecondary,
                   ),
@@ -1242,28 +1312,58 @@ class _MapLegend extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           row(
             colors.info,
-            const S('Bus en route', 'أتوبيس في الطريق').of(context),
+            const S(
+              'Bus en route',
+              'أتوبيس في الطريق',
+              fr: "Bus en route",
+              es: "Autobús en ruta",
+            ).of(context),
           ),
           row(
             colors.warning,
-            const S('Bus off route', 'أتوبيس خارج المسار').of(context),
+            const S(
+              'Bus off route',
+              'أتوبيس خارج المسار',
+              fr: "Bus hors itinéraire",
+              es: "Autobús fuera de ruta",
+            ).of(context),
           ),
           row(
             colors.emergency,
-            const S('Bus in emergency', 'أتوبيس في حالة طوارئ').of(context),
+            const S(
+              'Bus in emergency',
+              'أتوبيس في حالة طوارئ',
+              fr: "Bus en urgence",
+              es: "Autobús en emergencia",
+            ).of(context),
           ),
           const Divider(height: AppSpacing.lg),
           row(
             palette.pendingStop,
-            const S('Stop pending', 'محطة لسه', ).of(context),
+            const S(
+              'Stop pending',
+              'محطة لسه',
+              fr: "Arrêt en attente",
+              es: "Parada pendiente",
+            ).of(context),
           ),
           row(
             palette.boardedStop,
-            const S('Student boarded', 'الطالب ركب').of(context),
+            const S(
+              'Student boarded',
+              'الطالب ركب',
+              fr: "Élève monté",
+              es: "Estudiante abordó",
+            ).of(context),
           ),
           row(
             palette.droppedStop,
-            const S('Student dropped off', 'الطالب نزل').of(context),
+            const S(
+              'Student dropped off',
+              'الطالب نزل',
+              fr: "Élève déposé",
+              es: "Estudiante bajó",
+            ).of(context),
             ring: true,
           ),
           const Divider(height: AppSpacing.lg),
@@ -1273,6 +1373,12 @@ class _MapLegend extends StatelessWidget {
                   'off that path.',
               'الخط المتصل: المسار المتوقع. الخط المتقطع للأتوبيس: بعده عن '
                   'المسار ده.',
+              fr:
+                  "Ligne continue : trajet prévu. Ligne pointillée vers un "
+                  "bus : à quelle distance il est de ce trajet.",
+              es:
+                  "Línea sólida: ruta esperada. Línea discontinua hacia un "
+                  "autobús: qué tan lejos está de esa ruta.",
             ).of(context),
             style: theme.textTheme.bodySmall?.copyWith(
               color: colors.textMuted,
@@ -1353,6 +1459,8 @@ class _OpenIncidentsChip extends StatelessWidget {
                     const S(
                       'Open incidents with a location',
                       'بلاغات مفتوحة ليها مكان',
+                      fr: "Incidents ouverts avec une localisation",
+                      es: "Incidentes abiertos con ubicación",
                     ).of(sheetContext),
                     style: Theme.of(sheetContext).textTheme.titleSmall,
                   ),
@@ -1402,6 +1510,8 @@ class _OpenIncidentsChip extends StatelessWidget {
                 S(
                   '${incidents.length} open incident(s)',
                   '${incidents.length} بلاغ مفتوح',
+                  fr: "${incidents.length} incident(s) ouvert(s)",
+                  es: "${incidents.length} incidente(s) abierto(s)",
                 ).of(context),
                 style: Theme.of(
                   context,
@@ -1472,11 +1582,18 @@ class _OpsRail extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           _RailSection(
-            title: const S('Upcoming', 'قادمة').of(context),
+            title: const S(
+              'Upcoming',
+              'قادمة',
+              fr: "À venir",
+              es: "Próximos",
+            ).of(context),
             count: upcoming.length,
             emptyLabel: const S(
               'No more trips scheduled today.',
               'مفيش رحلات تانية متجدولة النهاردة.',
+              fr: "Plus aucun trajet prévu aujourd'hui.",
+              es: "No hay más viajes programados hoy.",
             ).of(context),
             children: [
               for (final trip in upcoming)
@@ -1487,17 +1604,26 @@ class _OpsRail extends StatelessWidget {
                   timeLabel: S(
                     'Scheduled ${_formatTime(trip.trip.scheduledAt)}',
                     'متجدولة ${_formatTime(trip.trip.scheduledAt)}',
+                    fr: "Prévu à ${_formatTime(trip.trip.scheduledAt)}",
+                    es: "Programado a las ${_formatTime(trip.trip.scheduledAt)}",
                   ).of(context),
                 ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           _RailSection(
-            title: const S('Ongoing', 'جارية').of(context),
+            title: const S(
+              'Ongoing',
+              'جارية',
+              fr: "En cours",
+              es: "En curso",
+            ).of(context),
             count: trips.length,
             emptyLabel: const S(
               'No trips on the road.',
               'مفيش رحلات على الطريق.',
+              fr: "Aucun trajet en cours.",
+              es: "No hay viajes en curso.",
             ).of(context),
             children: [
               for (final trip in trips)
@@ -1515,11 +1641,18 @@ class _OpsRail extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           _RailSection(
-            title: const S('Previous', 'سابقة').of(context),
+            title: const S(
+              'Previous',
+              'سابقة',
+              fr: "Précédents",
+              es: "Anteriores",
+            ).of(context),
             count: previous.length,
             emptyLabel: const S(
               'No completed trips to show yet.',
               'مفيش رحلات خلصت نعرضها لسه.',
+              fr: "Aucun trajet terminé à afficher pour l'instant.",
+              es: "Aún no hay viajes completados para mostrar.",
             ).of(context),
             children: [
               for (final trip in previous)
@@ -1532,6 +1665,8 @@ class _OpsRail extends StatelessWidget {
                       : S(
                           'Completed ${_formatTime(trip.trip.completedAt!)}',
                           'خلصت ${_formatTime(trip.trip.completedAt!)}',
+                          fr: "Terminé à ${_formatTime(trip.trip.completedAt!)}",
+                          es: "Completado a las ${_formatTime(trip.trip.completedAt!)}",
                         ).of(context),
                 ),
             ],
@@ -1757,6 +1892,8 @@ class _BusRailTile extends StatelessWidget {
                     message: const S(
                       'This bus is not broadcasting its location.',
                       'الأتوبيس ده مش بيبث موقعه.',
+                      fr: "Ce bus ne diffuse pas sa position.",
+                      es: "Este autobús no está transmitiendo su ubicación.",
                     ).of(context),
                     child: Icon(
                       Icons.gps_off,
@@ -1782,7 +1919,12 @@ class _BusRailTile extends StatelessWidget {
               children: [
                 if (isEmergency)
                   StatusBadge(
-                    label: const S('Emergency', 'حالة طوارئ').of(context),
+                    label: const S(
+                      'Emergency',
+                      'حالة طوارئ',
+                      fr: "Urgence",
+                      es: "Emergencia",
+                    ).of(context),
                     tone: StatusTone.emergency,
                   ),
                 if (deviation != null)
@@ -1790,17 +1932,25 @@ class _BusRailTile extends StatelessWidget {
                     label: S(
                       'Off route ${deviation!.currentDeviationMeters.round()} m',
                       'خارج المسار ${deviation!.currentDeviationMeters.round()} م',
+                      fr: "Hors itinéraire de ${deviation!.currentDeviationMeters.round()} m",
+                      es: "Fuera de ruta ${deviation!.currentDeviationMeters.round()} m",
                     ).of(context),
                     tone: StatusTone.error,
                   ),
                 if (etaLabel != null)
                   StatusBadge(
                     label: nextStop == null
-                        ? S('Next stop $etaLabel', 'المحطة الجاية $etaLabel')
-                              .of(context)
+                        ? S(
+                            'Next stop $etaLabel',
+                            'المحطة الجاية $etaLabel',
+                            fr: "Prochain arrêt $etaLabel",
+                            es: "Próxima parada $etaLabel",
+                          ).of(context)
                         : S(
                             '${nextStop.label} · $etaLabel',
                             '${nextStop.label} · $etaLabel',
+                            fr: "${nextStop.label} · $etaLabel",
+                            es: "${nextStop.label} · $etaLabel",
                           ).of(context),
                     tone: StatusTone.info,
                   )
@@ -1831,6 +1981,12 @@ class _BusRailTile extends StatelessWidget {
                       '${eta!.stopsCompleted + eta!.stopsRemaining} stops done',
                   '${eta!.stopsCompleted} من '
                       '${eta!.stopsCompleted + eta!.stopsRemaining} محطة خلصت',
+                  fr:
+                      "${eta!.stopsCompleted} sur "
+                      "${eta!.stopsCompleted + eta!.stopsRemaining} arrêts terminés",
+                  es:
+                      "${eta!.stopsCompleted} de "
+                      "${eta!.stopsCompleted + eta!.stopsRemaining} paradas completadas",
                 ).of(context),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.textMuted,
@@ -1895,6 +2051,8 @@ class _DeviationsPanel extends StatelessWidget {
                     S(
                       'Off route (${active.length})',
                       'خارج المسار (${active.length})',
+                      fr: "Hors itinéraire (${active.length})",
+                      es: "Fuera de ruta (${active.length})",
                     ).of(context),
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: colors.warning,
@@ -1924,6 +2082,16 @@ class _DeviationsPanel extends StatelessWidget {
                       '${deviations[trip.trip.id]!.currentDeviationMeters.round()} م '
                       'عن المسار · من '
                       '${DateFormat.jm().format(deviations[trip.trip.id]!.startedAt)}',
+                  fr:
+                      "${trip.trip.busName} · "
+                      "${deviations[trip.trip.id]!.currentDeviationMeters.round()} m "
+                      "hors trajet · depuis "
+                      "${DateFormat.jm().format(deviations[trip.trip.id]!.startedAt)}",
+                  es:
+                      "${trip.trip.busName} · "
+                      "${deviations[trip.trip.id]!.currentDeviationMeters.round()} m "
+                      "fuera de ruta · desde "
+                      "${DateFormat.jm().format(deviations[trip.trip.id]!.startedAt)}",
                 ).of(context),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.textSecondary,
@@ -1996,10 +2164,18 @@ class _EmergencyTopBannerState extends State<_EmergencyTopBanner> {
                       ? const S(
                           'EMERGENCY IN PROGRESS — a driver has raised an SOS.',
                           'حالة طوارئ جارية — سائق ضغط زر الاستغاثة.',
+                          fr:
+                              "URGENCE EN COURS — un chauffeur a déclenché "
+                              "une alerte SOS.",
+                          es:
+                              "EMERGENCIA EN CURSO — un conductor ha "
+                              "activado una alerta SOS.",
                         ).of(context)
                       : S(
                           '${docs.length} EMERGENCIES IN PROGRESS.',
                           '${docs.length} حالات طوارئ جارية.',
+                          fr: "${docs.length} URGENCES EN COURS.",
+                          es: "${docs.length} EMERGENCIAS EN CURSO.",
                         ).of(context),
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: Colors.white,
@@ -2136,6 +2312,8 @@ class _ActiveEmergenciesPanelState extends State<_ActiveEmergenciesPanel> {
                         S(
                           'Active emergencies (${docs.length})',
                           'حالات طوارئ نشطة (${docs.length})',
+                          fr: "Urgences actives (${docs.length})",
+                          es: "Emergencias activas (${docs.length})",
                         ).of(context),
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: colors.emergency,
@@ -2202,7 +2380,12 @@ class _EmergencyTileState extends State<_EmergencyTile> {
       if (!mounted) return;
       AppSnackbar.success(
         context,
-        const S('Emergency resolved.', 'تم حل حالة الطوارئ.').of(context),
+        const S(
+          'Emergency resolved.',
+          'تم حل حالة الطوارئ.',
+          fr: "Urgence résolue.",
+          es: "Emergencia resuelta.",
+        ).of(context),
       );
     } catch (error) {
       if (!mounted) return;
@@ -2253,7 +2436,12 @@ class _EmergencyTileState extends State<_EmergencyTile> {
           if (!widget.readOnly) ...[
             const SizedBox(width: AppSpacing.sm),
             AppButton.destructive(
-              label: const S('Resolve', 'حل').of(context),
+              label: const S(
+                'Resolve',
+                'حل',
+                fr: "Résoudre",
+                es: "Resolver",
+              ).of(context),
               loading: _resolving,
               onPressed: _resolving ? null : _resolve,
             ),

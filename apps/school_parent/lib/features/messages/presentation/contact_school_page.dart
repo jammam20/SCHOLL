@@ -93,6 +93,8 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
         const S(
           'Write your message first.',
           'اكتب رسالتك الأول.',
+          fr: "Écrivez d'abord votre message.",
+          es: 'Escriba primero su mensaje.',
         ).of(context),
       );
       return;
@@ -105,8 +107,18 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
     final trip = _attachTrip ? _contextTrip : null;
 
     final subject = student == null
-        ? const S('General question', 'سؤال عام').of(context)
-        : S('About ${student.name}', 'بخصوص ${student.name}').of(context);
+        ? const S(
+            'General question',
+            'سؤال عام',
+            fr: 'Question générale',
+            es: 'Pregunta general',
+          ).of(context)
+        : S(
+            'About ${student.name}',
+            'بخصوص ${student.name}',
+            fr: 'À propos de ${student.name}',
+            es: 'Sobre ${student.name}',
+          ).of(context);
 
     setState(() => _sending = true);
     try {
@@ -125,6 +137,8 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
         const S(
           'Sent to your school.',
           'اتبعتت لمدرستك.',
+          fr: 'Envoyé à votre école.',
+          es: 'Enviado a su escuela.',
         ).of(context),
       );
       Navigator.pop(context);
@@ -136,6 +150,8 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
         const S(
           "Couldn't send that — check your connection and try again.",
           'معرفناش نبعتها — اتأكد من الاتصال وجرب تاني.',
+          fr: "Impossible de l'envoyer — vérifiez votre connexion et réessayez.",
+          es: 'No se pudo enviar — revise su conexión e inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -148,7 +164,12 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          const S('Contact your school', 'كلّم مدرستك').of(context),
+          const S(
+            'Contact your school',
+            'كلّم مدرستك',
+            fr: 'Contacter votre école',
+            es: 'Contactar a su escuela',
+          ).of(context),
         ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -174,6 +195,10 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                 "Couldn't load your children — check your connection and "
                     'try again.',
                 'معرفناش نحمّل بيانات أبنائك — اتأكد من الاتصال وجرب تاني.',
+                fr: "Impossible de charger vos enfants — vérifiez votre "
+                    "connexion et réessayez.",
+                es: 'No se pudieron cargar sus hijos — revise su conexión e '
+                    'inténtelo de nuevo.',
               ).of(context),
             );
           }
@@ -204,12 +229,20 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                 title: const S(
                   'This goes to the school office',
                   'الرسالة دي بتروح لإدارة المدرسة',
+                  fr: "Ceci est envoyé au secrétariat de l'école",
+                  es: 'Esto llega a la oficina de la escuela',
                 ).of(context),
                 message: const S(
                   'If the driver needs to know something, the school passes '
                       "it on — drivers can't be messaged directly.",
                   'لو في حاجة لازم السواق يعرفها، المدرسة هي اللي بتبلغه — '
                       'مفيش تواصل مباشر مع السواقين.',
+                  fr: "Si le chauffeur doit être informé de quelque chose, "
+                      "l'école le lui transmet — on ne peut pas écrire "
+                      "directement aux chauffeurs.",
+                  es: 'Si el conductor necesita saber algo, la escuela se lo '
+                      'transmite — no se puede escribir directamente a los '
+                      'conductores.',
                 ).of(context),
               ),
               const SizedBox(height: AppSpacing.xl2),
@@ -217,10 +250,14 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                 title: const S(
                   'What is this about?',
                   'الرسالة بخصوص إيه؟',
+                  fr: "De quoi s'agit-il ?",
+                  es: '¿De qué se trata?',
                 ).of(context),
                 subtitle: const S(
                   'Naming a child helps the office answer faster.',
                   'لما تحدد الطفل، الإدارة بترد أسرع.',
+                  fr: "Indiquer un enfant aide le secrétariat à répondre plus vite.",
+                  es: 'Indicar un hijo ayuda a la oficina a responder más rápido.',
                 ).of(context),
               ),
               // Selectable chips rather than a dropdown: a parent has a
@@ -253,7 +290,7 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
               ],
               const SizedBox(height: AppSpacing.xl2),
               SectionHeader(
-                title: const S('Your message', 'رسالتك').of(context),
+                title: const S('Your message', 'رسالتك', fr: 'Votre message', es: 'Su mensaje').of(context),
               ),
               TextField(
                 controller: _messageController,
@@ -286,12 +323,21 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                     'e.g. My son will be picked up by his grandmother '
                         'tomorrow — can you let the driver know?',
                     'مثلاً: جدته هتستلمه بكرة — ممكن تبلغوا السواق؟',
+                    fr: "ex. Mon fils sera récupéré par sa grand-mère demain "
+                        "— pouvez-vous en informer le chauffeur ?",
+                    es: 'p. ej. Mañana lo recogerá su abuela — ¿pueden avisar '
+                        'al conductor?',
                   ).of(context),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
               AppButton.primary(
-                label: const S('Send to school', 'ابعت للمدرسة').of(context),
+                label: const S(
+                  'Send to school',
+                  'ابعت للمدرسة',
+                  fr: "Envoyer à l'école",
+                  es: 'Enviar a la escuela',
+                ).of(context),
                 icon: Icons.send_rounded,
                 loading: _sending,
                 onPressed: _hasMessage ? () => _submit(students) : null,
@@ -307,6 +353,12 @@ class _ContactSchoolPageState extends State<ContactSchoolPage> {
                   'لو في حاجة مستعجلة والأتوبيس في الطريق، اتصل بالمدرسة '
                       'على طول — الرسالة دي بتروح لقائمة رسايلهم، مش تنبيه '
                       'عاجل.',
+                  fr: "Pour tout ce qui est urgent pendant que le bus roule, "
+                      "appelez directement votre école — ceci part dans leur "
+                      "file de messages, pas comme une alerte.",
+                  es: 'Para algo urgente mientras el autobús está en marcha, '
+                      'llame directamente a su escuela — esto va a su cola de '
+                      'mensajes, no como una alerta.',
                 ).of(context),
               ),
             ],
@@ -346,6 +398,10 @@ class _ChildPicker extends StatelessWidget {
           "You don't have a child linked yet, so this will be sent as a "
               'general question.',
           'مفيش طفل مرتبط بحسابك لسه، فالرسالة هتتبعت كسؤال عام.',
+          fr: "Vous n'avez pas encore d'enfant relié, donc ceci sera envoyé "
+              "comme une question générale.",
+          es: 'Aún no tiene un hijo vinculado, así que esto se enviará como '
+              'una pregunta general.',
         ).of(context),
       );
     }
@@ -353,14 +409,19 @@ class _ChildPicker extends StatelessWidget {
     // Keeps the group's own label available to screen readers now that the
     // dropdown's `labelText` is gone.
     return Semantics(
-      label: const S('Child', 'الطفل').of(context),
+      label: const S('Child', 'الطفل', fr: 'Enfant', es: 'Hijo/a').of(context),
       container: true,
       child: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
         children: [
           _PickerChip(
-            label: const S('A general question', 'سؤال عام').of(context),
+            label: const S(
+              'A general question',
+              'سؤال عام',
+              fr: 'Une question générale',
+              es: 'Una pregunta general',
+            ).of(context),
             icon: Icons.help_outline_rounded,
             selected: selectedId == null,
             enabled: enabled,
@@ -549,6 +610,8 @@ class _TripContextFieldState extends State<_TripContextField> {
               const S(
                 "Include today's trip",
                 'أرفق رحلة النهاردة',
+                fr: "Inclure le trajet d'aujourd'hui",
+                es: 'Incluir el viaje de hoy',
               ).of(context),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,

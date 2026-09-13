@@ -46,7 +46,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Profile', 'الملف الشخصي').of(context)),
+        title: Text(
+          const S(
+            'Profile',
+            'الملف الشخصي',
+            fr: 'Profil',
+            es: 'Perfil',
+          ).of(context),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -92,7 +99,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: const S('Edit name', 'تعديل الاسم').of(context),
+                      tooltip: const S(
+                        'Edit name',
+                        'تعديل الاسم',
+                        fr: 'Modifier le nom',
+                        es: 'Editar nombre',
+                      ).of(context),
                       onPressed: () => _editName(context),
                     ),
                   ],
@@ -116,7 +128,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
-                    const S('School administrator', 'مدير المدرسة').of(context),
+                    const S(
+                      'School administrator',
+                      'مدير المدرسة',
+                      fr: "Administrateur de l'école",
+                      es: 'Administrador escolar',
+                    ).of(context),
                     style: TextStyle(
                       color: colors.onPrimaryContainer,
                       fontWeight: FontWeight.w700,
@@ -129,41 +146,75 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: AppSpacing.xl3),
           SectionHeader(
-            title: const S('My school', 'مدرستي').of(context),
+            title: const S(
+              'My school',
+              'مدرستي',
+              fr: 'Mon école',
+              es: 'Mi escuela',
+            ).of(context),
           ),
           _SchoolCard(schoolId: user.schoolId),
           const SizedBox(height: AppSpacing.xl3),
           SectionHeader(
-            title: const S('Operational settings', 'إعدادات التشغيل').of(context),
+            title: const S(
+              'Operational settings',
+              'إعدادات التشغيل',
+              fr: "Paramètres opérationnels",
+              es: 'Configuración operativa',
+            ).of(context),
             subtitle: const S(
               'Enforced by the server, not just this screen.',
               'مطبقة من السيرفر، مش بس من الشاشة دي.',
+              fr: "Appliqué par le serveur, pas seulement par cet écran.",
+              es: 'Aplicado por el servidor, no solo por esta pantalla.',
             ).of(context),
           ),
           _OperationalSettingsCard(schoolId: user.schoolId),
           const SizedBox(height: AppSpacing.xl3),
           SectionHeader(
-            title: const S('Preferences', 'التفضيلات').of(context),
+            title: const S(
+              'Preferences',
+              'التفضيلات',
+              fr: 'Préférences',
+              es: 'Preferencias',
+            ).of(context),
           ),
           Card(
             child: Column(
               children: [
                 ListTile(
                   leading: const Icon(Icons.translate),
-                  title: Text(const S('Language', 'اللغة', fr: 'Langue', es: 'Idioma').of(context)),
+                  title: Text(
+                    const S(
+                      'Language',
+                      'اللغة',
+                      fr: 'Langue',
+                      es: 'Idioma',
+                    ).of(context),
+                  ),
                   subtitle: ValueListenableBuilder<Locale>(
                     valueListenable: AppSettings.locale,
-                    builder: (context, locale, _) =>
-                        Text(AppLanguage.fromCode(locale.languageCode).nativeName),
+                    builder: (context, locale, _) => Text(
+                      AppLanguage.fromCode(locale.languageCode).nativeName,
+                    ),
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () =>
-                      showLanguagePickerSheet(context, onChanged: LanguageSync.save),
+                  onTap: () => showLanguagePickerSheet(
+                    context,
+                    onChanged: LanguageSync.save,
+                  ),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.dark_mode_outlined),
-                  title: Text(const S('Dark mode', 'الوضع الليلي').of(context)),
+                  title: Text(
+                    const S(
+                      'Dark mode',
+                      'الوضع الليلي',
+                      fr: 'Mode sombre',
+                      es: 'Modo oscuro',
+                    ).of(context),
+                  ),
                   trailing: ValueListenableBuilder<ThemeMode>(
                     valueListenable: AppSettings.themeMode,
                     builder: (context, mode, _) => Switch(
@@ -176,7 +227,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: Text(
-                    const S('Privacy & Terms', 'الخصوصية والشروط').of(context),
+                    const S(
+                      'Privacy & Terms',
+                      'الخصوصية والشروط',
+                      fr: 'Confidentialité et conditions',
+                      es: 'Privacidad y términos',
+                    ).of(context),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
@@ -190,7 +246,12 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: AppSpacing.xl3),
           AppButton.destructive(
             icon: Icons.logout,
-            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            label: const S(
+              'Sign out',
+              'تسجيل الخروج',
+              fr: 'Se déconnecter',
+              es: 'Cerrar sesión',
+            ).of(context),
             onPressed: onSignOut,
           ),
         ],
@@ -203,15 +264,34 @@ class _ProfilePageState extends State<ProfilePage> {
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Edit name', 'تعديل الاسم').of(dialogContext)),
+        title: Text(
+          const S(
+            'Edit name',
+            'تعديل الاسم',
+            fr: 'Modifier le nom',
+            es: 'Editar nombre',
+          ).of(dialogContext),
+        ),
         content: TextField(controller: controller, autofocus: true),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+            child: Text(
+              const S(
+                'Cancel',
+                'إلغاء',
+                fr: 'Annuler',
+                es: 'Cancelar',
+              ).of(dialogContext),
+            ),
           ),
           AppButton.primary(
-            label: const S('Save', 'حفظ').of(dialogContext),
+            label: const S(
+              'Save',
+              'حفظ',
+              fr: 'Enregistrer',
+              es: 'Guardar',
+            ).of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, controller.text),
           ),
         ],
@@ -222,7 +302,10 @@ class _ProfilePageState extends State<ProfilePage> {
     if (trimmed == null || trimmed.isEmpty) return;
 
     try {
-      await ProfileRepository().updateName(schoolId: user.schoolId, name: trimmed);
+      await ProfileRepository().updateName(
+        schoolId: user.schoolId,
+        name: trimmed,
+      );
       if (mounted) setState(() => _displayName = trimmed);
     } catch (_) {
       if (!context.mounted) return;
@@ -231,6 +314,8 @@ class _ProfilePageState extends State<ProfilePage> {
         const S(
           "Couldn't save your name — try again.",
           'معرفناش نحفظ اسمك — جرب تاني.',
+          fr: "Impossible d'enregistrer votre nom — réessayez.",
+          es: 'No se pudo guardar su nombre — inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -288,8 +373,18 @@ class _SchoolCard extends StatelessWidget {
                     ),
                     StatusBadge(
                       label: isActive
-                          ? const S('Active', 'نشطة').of(context)
-                          : const S('Inactive', 'غير نشطة').of(context),
+                          ? const S(
+                              'Active',
+                              'نشطة',
+                              fr: 'Active',
+                              es: 'Activa',
+                            ).of(context)
+                          : const S(
+                              'Inactive',
+                              'غير نشطة',
+                              fr: 'Inactive',
+                              es: 'Inactiva',
+                            ).of(context),
                       tone: isActive ? StatusTone.success : StatusTone.error,
                     ),
                   ],
@@ -317,6 +412,12 @@ class _SchoolCard extends StatelessWidget {
                               const S(
                                 'Location not set — every trip needs this as its final stop.',
                                 'الموقع لسه مش متحدد — كل رحلة محتاجة تنتهي هنا.',
+                                fr:
+                                    "Emplacement non défini — chaque trajet "
+                                    "doit se terminer ici.",
+                                es:
+                                    'Ubicación no establecida — cada viaje '
+                                    'necesita terminar aquí.',
                               ).of(context),
                               style: Theme.of(context).textTheme.bodySmall,
                             )
@@ -324,7 +425,7 @@ class _SchoolCard extends StatelessWidget {
                               textDirection: TextDirection.ltr,
                               child: Text(
                                 'Lat ${latitude.toStringAsFixed(5)}, '
-                                    'Lng ${longitude.toStringAsFixed(5)}',
+                                'Lng ${longitude.toStringAsFixed(5)}',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ),
@@ -332,8 +433,18 @@ class _SchoolCard extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     AppButton.secondary(
                       label: latitude == null
-                          ? const S('Set', 'تحديد').of(context)
-                          : const S('Edit', 'تعديل').of(context),
+                          ? const S(
+                              'Set',
+                              'تحديد',
+                              fr: 'Définir',
+                              es: 'Establecer',
+                            ).of(context)
+                          : const S(
+                              'Edit',
+                              'تعديل',
+                              fr: 'Modifier',
+                              es: 'Editar',
+                            ).of(context),
                       onPressed: () async {
                         final picked = await Navigator.push<LatLng>(
                           context,
@@ -342,8 +453,11 @@ class _SchoolCard extends StatelessWidget {
                               title: const S(
                                 'Set school location',
                                 'تحديد موقع المدرسة',
+                                fr: "Définir l'emplacement de l'école",
+                                es: 'Establecer ubicación de la escuela',
                               ).of(context),
-                              initialPosition: latitude == null || longitude == null
+                              initialPosition:
+                                  latitude == null || longitude == null
                                   ? null
                                   : LatLng(latitude, longitude),
                             ),
@@ -362,6 +476,8 @@ class _SchoolCard extends StatelessWidget {
                             const S(
                               'School location updated.',
                               'تم تحديث موقع المدرسة.',
+                              fr: "Emplacement de l'école mis à jour.",
+                              es: 'Ubicación de la escuela actualizada.',
                             ).of(context),
                           );
                         } on SchoolLocationException catch (e) {
@@ -445,16 +561,17 @@ class _OperationalSettingsEditorState
     super.initState();
     _weeklyHolidays.addAll(widget.school.weeklyHolidays);
   }
+
   bool _saving = false;
 
   static const _weekdayLabels = [
-    S('Mon', 'إثنين'),
-    S('Tue', 'ثلاثاء'),
-    S('Wed', 'أربعاء'),
-    S('Thu', 'خميس'),
-    S('Fri', 'جمعة'),
-    S('Sat', 'سبت'),
-    S('Sun', 'حد'),
+    S('Mon', 'إثنين', fr: 'Lun', es: 'Lun'),
+    S('Tue', 'ثلاثاء', fr: 'Mar', es: 'Mar'),
+    S('Wed', 'أربعاء', fr: 'Mer', es: 'Mié'),
+    S('Thu', 'خميس', fr: 'Jeu', es: 'Jue'),
+    S('Fri', 'جمعة', fr: 'Ven', es: 'Vie'),
+    S('Sat', 'سبت', fr: 'Sam', es: 'Sáb'),
+    S('Sun', 'حد', fr: 'Dim', es: 'Dom'),
   ];
 
   @override
@@ -481,8 +598,9 @@ class _OperationalSettingsEditorState
 
   Future<void> _removeSpecialHoliday(String iso) async {
     await _save(
-      specialHolidays:
-          widget.school.specialHolidays.where((d) => d != iso).toList(),
+      specialHolidays: widget.school.specialHolidays
+          .where((d) => d != iso)
+          .toList(),
     );
   }
 
@@ -499,7 +617,12 @@ class _OperationalSettingsEditorState
       if (!mounted) return;
       AppSnackbar.success(
         context,
-        const S('Settings saved.', 'اتحفظت الإعدادات.').of(context),
+        const S(
+          'Settings saved.',
+          'اتحفظت الإعدادات.',
+          fr: 'Paramètres enregistrés.',
+          es: 'Configuración guardada.',
+        ).of(context),
       );
     } catch (_) {
       if (!mounted) return;
@@ -508,6 +631,8 @@ class _OperationalSettingsEditorState
         const S(
           "Couldn't save these settings — try again.",
           'معرفناش نحفظ الإعدادات دي — جرب تاني.',
+          fr: "Impossible d'enregistrer ces paramètres — réessayez.",
+          es: 'No se pudo guardar esta configuración — inténtelo de nuevo.',
         ).of(context),
       );
     } finally {
@@ -525,8 +650,12 @@ class _OperationalSettingsEditorState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              const S('Driver trip start window', 'موعد بدء الرحلة للسواق')
-                  .of(context),
+              const S(
+                'Driver trip start window',
+                'موعد بدء الرحلة للسواق',
+                fr: 'Fenêtre de démarrage du trajet du chauffeur',
+                es: 'Ventana de inicio de viaje del conductor',
+              ).of(context),
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -536,10 +665,16 @@ class _OperationalSettingsEditorState
                     'start a trip. Leave blank to allow starting any time.',
                 'قد إيه بالدقايق قبل الميعاد المحدد يقدر السواق يبدأ الرحلة. '
                     'سيبه فاضي عشان تسمح بالبدء في أي وقت.',
+                fr:
+                    "Combien de minutes avant l'heure prévue un chauffeur "
+                    "peut démarrer un trajet. Laissez vide pour autoriser "
+                    "le démarrage à tout moment.",
+                es:
+                    'Cuántos minutos antes de la hora programada puede un '
+                    'conductor iniciar un viaje. Deje en blanco para '
+                    'permitir el inicio en cualquier momento.',
               ).of(context),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
+              style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: colors.textMuted),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -547,13 +682,23 @@ class _OperationalSettingsEditorState
               controller: _startWindow,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                suffixText: const S('minutes', 'دقيقة').of(context),
+                suffixText: const S(
+                  'minutes',
+                  'دقيقة',
+                  fr: 'minutes',
+                  es: 'minutos',
+                ).of(context),
                 border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              const S('Absence cutoff', 'موعد قفل الغياب').of(context),
+              const S(
+                'Absence cutoff',
+                'موعد قفل الغياب',
+                fr: "Date limite d'absence",
+                es: 'Fecha límite de ausencia',
+              ).of(context),
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -566,10 +711,19 @@ class _OperationalSettingsEditorState
                 'قد إيه بالدقايق قبل ميعاد ذهاب الخط يقدر ولي الأمر يعلّم '
                     'ابنه غايب النهاردة. بتتطبق بس على الخطوط اللي ليها '
                     'ميعاد ذهاب محدد. سيبه فاضي عشان مفيش قفل.',
+                fr:
+                    "Combien de minutes avant l'horaire de départ d'un "
+                    "itinéraire un parent peut encore marquer son enfant "
+                    "absent pour aujourd'hui. S'applique uniquement aux "
+                    "itinéraires ayant une heure de départ définie. "
+                    "Laissez vide pour aucune limite.",
+                es:
+                    'Cuántos minutos antes del horario de salida de una '
+                    'ruta puede un padre aún marcar a su hijo como ausente '
+                    'hoy. Solo se aplica a rutas con una hora de salida '
+                    'establecida. Deje en blanco para no tener límite.',
               ).of(context),
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
+              style: Theme.of(context).textTheme.bodySmall
                   ?.copyWith(color: colors.textMuted),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -577,13 +731,23 @@ class _OperationalSettingsEditorState
               controller: _cutoff,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                suffixText: const S('minutes', 'دقيقة').of(context),
+                suffixText: const S(
+                  'minutes',
+                  'دقيقة',
+                  fr: 'minutes',
+                  es: 'minutos',
+                ).of(context),
                 border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              const S('Weekly holidays', 'الإجازات الأسبوعية').of(context),
+              const S(
+                'Weekly holidays',
+                'الإجازات الأسبوعية',
+                fr: 'Jours fériés hebdomadaires',
+                es: 'Días festivos semanales',
+              ).of(context),
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -610,14 +774,26 @@ class _OperationalSettingsEditorState
               children: [
                 Expanded(
                   child: Text(
-                    const S('Special holidays', 'إجازات خاصة').of(context),
+                    const S(
+                      'Special holidays',
+                      'إجازات خاصة',
+                      fr: 'Jours fériés spéciaux',
+                      es: 'Días festivos especiales',
+                    ).of(context),
                     style: Theme.of(context).textTheme.labelLarge,
                   ),
                 ),
                 TextButton.icon(
                   onPressed: _pickSpecialHoliday,
                   icon: const Icon(Icons.add, size: 18),
-                  label: Text(const S('Add date', 'إضافة تاريخ').of(context)),
+                  label: Text(
+                    const S(
+                      'Add date',
+                      'إضافة تاريخ',
+                      fr: 'Ajouter une date',
+                      es: 'Agregar fecha',
+                    ).of(context),
+                  ),
                 ),
               ],
             ),
@@ -640,7 +816,12 @@ class _OperationalSettingsEditorState
             Align(
               alignment: AlignmentDirectional.centerEnd,
               child: AppButton.primary(
-                label: const S('Save', 'حفظ').of(context),
+                label: const S(
+                  'Save',
+                  'حفظ',
+                  fr: 'Enregistrer',
+                  es: 'Guardar',
+                ).of(context),
                 loading: _saving,
                 onPressed: () => _save(),
               ),

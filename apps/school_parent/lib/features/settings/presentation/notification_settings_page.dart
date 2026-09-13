@@ -60,6 +60,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         const S(
           "Couldn't save that — try again.",
           'معرفناش نحفظ ده — جرب تاني.',
+          fr: "Impossible d'enregistrer — réessayez.",
+          es: 'No se pudo guardar — inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -83,7 +85,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          const S('Notification settings', 'إعدادات الإشعارات').of(context),
+          const S(
+            'Notification settings',
+            'إعدادات الإشعارات',
+            fr: 'Paramètres de notifications',
+            es: 'Ajustes de notificaciones',
+          ).of(context),
         ),
       ),
       body: prefs == null
@@ -104,6 +111,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         'either way.',
                     'دي بتتحكم في التنبيهات اللي بتوصل موبايلك. كل حاجة هتفضل '
                         'تظهر في قائمة الإشعارات على أي حال.',
+                    fr: 'Ceci contrôle les alertes envoyées sur votre téléphone. '
+                        'Tout continue de toute façon à apparaître dans votre '
+                        'liste de notifications.',
+                    es: 'Esto controla las alertas que esta aplicación envía a su '
+                        'teléfono. Todo seguirá apareciendo en su lista de '
+                        'notificaciones de todos modos.',
                   ).of(context),
                 ),
                 const SizedBox(height: AppSpacing.xl2),
@@ -111,6 +124,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   title: const S(
                     'Trip notifications',
                     'إشعارات الرحلة',
+                    fr: 'Notifications de trajet',
+                    es: 'Notificaciones de viaje',
                   ).of(context),
                 ),
                 AppListCard(
@@ -118,10 +133,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     _PrefSwitch(
                       icon: Icons.play_circle_outline_rounded,
                       tone: colors.info,
-                      title: const S('Trip started', 'بدء الرحلة').of(context),
+                      title: const S(
+                        'Trip started',
+                        'بدء الرحلة',
+                        fr: 'Trajet démarré',
+                        es: 'Viaje iniciado',
+                      ).of(context),
                       subtitle: const S(
                         'When the bus starts its route',
                         'لما الأتوبيس يبدأ خط سيره',
+                        fr: 'Quand le bus commence son trajet',
+                        es: 'Cuando el autobús empieza su ruta',
                       ).of(context),
                       value: prefs.tripStart,
                       onChanged: (value) =>
@@ -133,10 +155,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       title: const S(
                         'Trip paused',
                         'توقف الرحلة مؤقتًا',
+                        fr: 'Trajet en pause',
+                        es: 'Viaje en pausa',
                       ).of(context),
                       subtitle: const S(
                         'When the driver pauses',
                         'لما السواق يوقف مؤقتًا',
+                        fr: 'Quand le chauffeur fait une pause',
+                        es: 'Cuando el conductor hace una pausa',
                       ).of(context),
                       value: prefs.tripPause,
                       onChanged: (value) =>
@@ -145,10 +171,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     _PrefSwitch(
                       icon: Icons.flag_outlined,
                       tone: colors.info,
-                      title: const S('Trip ended', 'انتهاء الرحلة').of(context),
+                      title: const S(
+                        'Trip ended',
+                        'انتهاء الرحلة',
+                        fr: 'Trajet terminé',
+                        es: 'Viaje finalizado',
+                      ).of(context),
                       subtitle: const S(
                         'When the trip completes or is cancelled',
                         'لما الرحلة تخلص أو تتلغي',
+                        fr: 'Quand le trajet se termine ou est annulé',
+                        es: 'Cuando el viaje termina o se cancela',
                       ).of(context),
                       value: prefs.tripEnd,
                       onChanged: (value) =>
@@ -160,10 +193,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       title: const S(
                         'Arrival at pickup point',
                         'الوصول لنقطة الاستلام',
+                        fr: 'Arrivée au point de ramassage',
+                        es: 'Llegada al punto de recogida',
                       ).of(context),
                       subtitle: const S(
                         "The moment the bus reaches my child's pickup point",
                         'أول ما الأتوبيس يوصل نقطة استلام ابني',
+                        fr: "Dès que le bus atteint le point de ramassage de mon enfant",
+                        es: 'En el momento en que el autobús llega al punto de recogida de mi hijo',
                       ).of(context),
                       value: prefs.arrival,
                       onChanged: (value) =>
@@ -173,12 +210,23 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 ),
                 const SizedBox(height: AppSpacing.xl3),
                 SectionHeader(
-                  title: const S('Heads-up timing', 'توقيت التنبيه').of(context),
+                  title: const S(
+                    'Heads-up timing',
+                    'توقيت التنبيه',
+                    fr: "Délai d'alerte",
+                    es: 'Tiempo de aviso',
+                  ).of(context),
                   subtitle: const S(
                     'An early warning before the bus reaches your stop, so '
                         'nobody is waiting outside longer than they need to.',
                     'تنبيه بدري قبل ما الأتوبيس يوصل محطتك، عشان محدش يستنى '
                         'بره أكتر من اللازم.',
+                    fr: "Un avertissement précoce avant que le bus n'atteigne "
+                        "votre arrêt, pour que personne n'attende dehors plus "
+                        "longtemps que nécessaire.",
+                    es: 'Un aviso anticipado antes de que el autobús llegue a su '
+                        'parada, para que nadie espere afuera más de lo '
+                        'necesario.',
                   ).of(context),
                 ),
                 AppListCard(
@@ -189,6 +237,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       title: const S(
                         'Heads-up before arrival',
                         'تنبيه قبل الوصول',
+                        fr: "Alerte avant l'arrivée",
+                        es: 'Aviso antes de llegar',
                       ).of(context),
                       subtitle: prefs.minutesBefore > 0
                           ? S(
@@ -196,8 +246,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                   'bus arrives',
                               'قبل وصول الأتوبيس بـ ${prefs.minutesBefore} '
                                   'دقيقة تقريبًا',
+                              fr: 'Environ ${prefs.minutesBefore} minutes avant '
+                                  "l'arrivée du bus",
+                              es: 'Unos ${prefs.minutesBefore} minutos antes de '
+                                  'que llegue el autobús',
                             ).of(context)
-                          : const S('Off', 'متوقف').of(context),
+                          : const S('Off', 'متوقف', fr: 'Désactivé', es: 'Desactivado').of(context),
                       value: prefs.minutesBefore > 0,
                       onChanged: (value) => _apply(
                         (p) => p.copyWith(
@@ -316,7 +370,12 @@ class _MinutesPicker extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            const S('Minutes before arrival', 'الدقايق قبل الوصول').of(context),
+            const S(
+              'Minutes before arrival',
+              'الدقايق قبل الوصول',
+              fr: "Minutes avant l'arrivée",
+              es: 'Minutos antes de llegar',
+            ).of(context),
             style: theme.textTheme.bodySmall?.copyWith(
               color: colors.textSecondary,
               fontWeight: FontWeight.w700,
@@ -355,7 +414,7 @@ class _MinutesPicker extends StatelessWidget {
                       horizontal: AppSpacing.md,
                       vertical: AppSpacing.md,
                     ),
-                    suffixText: const S('min', 'د').of(context),
+                    suffixText: const S('min', 'د', fr: 'min', es: 'min').of(context),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                       borderSide: BorderSide(color: colors.border),
@@ -419,7 +478,7 @@ class _MinutePresetChip extends StatelessWidget {
             ),
           ),
           child: Text(
-            S('$minutes min', '$minutes د').of(context),
+            S('$minutes min', '$minutes د', fr: '$minutes min', es: '$minutes min').of(context),
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
               color: selected ? accent : colors.textPrimary,

@@ -38,21 +38,47 @@ class _ReportPostDialogState extends State<_ReportPostDialog> {
       CommunityReportReason.inappropriate => const S(
         'Inappropriate content',
         'محتوى غير مناسب',
+        fr: 'Contenu inapproprié',
+        es: 'Contenido inapropiado',
       ).of(context),
-      CommunityReportReason.abuse => const S('Abuse', 'إساءة').of(context),
+      CommunityReportReason.abuse => const S(
+        'Abuse',
+        'إساءة',
+        fr: 'Abus',
+        es: 'Abuso',
+      ).of(context),
       CommunityReportReason.misleading => const S(
         'Misleading information',
         'معلومات مضللة',
+        fr: 'Information trompeuse',
+        es: 'Información engañosa',
       ).of(context),
-      CommunityReportReason.spam => const S('Spam', 'سبام').of(context),
-      CommunityReportReason.other => const S('Other', 'أخرى').of(context),
+      CommunityReportReason.spam => const S(
+        'Spam',
+        'سبام',
+        fr: 'Spam',
+        es: 'Spam',
+      ).of(context),
+      CommunityReportReason.other => const S(
+        'Other',
+        'أخرى',
+        fr: 'Autre',
+        es: 'Otro',
+      ).of(context),
     };
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(const S('Report post', 'إبلاغ عن المنشور').of(context)),
+      title: Text(
+        const S(
+          'Report post',
+          'إبلاغ عن المنشور',
+          fr: 'Signaler la publication',
+          es: 'Reportar publicación',
+        ).of(context),
+      ),
       content: SizedBox(
         width: 360,
         child: Column(
@@ -91,6 +117,8 @@ class _ReportPostDialogState extends State<_ReportPostDialog> {
                 labelText: const S(
                   'Additional details (optional)',
                   'تفاصيل إضافية (اختياري)',
+                  fr: 'Détails supplémentaires (facultatif)',
+                  es: 'Detalles adicionales (opcional)',
                 ).of(context),
               ),
             ),
@@ -100,7 +128,7 @@ class _ReportPostDialogState extends State<_ReportPostDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(const S('Cancel', 'إلغاء').of(context)),
+          child: Text(const S('Cancel', 'إلغاء', fr: 'Annuler', es: 'Cancelar').of(context)),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, (
@@ -109,7 +137,7 @@ class _ReportPostDialogState extends State<_ReportPostDialog> {
                 ? null
                 : _detailsController.text.trim(),
           )),
-          child: Text(const S('Report', 'إبلاغ').of(context)),
+          child: Text(const S('Report', 'إبلاغ', fr: 'Signaler', es: 'Reportar').of(context)),
         ),
       ],
     );

@@ -23,7 +23,16 @@ class StudentDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(const S('Student', 'الطالب').of(context))),
+      appBar: AppBar(
+        title: Text(
+          const S(
+            'Student',
+            'الطالب',
+            fr: 'Élève',
+            es: 'Estudiante',
+          ).of(context),
+        ),
+      ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('schools')
@@ -49,6 +58,8 @@ class StudentDetailPage extends StatelessWidget {
               title: const S(
                 'This student no longer exists.',
                 'الطالب ده مبقاش موجود.',
+                fr: "Cet élève n'existe plus.",
+                es: 'Este estudiante ya no existe.',
               ).of(context),
             );
           }
@@ -110,8 +121,18 @@ class _StudentDetailBody extends StatelessWidget {
                   children: [
                     StatusBadge(
                       label: student.isActive
-                          ? const S('Active', 'نشط').of(context)
-                          : const S('Archived', 'مؤرشف').of(context),
+                          ? const S(
+                              'Active',
+                              'نشط',
+                              fr: 'Actif',
+                              es: 'Activo',
+                            ).of(context)
+                          : const S(
+                              'Archived',
+                              'مؤرشف',
+                              fr: 'Archivé',
+                              es: 'Archivado',
+                            ).of(context),
                       tone: student.isActive
                           ? StatusTone.success
                           : StatusTone.neutral,
@@ -119,8 +140,12 @@ class _StudentDetailBody extends StatelessWidget {
                     if (student.isAbsentToday) ...[
                       const SizedBox(height: 4),
                       StatusBadge(
-                        label: const S('Absent today', 'غايب النهاردة')
-                            .of(context),
+                        label: const S(
+                          'Absent today',
+                          'غايب النهاردة',
+                          fr: "Absent aujourd'hui",
+                          es: 'Ausente hoy',
+                        ).of(context),
                         tone: StatusTone.warning,
                       ),
                     ],
@@ -131,7 +156,12 @@ class _StudentDetailBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl2),
 
             SectionHeader(
-              title: const S('Transportation', 'النقل').of(context),
+              title: const S(
+                'Transportation',
+                'النقل',
+                fr: 'Transport',
+                es: 'Transporte',
+              ).of(context),
             ),
             const SizedBox(height: AppSpacing.sm),
             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -151,10 +181,19 @@ class _StudentDetailBody extends StatelessWidget {
                     SettingsTile(
                       icon: Icons.route_rounded,
                       tone: routeName == null ? colors.warning : colors.success,
-                      title: const S('Assigned route', 'الخط المخصص')
-                          .of(context),
+                      title: const S(
+                        'Assigned route',
+                        'الخط المخصص',
+                        fr: 'Itinéraire assigné',
+                        es: 'Ruta asignada',
+                      ).of(context),
                       subtitle: routeName ??
-                          const S('Not assigned', 'مش متحدد').of(context),
+                          const S(
+                            'Not assigned',
+                            'مش متحدد',
+                            fr: 'Non assigné',
+                            es: 'No asignado',
+                          ).of(context),
                     ),
                     SettingsTile(
                       icon: Icons.location_on_rounded,
@@ -162,6 +201,8 @@ class _StudentDetailBody extends StatelessWidget {
                       title: const S(
                         'Pickup / drop-off location',
                         'نقطة الاستلام/التسليم',
+                        fr: 'Lieu de prise en charge / dépose',
+                        es: 'Lugar de recogida / entrega',
                       ).of(context),
                       subtitle: student.hasLocation
                           ? '${student.latitude!.toStringAsFixed(5)}, '
@@ -169,6 +210,8 @@ class _StudentDetailBody extends StatelessWidget {
                           : const S(
                               'Not set',
                               'مش متحددة',
+                              fr: 'Non défini',
+                              es: 'No definido',
                             ).of(context),
                     ),
                     if (student.hasPendingLocationRequest)
@@ -178,11 +221,18 @@ class _StudentDetailBody extends StatelessWidget {
                         title: const S(
                           'Pending location request',
                           'طلب موقع قيد المراجعة',
+                          fr: 'Demande de localisation en attente',
+                          es: 'Solicitud de ubicación pendiente',
                         ).of(context),
                         subtitle: '${student.pendingLatitude!.toStringAsFixed(5)}, '
                             '${student.pendingLongitude!.toStringAsFixed(5)}',
                         trailing: StatusBadge(
-                          label: const S('Pending', 'قيد المراجعة').of(context),
+                          label: const S(
+                            'Pending',
+                            'قيد المراجعة',
+                            fr: 'En attente',
+                            es: 'Pendiente',
+                          ).of(context),
                           tone: StatusTone.info,
                         ),
                       ),
@@ -193,7 +243,12 @@ class _StudentDetailBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl2),
 
             SectionHeader(
-              title: const S('Parents / guardians', 'أولياء الأمور').of(context),
+              title: const S(
+                'Parents / guardians',
+                'أولياء الأمور',
+                fr: 'Parents / tuteurs',
+                es: 'Padres / tutores',
+              ).of(context),
             ),
             const SizedBox(height: AppSpacing.sm),
             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -210,6 +265,8 @@ class _StudentDetailBody extends StatelessWidget {
                     title: const S(
                       'No parent linked yet',
                       'مفيش ولي أمر مرتبط لسه',
+                      fr: "Aucun parent lié pour l'instant",
+                      es: 'Aún no hay padres vinculados',
                     ).of(context),
                   );
                 }
@@ -227,7 +284,12 @@ class _StudentDetailBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl2),
 
             SectionHeader(
-              title: const S('Recent activity', 'النشاط الأخير').of(context),
+              title: const S(
+                'Recent activity',
+                'النشاط الأخير',
+                fr: 'Activité récente',
+                es: 'Actividad reciente',
+              ).of(context),
             ),
             const SizedBox(height: AppSpacing.sm),
             ActivityTimeline(

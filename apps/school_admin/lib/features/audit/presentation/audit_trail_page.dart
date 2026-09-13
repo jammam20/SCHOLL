@@ -36,7 +36,14 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Audit trail', 'سجل التدقيق').of(context)),
+        title: Text(
+          const S(
+            'Audit trail',
+            'سجل التدقيق',
+            fr: "Journal d'audit",
+            es: 'Registro de auditoría',
+          ).of(context),
+        ),
       ),
       body: SchoolDirectoryBuilder(
         schoolId: widget.schoolId,
@@ -68,6 +75,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                     title: const S(
                       'No audit entries yet',
                       'مفيش سجلات تدقيق لسه',
+                      fr: "Pas encore d'entrées d'audit",
+                      es: 'Aún no hay entradas de auditoría',
                     ).of(context),
                     message: const S(
                       'Every admin and driver action that changes an '
@@ -76,6 +85,17 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                       'كل إجراء من الأدمن أو السواق بيغيّر بلاغ أو حالة '
                           'طوارئ أو تخصيص رحلة أو ركوب طالب بيتسجل هنا '
                           'بشكل دائم.',
+                      fr:
+                          "Chaque action d'un administrateur ou d'un "
+                          "chauffeur qui modifie un incident, une urgence, "
+                          "une assignation de trajet ou un enregistrement "
+                          "d'embarquement est enregistrée ici de façon "
+                          "permanente.",
+                      es:
+                          'Cada acción de un administrador o conductor que '
+                          'modifica un incidente, emergencia, asignación de '
+                          'viaje o registro de abordaje se registra aquí de '
+                          'forma permanente.',
                     ).of(context),
                   );
                 }
@@ -109,6 +129,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                           title: const S(
                             'Recorded actions',
                             'الإجراءات المسجلة',
+                            fr: 'Actions enregistrées',
+                            es: 'Acciones registradas',
                           ).of(context),
                           subtitle: S(
                             'Showing ${visible.length} of ${all.length} '
@@ -116,6 +138,15 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                                 'or deleted.',
                             'بيتعرض ${visible.length} من ${all.length} سجل. '
                                 'سجلات التدقيق مينفعش تتعدل أو تتمسح أبداً.',
+                            fr:
+                                '${visible.length} sur ${all.length} entrées '
+                                "affichées. Les enregistrements d'audit ne "
+                                'peuvent jamais être modifiés ni supprimés.',
+                            es:
+                                'Mostrando ${visible.length} de '
+                                '${all.length} entradas. Los registros de '
+                                'auditoría nunca pueden editarse ni '
+                                'eliminarse.',
                           ).of(context),
                         ),
                         _AuditFilters(
@@ -139,6 +170,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                             title: const S(
                               'No entries match these filters.',
                               'مفيش سجلات مطابقة للفلاتر دي.',
+                              fr: 'Aucune entrée ne correspond à ces filtres.',
+                              es: 'Ninguna entrada coincide con estos filtros.',
                             ).of(context),
                           )
                         else
@@ -150,6 +183,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                               label: const S(
                                 'Load more',
                                 'حمّل المزيد',
+                                fr: 'Charger plus',
+                                es: 'Cargar más',
                               ).of(context),
                               icon: Icons.expand_more,
                               onPressed: () =>
@@ -236,13 +271,23 @@ class _AuditFilters extends StatelessWidget {
             // matching how the field actually renders either way.
             isExpanded: true,
             decoration: InputDecoration(
-              labelText: const S('Action', 'الإجراء').of(context),
+              labelText: const S(
+                'Action',
+                'الإجراء',
+                fr: 'Action',
+                es: 'Acción',
+              ).of(context),
             ),
             items: [
               DropdownMenuItem<String?>(
                 value: null,
                 child: Text(
-                  const S('All actions', 'كل الإجراءات').of(context),
+                  const S(
+                    'All actions',
+                    'كل الإجراءات',
+                    fr: 'Toutes actions',
+                    es: 'Todas las acciones',
+                  ).of(context),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -265,13 +310,23 @@ class _AuditFilters extends StatelessWidget {
             isDense: true,
             isExpanded: true,
             decoration: InputDecoration(
-              labelText: const S('Entity', 'العنصر').of(context),
+              labelText: const S(
+                'Entity',
+                'العنصر',
+                fr: 'Entité',
+                es: 'Entidad',
+              ).of(context),
             ),
             items: [
               DropdownMenuItem<String?>(
                 value: null,
                 child: Text(
-                  const S('All entities', 'كل العناصر').of(context),
+                  const S(
+                    'All entities',
+                    'كل العناصر',
+                    fr: 'Toutes entités',
+                    es: 'Todas las entidades',
+                  ).of(context),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -287,7 +342,12 @@ class _AuditFilters extends StatelessWidget {
         AppButton.secondary(
           icon: Icons.date_range_outlined,
           label: dateRange == null
-              ? const S('Any date', 'أي تاريخ').of(context)
+              ? const S(
+                  'Any date',
+                  'أي تاريخ',
+                  fr: 'Toute date',
+                  es: 'Cualquier fecha',
+                ).of(context)
               : '${DateFormat.yMMMd().format(dateRange!.start)} — '
                     '${DateFormat.yMMMd().format(dateRange!.end)}',
           onPressed: () async {
@@ -303,7 +363,12 @@ class _AuditFilters extends StatelessWidget {
         ),
         if (dateRange != null)
           IconButton(
-            tooltip: const S('Clear dates', 'مسح التواريخ').of(context),
+            tooltip: const S(
+              'Clear dates',
+              'مسح التواريخ',
+              fr: 'Effacer les dates',
+              es: 'Borrar fechas',
+            ).of(context),
             icon: const Icon(Icons.close),
             onPressed: () => onDateRangeChanged(null),
           ),
@@ -380,10 +445,37 @@ class _AuditTableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          cell(_flexWhen, const S('When', 'الوقت').of(context)),
-          cell(_flexActor, const S('Actor', 'المستخدم').of(context)),
-          cell(_flexAction, const S('Action', 'الإجراء').of(context)),
-          cell(_flexEntity, const S('Entity', 'العنصر').of(context)),
+          cell(
+            _flexWhen,
+            const S('When', 'الوقت', fr: 'Quand', es: 'Cuándo').of(context),
+          ),
+          cell(
+            _flexActor,
+            const S(
+              'Actor',
+              'المستخدم',
+              fr: 'Acteur',
+              es: 'Actor',
+            ).of(context),
+          ),
+          cell(
+            _flexAction,
+            const S(
+              'Action',
+              'الإجراء',
+              fr: 'Action',
+              es: 'Acción',
+            ).of(context),
+          ),
+          cell(
+            _flexEntity,
+            const S(
+              'Entity',
+              'العنصر',
+              fr: 'Entité',
+              es: 'Entidad',
+            ).of(context),
+          ),
         ],
       ),
     );
@@ -477,7 +569,12 @@ class _AuditRowState extends State<_AuditRow> {
         if (entry.tripId != null)
           DirectoryMetaLine(
             icon: Icons.route_outlined,
-            text: S('Trip ${entry.tripId}', 'رحلة ${entry.tripId}').of(context),
+            text: S(
+              'Trip ${entry.tripId}',
+              'رحلة ${entry.tripId}',
+              fr: 'Trajet ${entry.tripId}',
+              es: 'Viaje ${entry.tripId}',
+            ).of(context),
           ),
         if (hasDetail)
           Align(
@@ -495,8 +592,18 @@ class _AuditRowState extends State<_AuditRow> {
               ),
               label: Text(
                 _expanded
-                    ? const S('Hide details', 'إخفاء التفاصيل').of(context)
-                    : const S('Details', 'التفاصيل').of(context),
+                    ? const S(
+                        'Hide details',
+                        'إخفاء التفاصيل',
+                        fr: 'Masquer les détails',
+                        es: 'Ocultar detalles',
+                      ).of(context)
+                    : const S(
+                        'Details',
+                        'التفاصيل',
+                        fr: 'Détails',
+                        es: 'Detalles',
+                      ).of(context),
               ),
             ),
           ),

@@ -28,7 +28,14 @@ class _ReportsTabState extends State<ReportsTab> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Reports', 'التقارير').of(context)),
+        title: Text(
+          const S(
+            'Reports',
+            'التقارير',
+            fr: 'Rapports',
+            es: 'Informes',
+          ).of(context),
+        ),
       ),
       body: Column(
         children: [
@@ -46,11 +53,25 @@ class _ReportsTabState extends State<ReportsTab> {
                     segments: [
                       ButtonSegment(
                         value: 7,
-                        label: Text(const S('7 days', '7 أيام').of(context)),
+                        label: Text(
+                          const S(
+                            '7 days',
+                            '7 أيام',
+                            fr: '7 jours',
+                            es: '7 días',
+                          ).of(context),
+                        ),
                       ),
                       ButtonSegment(
                         value: 30,
-                        label: Text(const S('30 days', '30 يوم').of(context)),
+                        label: Text(
+                          const S(
+                            '30 days',
+                            '30 يوم',
+                            fr: '30 jours',
+                            es: '30 días',
+                          ).of(context),
+                        ),
                       ),
                     ],
                     selected: {_rangeDays},
@@ -232,7 +253,12 @@ class _ReportsBody extends StatelessWidget {
       ),
       children: [
         SectionHeader(
-          title: const S('Trip performance', 'أداء الرحلات').of(context),
+          title: const S(
+            'Trip performance',
+            'أداء الرحلات',
+            fr: 'Performance des trajets',
+            es: 'Rendimiento de viajes',
+          ).of(context),
         ),
         IntrinsicHeight(
           child: Row(
@@ -242,7 +268,12 @@ class _ReportsBody extends StatelessWidget {
                 child: MetricStatCard(
                   icon: Icons.task_alt,
                   tone: colors.success,
-                  label: const S('Completion rate', 'نسبة الإنجاز').of(context),
+                  label: const S(
+                    'Completion rate',
+                    'نسبة الإنجاز',
+                    fr: 'Taux de complétion',
+                    es: 'Tasa de finalización',
+                  ).of(context),
                   value: completionRate == null
                       ? '—'
                       : '${(completionRate * 100).round()}%',
@@ -253,7 +284,12 @@ class _ReportsBody extends StatelessWidget {
                 child: MetricStatCard(
                   icon: Icons.schedule,
                   tone: colors.info,
-                  label: const S('On-time rate', 'نسبة الالتزام بالمعاد').of(context),
+                  label: const S(
+                    'On-time rate',
+                    'نسبة الالتزام بالمعاد',
+                    fr: 'Taux de ponctualité',
+                    es: 'Tasa de puntualidad',
+                  ).of(context),
                   value: onTimeRate == null ? '—' : '${(onTimeRate * 100).round()}%',
                 ),
               ),
@@ -268,7 +304,12 @@ class _ReportsBody extends StatelessWidget {
               Expanded(
                 child: MetricStatCard(
                   icon: Icons.timer_outlined,
-                  label: const S('Avg. trip duration', 'متوسط مدة الرحلة').of(context),
+                  label: const S(
+                    'Avg. trip duration',
+                    'متوسط مدة الرحلة',
+                    fr: 'Durée moyenne du trajet',
+                    es: 'Duración media del viaje',
+                  ).of(context),
                   value: avgDuration == null ? '—' : _formatDuration(avgDuration),
                 ),
               ),
@@ -277,7 +318,12 @@ class _ReportsBody extends StatelessWidget {
                 child: MetricStatCard(
                   icon: Icons.warning_amber_rounded,
                   tone: colors.emergency,
-                  label: const S('Emergencies', 'حالات الطوارئ').of(context),
+                  label: const S(
+                    'Emergencies',
+                    'حالات الطوارئ',
+                    fr: 'Urgences',
+                    es: 'Emergencias',
+                  ).of(context),
                   value: '$emergencies',
                 ),
               ),
@@ -286,7 +332,12 @@ class _ReportsBody extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xl3),
         SectionHeader(
-          title: const S('Attendance', 'الحضور والغياب').of(context),
+          title: const S(
+            'Attendance',
+            'الحضور والغياب',
+            fr: 'Présence',
+            es: 'Asistencia',
+          ).of(context),
         ),
         SizedBox(
           width: double.infinity,
@@ -296,13 +347,20 @@ class _ReportsBody extends StatelessWidget {
             label: const S(
               'Total absences in range',
               'إجمالي الغياب في المدة دي',
+              fr: 'Total des absences sur la période',
+              es: 'Total de ausencias en el rango',
             ).of(context),
             value: '${absences.length}',
           ),
         ),
         const SizedBox(height: AppSpacing.xl2),
         Text(
-          const S('Most frequently absent', 'الأكتر غيابًا').of(context),
+          const S(
+            'Most frequently absent',
+            'الأكتر غيابًا',
+            fr: 'Absences les plus fréquentes',
+            es: 'Ausencias más frecuentes',
+          ).of(context),
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -313,6 +371,8 @@ class _ReportsBody extends StatelessWidget {
             title: const S(
               'No absences recorded in this range.',
               'مفيش غياب متسجل في المدة دي.',
+              fr: 'Aucune absence enregistrée sur cette période.',
+              es: 'No hay ausencias registradas en este rango.',
             ).of(context),
           )
         else
@@ -324,7 +384,12 @@ class _ReportsBody extends StatelessWidget {
           ),
         const SizedBox(height: AppSpacing.xl3),
         SectionHeader(
-          title: const S('By driver', 'حسب السواق').of(context),
+          title: const S(
+            'By driver',
+            'حسب السواق',
+            fr: 'Par chauffeur',
+            es: 'Por conductor',
+          ).of(context),
         ),
         if (driverEntries.isEmpty)
           EmptyStateView(
@@ -333,6 +398,8 @@ class _ReportsBody extends StatelessWidget {
             title: const S(
               'No trips scheduled in this range.',
               'مفيش رحلات متجدولة في المدة دي.',
+              fr: 'Aucun trajet programmé sur cette période.',
+              es: 'No hay viajes programados en este rango.',
             ).of(context),
           )
         else
@@ -343,7 +410,12 @@ class _ReportsBody extends StatelessWidget {
                 leading: const CircleAvatar(child: Icon(Icons.badge)),
                 title: Text(
                   stats.name.isEmpty
-                      ? const S('Unknown driver', 'سائق غير معروف').of(context)
+                      ? const S(
+                          'Unknown driver',
+                          'سائق غير معروف',
+                          fr: 'Chauffeur inconnu',
+                          es: 'Conductor desconocido',
+                        ).of(context)
                       : stats.name,
                 ),
                 subtitle: Text(
@@ -354,6 +426,14 @@ class _ReportsBody extends StatelessWidget {
                     '${stats.completed} رحلة مكتملة'
                         '${stats.emergencies > 0 ? ' · ${stats.emergencies} طوارئ' : ''}'
                         '${stats.avgDuration != null ? ' · متوسط ${_formatDuration(stats.avgDuration!)}' : ''}',
+                    fr:
+                        '${stats.completed} terminé(s)'
+                        '${stats.emergencies > 0 ? ' · ${stats.emergencies} urgence(s)' : ''}'
+                        '${stats.avgDuration != null ? ' · moy. ${_formatDuration(stats.avgDuration!)}' : ''}',
+                    es:
+                        '${stats.completed} completado(s)'
+                        '${stats.emergencies > 0 ? ' · ${stats.emergencies} emergencia(s)' : ''}'
+                        '${stats.avgDuration != null ? ' · prom. ${_formatDuration(stats.avgDuration!)}' : ''}',
                   ).of(context),
                 ),
               ),

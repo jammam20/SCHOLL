@@ -38,12 +38,22 @@ class LiveTripMapPage extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              S('Tracking ${student.name}', 'متابعة ${student.name}').of(
+              S(
+                'Tracking ${student.name}',
+                'متابعة ${student.name}',
+                fr: 'Suivi de ${student.name}',
+                es: 'Siguiendo a ${student.name}',
+              ).of(
                 context,
               ),
             ),
             Text(
-              const S('Live bus location', 'موقع الأتوبيس المباشر').of(
+              const S(
+                'Live bus location',
+                'موقع الأتوبيس المباشر',
+                fr: 'Position du bus en direct',
+                es: 'Ubicación del autobús en vivo',
+              ).of(
                 context,
               ),
               style: theme.textTheme.bodySmall?.copyWith(
@@ -65,6 +75,12 @@ class LiveTripMapPage extends StatelessWidget {
                 "Couldn't load this trip — check your connection and try "
                     'again.',
                 'معرفناش نحمّل الرحلة دي — اتأكد من الاتصال وجرب تاني.',
+                fr:
+                    'Impossible de charger ce trajet — vérifiez votre '
+                    'connexion et réessayez.',
+                es:
+                    'No se pudo cargar este viaje: revise su conexión e '
+                    'inténtelo de nuevo.',
               ).of(context),
             );
           }
@@ -101,12 +117,21 @@ class LiveTripMapPage extends StatelessWidget {
     title: const S(
       'Nothing to track right now',
       'مفيش حاجة نتابعها دلوقتي',
+      fr: 'Rien à suivre pour le moment',
+      es: 'Nada que seguir en este momento',
     ).of(context),
     message: const S(
       "This route's bus isn't out on a trip at the moment.",
       'أتوبيس الخط ده مش في رحلة دلوقتي.',
+      fr: "Le bus de ce trajet n'est pas en route en ce moment.",
+      es: 'El autobús de esta ruta no está en viaje en este momento.',
     ).of(context),
-    actionLabel: const S('Back', 'رجوع').of(context),
+    actionLabel: const S(
+      'Back',
+      'رجوع',
+      fr: 'Retour',
+      es: 'Atrás',
+    ).of(context),
     onAction: () => Navigator.of(context).maybePop(),
   );
 }

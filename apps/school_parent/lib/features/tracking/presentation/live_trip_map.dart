@@ -825,6 +825,8 @@ class _MapSurface extends StatelessWidget {
         title: S(
           '${student.name} was dropped off',
           '${student.name} نزل من الأتوبيس',
+          fr: '${student.name} a été déposé(e)',
+          es: '${student.name} fue bajado(a) del autobús',
         ).of(context),
       );
     }
@@ -838,12 +840,20 @@ class _MapSurface extends StatelessWidget {
         title: S(
           '${student.name} is on the bus',
           '${student.name} في الأتوبيس',
+          fr: '${student.name} est dans le bus',
+          es: '${student.name} está en el autobús',
         ).of(context),
         detail: toSchool == null
             ? null
             : S(
                 'At school in about ${formatEtaDuration(context, toSchool)}',
                 'هيوصل المدرسة خلال ${formatEtaDuration(context, toSchool)} تقريبًا',
+                fr:
+                    "À l'école dans environ "
+                    '${formatEtaDuration(context, toSchool)}',
+                es:
+                    'En la escuela en aproximadamente '
+                    '${formatEtaDuration(context, toSchool)}',
               ).of(context),
       );
     }
@@ -855,11 +865,19 @@ class _MapSurface extends StatelessWidget {
         title: const S(
           'Emergency reported on this trip',
           'اتبلّغ عن طوارئ في الرحلة دي',
+          fr: 'Urgence signalée sur ce trajet',
+          es: 'Emergencia reportada en este viaje',
         ).of(context),
         detail: const S(
           'Your school has been alerted and the bus is still being '
               'tracked here.',
           'المدرسة اتبلغت والأتوبيس لسه بيتتابع هنا.',
+          fr:
+              "Votre école a été alertée et le bus continue d'être suivi "
+              'ici.',
+          es:
+              'Se ha alertado a la escuela y el autobús se sigue '
+              'rastreando aquí.',
         ).of(context),
       );
     }
@@ -867,12 +885,23 @@ class _MapSurface extends StatelessWidget {
       return _MapStatus(
         color: colors.warning,
         icon: Icons.pause_circle_rounded,
-        title: const S('Trip paused', 'الرحلة متوقفة مؤقتًا').of(context),
+        title: const S(
+          'Trip paused',
+          'الرحلة متوقفة مؤقتًا',
+          fr: 'Trajet en pause',
+          es: 'Viaje en pausa',
+        ).of(context),
         detail: const S(
           "The driver paused the trip — you'll see it move again here as "
               'soon as it resumes.',
           'السواق وقف الرحلة مؤقتًا — هتشوفها بتتحرك هنا تاني أول ما '
               'تكمل.',
+          fr:
+              'Le chauffeur a mis le trajet en pause — vous le verrez '
+              'bouger à nouveau ici dès la reprise.',
+          es:
+              'El conductor puso el viaje en pausa: lo verá moverse de '
+              'nuevo aquí en cuanto se reanude.',
         ).of(context),
       );
     }
@@ -884,6 +913,8 @@ class _MapSurface extends StatelessWidget {
         title: const S(
           'Waiting for the bus to send its location',
           'في انتظار الأتوبيس يبعت موقعه',
+          fr: "En attente que le bus envoie sa position",
+          es: 'Esperando a que el autobús envíe su ubicación',
         ).of(context),
         detail: locationUnavailable
             ? const S(
@@ -891,10 +922,20 @@ class _MapSurface extends StatelessWidget {
                     'and the school are still shown below.',
                 'مش قادرين نوصل للبث المباشر دلوقتي — محطة طفلك والمدرسة '
                     'لسه ظاهرين تحت.',
+                fr:
+                    "Nous ne pouvons pas accéder au flux en direct pour le "
+                    "moment — l'arrêt de votre enfant et l'école restent "
+                    'affichés ci-dessous.',
+                es:
+                    'No podemos acceder a la transmisión en vivo en este '
+                    'momento: la parada de su hijo y la escuela siguen '
+                    'apareciendo abajo.',
               ).of(context)
             : const S(
                 "The driver hasn't started broadcasting yet.",
                 'السواق لسه ما بدأش يبث موقعه.',
+                fr: "Le chauffeur n'a pas encore commencé à diffuser.",
+                es: 'El conductor aún no ha comenzado a transmitir.',
               ).of(context),
       );
     }
@@ -906,6 +947,8 @@ class _MapSurface extends StatelessWidget {
         title: const S(
           'Live signal has dropped',
           'الإشارة المباشرة اتقطعت',
+          fr: 'Le signal en direct a été perdu',
+          es: 'Se perdió la señal en vivo',
         ).of(context),
         detail: etaUnavailableText(
           EtaUnavailableReason.staleGps,
@@ -921,6 +964,8 @@ class _MapSurface extends StatelessWidget {
         title: const S(
           'Bus is at your pickup point now',
           'الأتوبيس عند نقطة استلامك دلوقتي',
+          fr: 'Le bus est à votre point de ramassage maintenant',
+          es: 'El autobús está en su punto de recogida ahora',
         ).of(context),
       );
     }
@@ -933,6 +978,8 @@ class _MapSurface extends StatelessWidget {
         title: S(
           'Bus is about ${formatEtaDuration(context, eta)} away',
           'الأتوبيس على بُعد ${formatEtaDuration(context, eta)} تقريبًا',
+          fr: 'Le bus est à environ ${formatEtaDuration(context, eta)}',
+          es: 'El autobús está a unos ${formatEtaDuration(context, eta)}',
         ).of(context),
         detail: tripEta.hasStopPosition
             ? S(
@@ -940,6 +987,12 @@ class _MapSurface extends StatelessWidget {
                     '${tripEta.totalStops} on today’s route',
                 'محطتك رقم ${tripEta.stopNumber} من ${tripEta.totalStops} '
                     'في خط النهاردة',
+                fr:
+                    'Votre arrêt est le numéro ${tripEta.stopNumber} sur '
+                    '${tripEta.totalStops} du trajet du jour',
+                es:
+                    'Su parada es la número ${tripEta.stopNumber} de '
+                    '${tripEta.totalStops} en la ruta de hoy',
               ).of(context)
             : null,
       );
@@ -957,6 +1010,8 @@ class _MapSurface extends StatelessWidget {
           ? const S(
               'No arrival estimate right now',
               'مفيش وقت وصول متوقع دلوقتي',
+              fr: "Pas d'estimation d'arrivée pour le moment",
+              es: 'Sin estimación de llegada por ahora',
             ).of(context)
           : etaUnavailableText(reason).of(context),
     );
@@ -1004,16 +1059,22 @@ class _StatusCard extends StatelessWidget {
         S(
           '${formatDistanceMeters(context, distanceToStudentMeters!)} away',
           'على بُعد ${formatDistanceMeters(context, distanceToStudentMeters!)}',
+          fr: 'à ${formatDistanceMeters(context, distanceToStudentMeters!)}',
+          es: 'a ${formatDistanceMeters(context, distanceToStudentMeters!)}',
         ).of(context),
       if (updatedAt != null)
         S(
           'Updated ${TimeOfDay.fromDateTime(updatedAt!).format(context)}',
           'آخر تحديث ${TimeOfDay.fromDateTime(updatedAt!).format(context)}',
+          fr: 'Mis à jour ${TimeOfDay.fromDateTime(updatedAt!).format(context)}',
+          es: 'Actualizado ${TimeOfDay.fromDateTime(updatedAt!).format(context)}',
         ).of(context),
       if (speedMetersPerSecond != null && speedMetersPerSecond! >= 0.5)
         S(
           '${(speedMetersPerSecond! * 3.6).round()} km/h',
           '${(speedMetersPerSecond! * 3.6).round()} كم/س',
+          fr: '${(speedMetersPerSecond! * 3.6).round()} km/h',
+          es: '${(speedMetersPerSecond! * 3.6).round()} km/h',
         ).of(context),
     ];
 
@@ -1107,17 +1168,32 @@ class _MapControls extends StatelessWidget {
         _MapControlButton(
           icon: followBus ? Icons.gps_fixed_rounded : Icons.gps_not_fixed_rounded,
           tooltip: followBus
-              ? const S('Stop following the bus', 'وقف متابعة الأتوبيس').of(
+              ? const S(
+                  'Stop following the bus',
+                  'وقف متابعة الأتوبيس',
+                  fr: 'Arrêter de suivre le bus',
+                  es: 'Dejar de seguir el autobús',
+                ).of(
                   context,
                 )
-              : const S('Follow the bus', 'تابع الأتوبيس').of(context),
+              : const S(
+                  'Follow the bus',
+                  'تابع الأتوبيس',
+                  fr: 'Suivre le bus',
+                  es: 'Seguir el autobús',
+                ).of(context),
           active: followBus && canFollow,
           onPressed: canFollow ? onToggleFollow : null,
         ),
         const SizedBox(height: AppSpacing.sm),
         _MapControlButton(
           icon: Icons.zoom_out_map_rounded,
-          tooltip: const S('Fit the whole trip', 'اعرض الرحلة كلها').of(
+          tooltip: const S(
+            'Fit the whole trip',
+            'اعرض الرحلة كلها',
+            fr: 'Afficher tout le trajet',
+            es: 'Mostrar todo el viaje',
+          ).of(
             context,
           ),
           onPressed: onFitRoute,
@@ -1126,7 +1202,12 @@ class _MapControls extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           _MapControlButton(
             icon: Icons.open_in_full_rounded,
-            tooltip: const S('Open full screen', 'افتح ملء الشاشة').of(context),
+            tooltip: const S(
+              'Open full screen',
+              'افتح ملء الشاشة',
+              fr: 'Ouvrir en plein écran',
+              es: 'Abrir en pantalla completa',
+            ).of(context),
             onPressed: onOpenFullScreen,
           ),
         ],
@@ -1249,6 +1330,15 @@ class _DeviationBanner extends StatelessWidget {
                                 'has been notified.',
                             'الأتوبيس خارج مساره المعتاد مؤقتًا — لسه '
                                 'بتتابعه مباشر. والمدرسة اتبلغت.',
+                            fr:
+                                "Le bus s'est temporairement écarté de son "
+                                'itinéraire habituel — vous continuez à le '
+                                "suivre en direct. Votre école a été "
+                                'informée.',
+                            es:
+                                'El autobús se ha desviado temporalmente de '
+                                'su ruta habitual: usted sigue rastreándolo '
+                                'en vivo. Se ha notificado a su escuela.',
                           ).of(context),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: colors.textSecondary),

@@ -9,15 +9,55 @@ import 'journey_stage_visuals.dart';
 /// return value, which is the whole reason this list is a constant here
 /// rather than built per-render.
 const _stepLabels = [
-  S('Trip scheduled', 'الرحلة متجدولة'),
-  S('Trip started', 'الرحلة بدأت'),
-  S('Bus is on the way', 'الأتوبيس في الطريق'),
-  S('Bus approaching your stop', 'الأتوبيس قرّب من محطتك'),
-  S('Bus arrived at your stop', 'الأتوبيس وصل محطتك'),
-  S('Child boarded', 'الطفل ركب'),
-  S('Bus continuing to school', 'الأتوبيس مكمّل للمدرسة'),
-  S('Arrived at school', 'وصل المدرسة'),
-  S('Trip completed', 'الرحلة خلصت'),
+  S(
+    'Trip scheduled',
+    'الرحلة متجدولة',
+    fr: 'Trajet programmé',
+    es: 'Viaje programado',
+  ),
+  S('Trip started', 'الرحلة بدأت', fr: 'Trajet commencé', es: 'Viaje iniciado'),
+  S(
+    'Bus is on the way',
+    'الأتوبيس في الطريق',
+    fr: 'Le bus est en route',
+    es: 'El autobús está en camino',
+  ),
+  S(
+    'Bus approaching your stop',
+    'الأتوبيس قرّب من محطتك',
+    fr: 'Le bus approche de votre arrêt',
+    es: 'El autobús se acerca a su parada',
+  ),
+  S(
+    'Bus arrived at your stop',
+    'الأتوبيس وصل محطتك',
+    fr: 'Le bus est arrivé à votre arrêt',
+    es: 'El autobús llegó a su parada',
+  ),
+  S(
+    'Child boarded',
+    'الطفل ركب',
+    fr: "L'enfant est monté à bord",
+    es: 'El niño subió al autobús',
+  ),
+  S(
+    'Bus continuing to school',
+    'الأتوبيس مكمّل للمدرسة',
+    fr: "Le bus continue vers l'école",
+    es: 'El autobús continúa hacia la escuela',
+  ),
+  S(
+    'Arrived at school',
+    'وصل المدرسة',
+    fr: "Arrivé à l'école",
+    es: 'Llegó a la escuela',
+  ),
+  S(
+    'Trip completed',
+    'الرحلة خلصت',
+    fr: 'Trajet terminé',
+    es: 'Viaje finalizado',
+  ),
 ];
 
 /// The return-trip equivalent of [_stepLabels] — see returnJourneyPath's
@@ -25,12 +65,42 @@ const _stepLabels = [
 /// happens before departure, so the meaningful last step is drop-off, not
 /// a shared "arrived" moment).
 const _returnStepLabels = [
-  S('Return trip scheduled', 'رحلة العودة متجدولة'),
-  S('Leaving school', 'طالع من المدرسة'),
-  S('Bus is on the way home', 'الأتوبيس في الطريق للبيت'),
-  S('Bus approaching home', 'الأتوبيس قرّب من البيت'),
-  S('Bus arrived near home', 'الأتوبيس وصل قريب من البيت'),
-  S('Dropped off at home', 'اتسلّم في البيت'),
+  S(
+    'Return trip scheduled',
+    'رحلة العودة متجدولة',
+    fr: 'Trajet de retour programmé',
+    es: 'Viaje de regreso programado',
+  ),
+  S(
+    'Leaving school',
+    'طالع من المدرسة',
+    fr: "Départ de l'école",
+    es: 'Saliendo de la escuela',
+  ),
+  S(
+    'Bus is on the way home',
+    'الأتوبيس في الطريق للبيت',
+    fr: 'Le bus est en route vers la maison',
+    es: 'El autobús va camino a casa',
+  ),
+  S(
+    'Bus approaching home',
+    'الأتوبيس قرّب من البيت',
+    fr: 'Le bus approche de la maison',
+    es: 'El autobús se acerca a casa',
+  ),
+  S(
+    'Bus arrived near home',
+    'الأتوبيس وصل قريب من البيت',
+    fr: 'Le bus est arrivé près de la maison',
+    es: 'El autobús llegó cerca de casa',
+  ),
+  S(
+    'Dropped off at home',
+    'اتسلّم في البيت',
+    fr: 'Déposé à la maison',
+    es: 'Dejado en casa',
+  ),
 ];
 
 /// The index in [_stepLabels] of the step that *is* this child's own stop —
@@ -137,12 +207,16 @@ class JourneyTimeline extends StatelessWidget {
       return S(
         'Stop $stopNumber of $totalStops on today’s route',
         'المحطة رقم $stopNumber من $totalStops في خط النهاردة',
+        fr: 'Arrêt $stopNumber sur $totalStops du trajet du jour',
+        es: 'Parada $stopNumber de $totalStops en la ruta de hoy',
       ).of(context);
     }
     if (!_isReturn && index == _schoolStepIndex && _hasStopPosition) {
       return const S(
         'The final stop on every trip',
         'آخر محطة في كل رحلة',
+        fr: 'Le dernier arrêt de chaque trajet',
+        es: 'La última parada de cada viaje',
       ).of(context);
     }
     return null;
@@ -451,6 +525,12 @@ class JourneyProgressRail extends StatelessWidget {
                   'Step ${reached.clamp(1, total)} of $total · '
                       '${stageBadgeLabel(stage, direction: direction).of(context)}',
                   'الخطوة ${reached.clamp(1, total)} من $total · '
+                      '${stageBadgeLabel(stage, direction: direction).of(context)}',
+                  fr:
+                      'Étape ${reached.clamp(1, total)} sur $total · '
+                      '${stageBadgeLabel(stage, direction: direction).of(context)}',
+                  es:
+                      'Paso ${reached.clamp(1, total)} de $total · '
                       '${stageBadgeLabel(stage, direction: direction).of(context)}',
                 ).of(context),
           style: theme.textTheme.bodySmall?.copyWith(

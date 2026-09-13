@@ -122,22 +122,42 @@ class _ParentHomePageState extends State<ParentHomePage> {
       _Destination(
         icon: Icons.home_outlined,
         selectedIcon: Icons.home_rounded,
-        label: const S('Home', 'الرئيسية').of(context),
+        label: const S(
+          'Home',
+          'الرئيسية',
+          fr: 'Accueil',
+          es: 'Inicio',
+        ).of(context),
       ),
       _Destination(
         icon: Icons.chat_bubble_outline_rounded,
         selectedIcon: Icons.chat_bubble_rounded,
-        label: const S('Messages', 'الرسايل').of(context),
+        label: const S(
+          'Messages',
+          'الرسايل',
+          fr: 'Messages',
+          es: 'Mensajes',
+        ).of(context),
       ),
       _Destination(
         icon: Icons.forum_outlined,
         selectedIcon: Icons.forum_rounded,
-        label: const S('Community', 'المجتمع').of(context),
+        label: const S(
+          'Community',
+          'المجتمع',
+          fr: 'Communauté',
+          es: 'Comunidad',
+        ).of(context),
       ),
       _Destination(
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
-        label: const S('Profile', 'حسابي').of(context),
+        label: const S(
+          'Profile',
+          'حسابي',
+          fr: 'Profil',
+          es: 'Perfil',
+        ).of(context),
       ),
     ];
 
@@ -259,7 +279,14 @@ class _HomeTabState extends State<_HomeTab> {
         heroTag: 'home-add-child-fab',
         onPressed: () => _addChild(context),
         icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: Text(const S('Add child', 'إضافة طفل').of(context)),
+        label: Text(
+          const S(
+            'Add child',
+            'إضافة طفل',
+            fr: 'Ajouter un enfant',
+            es: 'Agregar niño',
+          ).of(context),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _studentsStream,
@@ -285,6 +312,12 @@ class _HomeTabState extends State<_HomeTab> {
                     'and try again.',
                 'معرفناش نحمّل بيانات أبنائك — اتأكد من الاتصال وجرب '
                     'تاني.',
+                fr:
+                    'Impossible de charger vos enfants — vérifiez votre '
+                    'connexion et réessayez.',
+                es:
+                    'No se pudieron cargar sus hijos: revise su conexión '
+                    'e inténtelo de nuevo.',
               ).of(context),
             );
           }
@@ -296,12 +329,20 @@ class _HomeTabState extends State<_HomeTab> {
               title: const S(
                 'No children linked yet',
                 'مفيش أبناء مرتبطين لسه',
+                fr: "Aucun enfant lié pour l'instant",
+                es: 'Aún no hay niños vinculados',
               ).of(context),
               message: const S(
                 'Tap "Add child" below to add one — your school will '
                     'review and approve it.',
                 'دوس على "إضافة طفل" تحت عشان تضيف واحد — مدرستك '
                     'هتراجعه وتوافق عليه.',
+                fr:
+                    'Appuyez sur « Ajouter un enfant » ci-dessous pour en '
+                    "ajouter un — votre école l'examinera et l'approuvera.",
+                es:
+                    'Toque "Agregar niño" abajo para añadir uno: su '
+                    'escuela lo revisará y aprobará.',
               ).of(context),
             );
           }
@@ -409,12 +450,27 @@ class _HomeTabState extends State<_HomeTab> {
     final hour = DateTime.now().hour;
     final name = user.name;
     if (hour < 12) {
-      return S('Good morning, $name', 'صباح الخير يا $name').of(context);
+      return S(
+        'Good morning, $name',
+        'صباح الخير يا $name',
+        fr: 'Bonjour, $name',
+        es: 'Buenos días, $name',
+      ).of(context);
     }
     if (hour < 17) {
-      return S('Good afternoon, $name', 'مساء الخير يا $name').of(context);
+      return S(
+        'Good afternoon, $name',
+        'مساء الخير يا $name',
+        fr: 'Bon après-midi, $name',
+        es: 'Buenas tardes, $name',
+      ).of(context);
     }
-    return S('Good evening, $name', 'مساء الخير يا $name').of(context);
+    return S(
+      'Good evening, $name',
+      'مساء الخير يا $name',
+      fr: 'Bonsoir, $name',
+      es: 'Buenas noches, $name',
+    ).of(context);
   }
 
   Future<void> _addChild(BuildContext context) async {
@@ -422,22 +478,45 @@ class _HomeTabState extends State<_HomeTab> {
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Add child', 'إضافة طفل').of(dialogContext)),
+        title: Text(
+          const S(
+            'Add child',
+            'إضافة طفل',
+            fr: 'Ajouter un enfant',
+            es: 'Agregar niño',
+          ).of(dialogContext),
+        ),
         content: TextField(
           controller: controller,
           autofocus: true,
           decoration: InputDecoration(
-            labelText: const S("Child's name", 'اسم الطفل').of(dialogContext),
+            labelText: const S(
+              "Child's name",
+              'اسم الطفل',
+              fr: "Nom de l'enfant",
+              es: 'Nombre del niño',
+            ).of(dialogContext),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+            child: Text(
+              const S(
+                'Cancel',
+                'إلغاء',
+                fr: 'Annuler',
+                es: 'Cancelar',
+              ).of(dialogContext),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: Text(const S('Add', 'إضافة').of(dialogContext)),
+            child: Text(
+              const S('Add', 'إضافة', fr: 'Ajouter', es: 'Agregar').of(
+                dialogContext,
+              ),
+            ),
           ),
         ],
       ),
@@ -492,10 +571,17 @@ class _TodayStrip extends StatelessWidget {
         ),
         Text(
           name != null
-              ? S('Showing $name', 'بنعرض $name').of(context)
+              ? S(
+                  'Showing $name',
+                  'بنعرض $name',
+                  fr: 'Affichage de $name',
+                  es: 'Mostrando a $name',
+                ).of(context)
               : S(
                   '$childCount ${childCount == 1 ? 'child' : 'children'}',
                   '$childCount من الأبناء',
+                  fr: '$childCount ${childCount == 1 ? 'enfant' : 'enfants'}',
+                  es: '$childCount ${childCount == 1 ? 'niño' : 'niños'}',
                 ).of(context),
           style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
         ),
@@ -521,7 +607,12 @@ class _NotificationsBell extends StatelessWidget {
         // — the bell still opens the inbox, which has its own error state.
         final unread = snapshot.data ?? 0;
         return IconButton(
-          tooltip: const S('Notifications', 'الإشعارات').of(context),
+          tooltip: const S(
+            'Notifications',
+            'الإشعارات',
+            fr: 'Notifications',
+            es: 'Notificaciones',
+          ).of(context),
           onPressed: () => Navigator.push(
             context,
             MaterialPageRoute(

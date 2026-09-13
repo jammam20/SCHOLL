@@ -36,7 +36,12 @@ class _RouteDeviationsPageState extends State<RouteDeviationsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          const S('Route deviations', 'الخروج عن المسار').of(context),
+          const S(
+            'Route deviations',
+            'الخروج عن المسار',
+            fr: "Écarts d'itinéraire",
+            es: 'Desvíos de ruta',
+          ).of(context),
         ),
       ),
       body: SchoolDirectoryBuilder(
@@ -69,6 +74,8 @@ class _RouteDeviationsPageState extends State<RouteDeviationsPage> {
                     title: const S(
                       'No route deviations recorded',
                       'مفيش خروج عن المسار متسجل',
+                      fr: "Aucun écart d'itinéraire enregistré",
+                      es: 'Sin desvíos de ruta registrados',
                     ).of(context),
                     message: const S(
                       'A record appears here each time a bus goes further '
@@ -76,6 +83,15 @@ class _RouteDeviationsPageState extends State<RouteDeviationsPage> {
                           'allows, and then returns to it.',
                       'بيتسجل هنا كل مرة أتوبيس يبعد عن مساره المتوقع أكتر '
                           'من حد السماح بتاع الخط وبعدين يرجع تاني.',
+                      fr:
+                          "Un enregistrement apparaît ici chaque fois qu'un "
+                          "bus s'éloigne de son trajet prévu au-delà de la "
+                          "tolérance de son itinéraire, puis y revient.",
+                      es:
+                          'Aparece un registro aquí cada vez que un autobús '
+                          'se aleja de su ruta prevista más de lo que '
+                          'permite la tolerancia de la ruta, y luego '
+                          'regresa a ella.',
                     ).of(context),
                   );
                 }
@@ -100,10 +116,14 @@ class _RouteDeviationsPageState extends State<RouteDeviationsPage> {
                           title: const S(
                             'Deviation history',
                             'سجل الخروج عن المسار',
+                            fr: "Historique des écarts",
+                            es: 'Historial de desvíos',
                           ).of(context),
                           subtitle: S(
                             'Showing ${visible.length} of ${all.length}',
                             'بيتعرض ${visible.length} من ${all.length}',
+                            fr: '${visible.length} sur ${all.length} affichés',
+                            es: 'Mostrando ${visible.length} de ${all.length}',
                           ).of(context),
                         ),
                         _DeviationFilters(
@@ -136,6 +156,8 @@ class _RouteDeviationsPageState extends State<RouteDeviationsPage> {
                             title: const S(
                               'No deviations match these filters.',
                               'مفيش سجلات مطابقة للفلاتر دي.',
+                              fr: 'Aucun écart ne correspond à ces filtres.',
+                              es: 'Ningún desvío coincide con estos filtros.',
                             ).of(context),
                           )
                         else
@@ -150,6 +172,8 @@ class _RouteDeviationsPageState extends State<RouteDeviationsPage> {
                               label: const S(
                                 'Load more',
                                 'حمّل المزيد',
+                                fr: 'Charger plus',
+                                es: 'Cargar más',
                               ).of(context),
                               icon: Icons.expand_more,
                               onPressed: () =>
@@ -226,7 +250,12 @@ class _DeviationSummary extends StatelessWidget {
           MetricStatCard(
             icon: Icons.alt_route,
             tone: colors.warning,
-            label: const S('Episodes', 'عدد المرات').of(context),
+            label: const S(
+              'Episodes',
+              'عدد المرات',
+              fr: 'Épisodes',
+              es: 'Episodios',
+            ).of(context),
             value: '${records.length}',
           ),
           MetricStatCard(
@@ -235,6 +264,8 @@ class _DeviationSummary extends StatelessWidget {
             label: const S(
               'Furthest off route',
               'أبعد مسافة عن المسار',
+              fr: "Plus grand écart de l'itinéraire",
+              es: 'Mayor desvío de la ruta',
             ).of(context),
             value: worst == null ? '—' : '${worst.round()} m',
           ),
@@ -243,6 +274,8 @@ class _DeviationSummary extends StatelessWidget {
             label: const S(
               'Average episode length',
               'متوسط مدة الخروج',
+              fr: 'Durée moyenne des épisodes',
+              es: 'Duración media de episodios',
             ).of(context),
             value: averageDuration == null
                 ? '—'
@@ -297,12 +330,24 @@ class _DeviationFilters extends StatelessWidget {
             initialValue: routeFilter,
             isDense: true,
             decoration: InputDecoration(
-              labelText: const S('Route', 'الخط').of(context),
+              labelText: const S(
+                'Route',
+                'الخط',
+                fr: 'Itinéraire',
+                es: 'Ruta',
+              ).of(context),
             ),
             items: [
               DropdownMenuItem<String?>(
                 value: null,
-                child: Text(const S('All routes', 'كل الخطوط').of(context)),
+                child: Text(
+                  const S(
+                    'All routes',
+                    'كل الخطوط',
+                    fr: 'Tous les itinéraires',
+                    es: 'Todas las rutas',
+                  ).of(context),
+                ),
               ),
               for (final id in routeIds)
                 DropdownMenuItem<String?>(
@@ -319,13 +364,23 @@ class _DeviationFilters extends StatelessWidget {
             initialValue: busFilter,
             isDense: true,
             decoration: InputDecoration(
-              labelText: const S('Bus', 'الأتوبيس').of(context),
+              labelText: const S(
+                'Bus',
+                'الأتوبيس',
+                fr: 'Bus',
+                es: 'Autobús',
+              ).of(context),
             ),
             items: [
               DropdownMenuItem<String?>(
                 value: null,
                 child: Text(
-                  const S('All buses', 'كل الأتوبيسات').of(context),
+                  const S(
+                    'All buses',
+                    'كل الأتوبيسات',
+                    fr: 'Tous les bus',
+                    es: 'Todos los autobuses',
+                  ).of(context),
                 ),
               ),
               for (final id in busIds)
@@ -340,7 +395,12 @@ class _DeviationFilters extends StatelessWidget {
         AppButton.secondary(
           icon: Icons.date_range_outlined,
           label: dateRange == null
-              ? const S('Any date', 'أي تاريخ').of(context)
+              ? const S(
+                  'Any date',
+                  'أي تاريخ',
+                  fr: 'Toute date',
+                  es: 'Cualquier fecha',
+                ).of(context)
               : '${DateFormat.yMMMd().format(dateRange!.start)} — '
                     '${DateFormat.yMMMd().format(dateRange!.end)}',
           onPressed: () async {
@@ -356,7 +416,12 @@ class _DeviationFilters extends StatelessWidget {
         ),
         if (dateRange != null)
           IconButton(
-            tooltip: const S('Clear dates', 'مسح التواريخ').of(context),
+            tooltip: const S(
+              'Clear dates',
+              'مسح التواريخ',
+              fr: 'Effacer les dates',
+              es: 'Borrar fechas',
+            ).of(context),
             icon: const Icon(Icons.close),
             onPressed: () => onDateRangeChanged(null),
           ),
@@ -433,15 +498,42 @@ class _DeviationTableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          cell(_flexWhen, const S('Started', 'بدأ').of(context)),
+          cell(
+            _flexWhen,
+            const S(
+              'Started',
+              'بدأ',
+              fr: 'Commencé',
+              es: 'Iniciado',
+            ).of(context),
+          ),
           cell(
             _flexContext,
-            const S('Route · bus · driver', 'الخط · الأتوبيس · السائق').of(
-              context,
-            ),
+            const S(
+              'Route · bus · driver',
+              'الخط · الأتوبيس · السائق',
+              fr: 'Itinéraire · bus · chauffeur',
+              es: 'Ruta · autobús · conductor',
+            ).of(context),
           ),
-          cell(_flexDistance, const S('Max distance', 'أقصى مسافة').of(context)),
-          cell(_flexDuration, const S('Duration', 'المدة').of(context)),
+          cell(
+            _flexDistance,
+            const S(
+              'Max distance',
+              'أقصى مسافة',
+              fr: 'Distance max',
+              es: 'Distancia máxima',
+            ).of(context),
+          ),
+          cell(
+            _flexDuration,
+            const S(
+              'Duration',
+              'المدة',
+              fr: 'Durée',
+              es: 'Duración',
+            ).of(context),
+          ),
         ],
       ),
     );
@@ -513,7 +605,12 @@ class _DeviationRow extends StatelessWidget {
           style: theme.textTheme.titleSmall?.copyWith(color: colors.warning),
         ),
         Text(
-          const S('furthest off path', 'أبعد نقطة').of(context),
+          const S(
+            'furthest off path',
+            'أبعد نقطة',
+            fr: "point le plus éloigné",
+            es: 'punto más alejado',
+          ).of(context),
           style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
         ),
       ],
@@ -521,9 +618,19 @@ class _DeviationRow extends StatelessWidget {
 
     final durationCell = Text(
       duration == null
-          ? const S('Ongoing', 'مستمر').of(context)
+          ? const S(
+              'Ongoing',
+              'مستمر',
+              fr: 'En cours',
+              es: 'En curso',
+            ).of(context)
           : duration.inMinutes < 1
-          ? const S('<1 min', 'أقل من دقيقة').of(context)
+          ? const S(
+              '<1 min',
+              'أقل من دقيقة',
+              fr: '<1 min',
+              es: '<1 min',
+            ).of(context)
           : '${duration.inMinutes} min',
       style: theme.textTheme.bodySmall,
     );

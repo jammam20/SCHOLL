@@ -91,6 +91,8 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
         const S(
           "Couldn't send that — check your connection and try again.",
           'معرفناش نبعتها — اتأكد من الاتصال وجرب تاني.',
+          fr: "Impossible de l'envoyer — vérifiez votre connexion et réessayez.",
+          es: 'No se pudo enviar — revise su conexión e inténtelo de nuevo.',
         ).of(context),
       );
     } finally {
@@ -152,17 +154,29 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
           children: [
             Text(
               thread.subject.isEmpty
-                  ? const S('General question', 'سؤال عام').of(context)
+                  ? const S(
+                      'General question',
+                      'سؤال عام',
+                      fr: 'Question générale',
+                      es: 'Pregunta general',
+                    ).of(context)
                   : thread.subject,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
               studentName == null || studentName.isEmpty
-                  ? const S('School office', 'إدارة المدرسة').of(context)
+                  ? const S(
+                      'School office',
+                      'إدارة المدرسة',
+                      fr: "Secrétariat de l'école",
+                      es: 'Oficina de la escuela',
+                    ).of(context)
                   : S(
                       'School office · about $studentName',
                       'إدارة المدرسة · بخصوص $studentName',
+                      fr: "Secrétariat de l'école · à propos de $studentName",
+                      es: 'Oficina de la escuela · sobre $studentName',
                     ).of(context),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -183,6 +197,10 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
               "You're talking to the school office — they pass anything the "
                   "driver needs to know on to them.",
               'انت بتكلم إدارة المدرسة — وهم اللي بيبلغوا السواق باللي يهمه.',
+              fr: "Vous parlez au secrétariat de l'école — il transmet au "
+                  "chauffeur ce qu'il doit savoir.",
+              es: 'Está hablando con la oficina de la escuela — le transmiten '
+                  'al conductor lo que necesite saber.',
             ).of(context),
           ),
           if (isClosed)
@@ -193,6 +211,8 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
               message: const S(
                 'The school marked this conversation closed.',
                 'المدرسة قفلت المحادثة دي.',
+                fr: "L'école a marqué cette conversation comme fermée.",
+                es: 'La escuela marcó esta conversación como cerrada.',
               ).of(context),
             ),
           Expanded(
@@ -206,6 +226,10 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
                           'connection and try again.',
                       'معرفناش نحمّل المحادثة دي — اتأكد من الاتصال وجرب '
                           'تاني.',
+                      fr: "Impossible de charger cette conversation — vérifiez "
+                          "votre connexion et réessayez.",
+                      es: 'No se pudo cargar esta conversación — revise su '
+                          'conexión e inténtelo de nuevo.',
                     ).of(context),
                   );
                 }
@@ -221,10 +245,14 @@ class _ParentThreadPageState extends State<ParentThreadPage> {
                     title: const S(
                       'No messages here yet',
                       'مفيش رسايل هنا لسه',
+                      fr: 'Aucun message pour le moment',
+                      es: 'Aún no hay mensajes aquí',
                     ).of(context),
                     message: const S(
                       'Write below and the school office will see it.',
                       'اكتب تحت وإدارة المدرسة هتشوفها.',
+                      fr: "Écrivez ci-dessous et le secrétariat de l'école le verra.",
+                      es: 'Escriba abajo y la oficina de la escuela lo verá.',
                     ).of(context),
                   );
                 }
@@ -380,8 +408,13 @@ class _DeliveryStatus extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             seenBySchool
-                ? const S('Seen by school', 'المدرسة شافتها').of(context)
-                : const S('Sent', 'اتبعتت').of(context),
+                ? const S(
+                    'Seen by school',
+                    'المدرسة شافتها',
+                    fr: "Vu par l'école",
+                    es: 'Visto por la escuela',
+                  ).of(context)
+                : const S('Sent', 'اتبعتت', fr: 'Envoyé', es: 'Enviado').of(context),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
               fontWeight: FontWeight.w700,
@@ -445,7 +478,12 @@ class _MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
-                  const S('School office', 'إدارة المدرسة').of(context),
+                  const S(
+                    'School office',
+                    'إدارة المدرسة',
+                    fr: "Secrétariat de l'école",
+                    es: 'Oficina de la escuela',
+                  ).of(context),
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: theme.colorScheme.primary,
@@ -546,6 +584,8 @@ class _ComposerState extends State<_Composer> {
                     hintText: const S(
                       'Write a message…',
                       'اكتب رسالة…',
+                      fr: 'Écrivez un message…',
+                      es: 'Escriba un mensaje…',
                     ).of(context),
                     filled: true,
                     fillColor: colors.background,
@@ -586,7 +626,7 @@ class _ComposerState extends State<_Composer> {
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  tooltip: const S('Send', 'ابعت').of(context),
+                  tooltip: const S('Send', 'ابعت', fr: 'Envoyer', es: 'Enviar').of(context),
                   onPressed: canSend ? widget.onSend : null,
                   icon: widget.sending
                       ? SizedBox(

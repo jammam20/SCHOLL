@@ -105,6 +105,8 @@ class ChildJourneyCard extends StatelessWidget {
                           const S(
                             'Awaiting school approval',
                             'في انتظار موافقة المدرسة',
+                            fr: "En attente d'approbation de l'école",
+                            es: 'A la espera de la aprobación de la escuela',
                           ).of(context),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colors.textSecondary,
@@ -115,7 +117,12 @@ class ChildJourneyCard extends StatelessWidget {
                 ),
                 if (student.approved && expanded)
                   IconButton(
-                    tooltip: const S('Child settings', 'إعدادات الطفل').of(
+                    tooltip: const S(
+                      'Child settings',
+                      'إعدادات الطفل',
+                      fr: "Paramètres de l'enfant",
+                      es: 'Ajustes del niño',
+                    ).of(
                       context,
                     ),
                     icon: const Icon(Icons.tune_rounded),
@@ -153,6 +160,8 @@ class ChildJourneyCard extends StatelessWidget {
         title: const S(
           'Transportation paused for this child',
           'خدمة النقل موقوفة لهذا الطفل',
+          fr: 'Transport suspendu pour cet enfant',
+          es: 'Transporte pausado para este niño',
         ).of(context),
         subtitle: const S(
           'Your school has paused bus service for this child, so they '
@@ -160,6 +169,14 @@ class ChildJourneyCard extends StatelessWidget {
               "this wasn't expected.",
           'مدرستك وقفت خدمة الأتوبيس للطفل ده، فمش هيظهر في أي خط أو '
               'رحلة. كلّم مدرستك لو ده مش متوقع.',
+          fr:
+              "L'école a suspendu le service de bus pour cet enfant : il "
+              "n'apparaîtra sur aucun trajet. Contactez l'école si cela "
+              'vous surprend.',
+          es:
+              'La escuela pausó el servicio de autobús para este niño, así '
+              'que no aparecerá en ninguna ruta ni viaje. Contacte a la '
+              'escuela si esto le sorprende.',
         ).of(context),
       );
     }
@@ -168,12 +185,25 @@ class ChildJourneyCard extends StatelessWidget {
       return _InfoBanner(
         icon: Icons.hourglass_top_rounded,
         tone: StatusTone.warning,
-        title: const S('Pending approval', 'في انتظار الموافقة').of(context),
+        title: const S(
+          'Pending approval',
+          'في انتظار الموافقة',
+          fr: "En attente d'approbation",
+          es: 'Pendiente de aprobación',
+        ).of(context),
         subtitle: const S(
           "Your school hasn't approved this child yet. Tracking, absences "
               'and trip alerts all switch on once they do.',
           'مدرستك لسه ما وافقتش على الطفل ده. المتابعة والغياب وتنبيهات '
               'الرحلة كلها هتشتغل أول ما توافق.',
+          fr:
+              "L'école n'a pas encore approuvé cet enfant. Le suivi, les "
+              "absences et les alertes de trajet s'activeront une fois "
+              'approuvé.',
+          es:
+              'La escuela aún no ha aprobado a este niño. El seguimiento, '
+              'las ausencias y las alertas de viaje se activarán en cuanto '
+              'lo apruebe.',
         ).of(context),
       );
     }
@@ -182,7 +212,12 @@ class ChildJourneyCard extends StatelessWidget {
       return _InfoBanner(
         icon: Icons.route_outlined,
         tone: StatusTone.neutral,
-        title: const S('No route assigned yet', 'لسه من غير خط سير').of(
+        title: const S(
+          'No route assigned yet',
+          'لسه من غير خط سير',
+          fr: 'Pas encore de trajet attribué',
+          es: 'Aún sin ruta asignada',
+        ).of(
           context,
         ),
         subtitle: const S(
@@ -190,6 +225,12 @@ class ChildJourneyCard extends StatelessWidget {
               "child to a bus and to today's trip.",
           'كلّم مدرستك تحدد خط سير — ده اللي بيربط الطفل ده بالأتوبيس '
               'وبرحلة النهاردة.',
+          fr:
+              "Demandez à l'école d'attribuer un trajet — c'est ce qui "
+              "relie cet enfant à un bus et au trajet du jour.",
+          es:
+              'Pida a la escuela que asigne una ruta: eso es lo que conecta '
+              'a este niño con un autobús y con el viaje de hoy.',
         ).of(context),
       );
     }
@@ -317,6 +358,12 @@ class _TripSectionState extends State<_TripSection> {
             message: const S(
               "Couldn't load this child's trip — check your connection.",
               'معرفناش نحمّل رحلة الطفل ده — اتأكد من الاتصال.',
+              fr:
+                  "Impossible de charger le trajet de cet enfant — "
+                  'vérifiez votre connexion.',
+              es:
+                  'No se pudo cargar el viaje de este niño: revise su '
+                  'conexión.',
             ).of(context),
           );
         }
@@ -353,12 +400,24 @@ class _TripSectionState extends State<_TripSection> {
               _InfoBanner(
                 icon: Icons.event_busy_rounded,
                 tone: StatusTone.warning,
-                title: const S('Absent today', 'غايب النهاردة').of(context),
+                title: const S(
+                  'Absent today',
+                  'غايب النهاردة',
+                  fr: "Absent aujourd'hui",
+                  es: 'Ausente hoy',
+                ).of(context),
                 subtitle: const S(
                   "The bus will skip this child's stop today. You can undo "
                       'this in child settings.',
                   'الأتوبيس هيتخطى محطة الطفل ده النهاردة. تقدر تلغي ده من '
                       'إعدادات الطفل.',
+                  fr:
+                      "Le bus sautera l'arrêt de cet enfant aujourd'hui. "
+                      "Vous pouvez annuler cela dans les paramètres de "
+                      "l'enfant.",
+                  es:
+                      'El autobús se saltará la parada de este niño hoy. '
+                      'Puede deshacerlo en los ajustes del niño.',
                 ).of(context),
               ),
               if (expanded) ...[
@@ -371,7 +430,12 @@ class _TripSectionState extends State<_TripSection> {
                 ),
               ] else
                 _CompactFooterAction(
-                  label: const S('View details', 'شوف التفاصيل').of(context),
+                  label: const S(
+                    'View details',
+                    'شوف التفاصيل',
+                    fr: 'Voir les détails',
+                    es: 'Ver detalles',
+                  ).of(context),
                   onPressed: onFocusRequested,
                 ),
             ],
@@ -478,7 +542,12 @@ class _CompactIdle extends StatelessWidget {
           TextButton(
             onPressed: onFocusRequested,
             child: Text(
-              const S('Details', 'التفاصيل').of(context),
+              const S(
+                'Details',
+                'التفاصيل',
+                fr: 'Détails',
+                es: 'Detalles',
+              ).of(context),
             ),
           ),
       ],
@@ -492,7 +561,12 @@ class _CompactIdle extends StatelessWidget {
     final trip = this.trip;
     if (trip == null || !isTripToday) {
       return (
-        const S('No trip on record today', 'مفيش رحلة مسجلة النهاردة'),
+        const S(
+          'No trip on record today',
+          'مفيش رحلة مسجلة النهاردة',
+          fr: "Aucun trajet enregistré aujourd'hui",
+          es: 'Sin viaje registrado hoy',
+        ),
         StatusTone.neutral,
       );
     }
@@ -502,17 +576,29 @@ class _CompactIdle extends StatelessWidget {
           S(
             'Scheduled for ${DateFormat.jm().format(trip.scheduledAt)}',
             'متجدولة الساعة ${DateFormat.jm().format(trip.scheduledAt)}',
+            fr: 'Prévu pour ${DateFormat.jm().format(trip.scheduledAt)}',
+            es: 'Programado para ${DateFormat.jm().format(trip.scheduledAt)}',
           ),
           StatusTone.info,
         );
       case TripStatus.cancelled:
         return (
-          const S("Today's trip was cancelled", 'رحلة النهاردة اتلغت'),
+          const S(
+            "Today's trip was cancelled",
+            'رحلة النهاردة اتلغت',
+            fr: "Le trajet d'aujourd'hui a été annulé",
+            es: 'El viaje de hoy fue cancelado',
+          ),
           StatusTone.error,
         );
       case TripStatus.completed:
         return (
-          const S("Today's trip is finished", 'رحلة النهاردة خلصت'),
+          const S(
+            "Today's trip is finished",
+            'رحلة النهاردة خلصت',
+            fr: "Le trajet d'aujourd'hui est terminé",
+            es: 'El viaje de hoy ha terminado',
+          ),
           StatusTone.success,
         );
       // Live statuses never reach this widget — _TripSection routes them
@@ -523,7 +609,12 @@ class _CompactIdle extends StatelessWidget {
       case TripStatus.paused:
       case TripStatus.emergency:
         return (
-          const S('Trip in progress', 'الرحلة شغالة'),
+          const S(
+            'Trip in progress',
+            'الرحلة شغالة',
+            fr: 'Trajet en cours',
+            es: 'Viaje en curso',
+          ),
           StatusTone.info,
         );
     }
@@ -636,6 +727,12 @@ class _ActiveJourneyState extends State<_ActiveJourney> {
             message: const S(
               "Couldn't load this trip's progress — check your connection.",
               'معرفناش نحمّل تقدم الرحلة — اتأكد من الاتصال.',
+              fr:
+                  "Impossible de charger l'avancement du trajet — "
+                  'vérifiez votre connexion.',
+              es:
+                  'No se pudo cargar el progreso del viaje: revise su '
+                  'conexión.',
             ).of(context),
           );
         }
@@ -830,7 +927,12 @@ class _Body extends StatelessWidget {
               onPressed: onFocusRequested,
               icon: const Icon(Icons.map_outlined, size: 18),
               label: Text(
-                const S('Track live', 'تابع مباشر').of(context),
+                const S(
+                  'Track live',
+                  'تابع مباشر',
+                  fr: 'Suivre en direct',
+                  es: 'Seguir en vivo',
+                ).of(context),
               ),
             ),
           ),
@@ -881,7 +983,12 @@ class _Body extends StatelessWidget {
                 _InfoBanner(
                   icon: Icons.location_off_outlined,
                   tone: StatusTone.neutral,
-                  title: const S('No map yet', 'مفيش خريطة لسه').of(context),
+                  title: const S(
+                    'No map yet',
+                    'مفيش خريطة لسه',
+                    fr: 'Pas encore de carte',
+                    es: 'Aún sin mapa',
+                  ).of(context),
                   subtitle: const S(
                     "Your school hasn't set a pickup point for this child, "
                         'so there is nowhere to track the bus against yet. '
@@ -889,6 +996,17 @@ class _Body extends StatelessWidget {
                     'المدرسة لسه ما حددتش نقطة استلام للطفل ده، فمفيش مكان '
                         'نتابع الأتوبيس بالنسبة له. الخطوات فوق لسه '
                         'بتتحدث مباشر.',
+                    fr:
+                        "L'école n'a pas encore défini de point de "
+                        "ramassage pour cet enfant, donc il n'y a rien à "
+                        'suivre sur la carte pour le moment. Les étapes '
+                        'ci-dessus continuent de se mettre à jour en '
+                        'direct.',
+                    es:
+                        'La escuela aún no ha definido un punto de '
+                        'recogida para este niño, así que todavía no hay '
+                        'nada que seguir en el mapa. Los pasos de arriba '
+                        'siguen actualizándose en vivo.',
                   ).of(context),
                 ),
               ],
@@ -1013,8 +1131,18 @@ class _Body extends StatelessWidget {
     // facts line so it costs no extra vertical space.
     final facts = <String>[
       trip.direction == TripDirection.returnTrip
-          ? const S('← Return home', '← رجوع للمنزل').of(context)
-          : const S('→ To school', '→ للمدرسة').of(context),
+          ? const S(
+              '← Return home',
+              '← رجوع للمنزل',
+              fr: '← Retour à la maison',
+              es: '← Regreso a casa',
+            ).of(context)
+          : const S(
+              '→ To school',
+              '→ للمدرسة',
+              fr: "→ Vers l'école",
+              es: '→ A la escuela',
+            ).of(context),
       if (trip.routeName.isNotEmpty) trip.routeName,
       if (trip.busName.isNotEmpty)
         trip.busPlateNumber.isEmpty
@@ -1039,6 +1167,12 @@ class _Body extends StatelessWidget {
                 '${trip.startedAt != null ? ' · started ${DateFormat.jm().format(trip.startedAt!)}' : ''}',
             'متجدولة ${DateFormat.jm().format(trip.scheduledAt)}'
                 '${trip.startedAt != null ? ' · بدأت ${DateFormat.jm().format(trip.startedAt!)}' : ''}',
+            fr:
+                'Prévu ${DateFormat.jm().format(trip.scheduledAt)}'
+                '${trip.startedAt != null ? ' · démarré ${DateFormat.jm().format(trip.startedAt!)}' : ''}',
+            es:
+                'Programado ${DateFormat.jm().format(trip.scheduledAt)}'
+                '${trip.startedAt != null ? ' · iniciado ${DateFormat.jm().format(trip.startedAt!)}' : ''}',
           ).of(context),
           style: theme.textTheme.bodySmall?.copyWith(
             color: colors.textMuted,
@@ -1071,10 +1205,17 @@ class _EtaChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final label = eta.inMinutes < 1
-        ? const S('Arriving now', 'بيوصل دلوقتي').of(context)
+        ? const S(
+            'Arriving now',
+            'بيوصل دلوقتي',
+            fr: 'Arrive maintenant',
+            es: 'Llegando ahora',
+          ).of(context)
         : S(
             'In ${eta.inMinutes} min',
             'خلال ${eta.inMinutes} د',
+            fr: 'Dans ${eta.inMinutes} min',
+            es: 'En ${eta.inMinutes} min',
           ).of(context);
 
     return Container(

@@ -98,16 +98,31 @@ class _VehicleManagementView extends StatelessWidget {
                   title: const S(
                     'No buses yet.',
                     'مفيش أتوبيسات لسه.',
+                    fr: "Pas encore de bus.",
+                    es: 'Aún no hay autobuses.',
                   ).of(context),
                   message: const S(
                     'Add your first bus to start tracking its documents, '
                         'maintenance and trip assignments.',
                     'ضيف أول أتوبيس عشان تبدأ تتابع أوراقه وصيانته '
                         'والرحلات المخصصة له.',
+                    fr:
+                        'Ajoutez votre premier bus pour commencer à suivre '
+                        'ses documents, son entretien et ses trajets '
+                        'assignés.',
+                    es:
+                        'Agregue su primer autobús para comenzar a hacer '
+                        'seguimiento de sus documentos, mantenimiento y '
+                        'viajes asignados.',
                   ).of(context),
                   actionLabel: readOnly
                       ? null
-                      : const S('Add bus', 'إضافة أتوبيس').of(context),
+                      : const S(
+                          'Add bus',
+                          'إضافة أتوبيس',
+                          fr: 'Ajouter un bus',
+                          es: 'Agregar autobús',
+                        ).of(context),
                   onAction: readOnly ? null : () => _createBus(context),
                 )
               : _FleetList(
@@ -121,7 +136,12 @@ class _VehicleManagementView extends StatelessWidget {
           appBar: showAppBar
               ? AppBar(
                   title: Text(
-                    const S('Vehicles', 'المركبات').of(context),
+                    const S(
+                      'Vehicles',
+                      'المركبات',
+                      fr: 'Véhicules',
+                      es: 'Vehículos',
+                    ).of(context),
                   ),
                 )
               : null,
@@ -135,7 +155,14 @@ class _VehicleManagementView extends StatelessWidget {
                   heroTag: 'vehicles-add-fab',
                   onPressed: () => _createBus(context),
                   icon: const Icon(Icons.add),
-                  label: Text(const S('Bus', 'أتوبيس').of(context)),
+                  label: Text(
+                    const S(
+                      'Bus',
+                      'أتوبيس',
+                      fr: 'Bus',
+                      es: 'Autobús',
+                    ).of(context),
+                  ),
                 ),
           body: body,
         );
@@ -153,7 +180,14 @@ class _VehicleManagementView extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Add bus', 'إضافة أتوبيس').of(dialogContext)),
+        title: Text(
+          const S(
+            'Add bus',
+            'إضافة أتوبيس',
+            fr: 'Ajouter un bus',
+            es: 'Agregar autobús',
+          ).of(dialogContext),
+        ),
         content: SizedBox(
           width: 420,
           child: Column(
@@ -162,7 +196,12 @@ class _VehicleManagementView extends StatelessWidget {
               TextField(
                 controller: name,
                 decoration: InputDecoration(
-                  labelText: const S('Name', 'الاسم').of(dialogContext),
+                  labelText: const S(
+                    'Name',
+                    'الاسم',
+                    fr: 'Nom',
+                    es: 'Nombre',
+                  ).of(dialogContext),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -172,6 +211,8 @@ class _VehicleManagementView extends StatelessWidget {
                   labelText: const S(
                     'Plate number',
                     'رقم اللوحة',
+                    fr: "Numéro d'immatriculation",
+                    es: 'Número de placa',
                   ).of(dialogContext),
                 ),
               ),
@@ -180,7 +221,12 @@ class _VehicleManagementView extends StatelessWidget {
                 controller: capacity,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: const S('Capacity', 'السعة').of(dialogContext),
+                  labelText: const S(
+                    'Capacity',
+                    'السعة',
+                    fr: 'Capacité',
+                    es: 'Capacidad',
+                  ).of(dialogContext),
                 ),
               ),
             ],
@@ -188,11 +234,21 @@ class _VehicleManagementView extends StatelessWidget {
         ),
         actions: [
           AppButton.secondary(
-            label: const S('Cancel', 'إلغاء').of(dialogContext),
+            label: const S(
+              'Cancel',
+              'إلغاء',
+              fr: 'Annuler',
+              es: 'Cancelar',
+            ).of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, false),
           ),
           AppButton.primary(
-            label: const S('Save', 'حفظ').of(dialogContext),
+            label: const S(
+              'Save',
+              'حفظ',
+              fr: 'Enregistrer',
+              es: 'Guardar',
+            ).of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, true),
           ),
         ],
@@ -275,6 +331,8 @@ class _FleetList extends StatelessWidget {
                     label: const S(
                       'Active vehicles',
                       'المركبات النشطة',
+                      fr: 'Véhicules actifs',
+                      es: 'Vehículos activos',
                     ).of(context),
                     value: '$active / ${buses.length}',
                   ),
@@ -284,6 +342,8 @@ class _FleetList extends StatelessWidget {
                     label: const S(
                       'Documents expiring or overdue',
                       'أوراق قربت تنتهي أو متأخرة',
+                      fr: 'Documents expirant ou en retard',
+                      es: 'Documentos por vencer o vencidos',
                     ).of(context),
                     value: '$needingAttention',
                   ),
@@ -293,6 +353,8 @@ class _FleetList extends StatelessWidget {
                     label: const S(
                       'No documents recorded',
                       'من غير أوراق مسجلة',
+                      fr: 'Aucun document enregistré',
+                      es: 'Sin documentos registrados',
                     ).of(context),
                     value: '$unprofiled',
                   ),
@@ -309,12 +371,25 @@ class _FleetList extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl2),
             SectionHeader(
-              title: const S('Fleet', 'الأسطول').of(context),
+              title: const S(
+                'Fleet',
+                'الأسطول',
+                fr: 'Flotte',
+                es: 'Flota',
+              ).of(context),
               subtitle: const S(
                 'Insurance, registration and inspection expiry at a glance. '
                     'Open a vehicle to edit its profile and maintenance log.',
                 'التأمين ورخصة التسيير والفحص في نظرة واحدة. افتح المركبة '
                     'عشان تعدّل بياناتها وسجل صيانتها.',
+                fr:
+                    "Expiration de l'assurance, de l'immatriculation et de "
+                    "l'inspection en un coup d'œil. Ouvrez un véhicule pour "
+                    "modifier son profil et son journal d'entretien.",
+                es:
+                    'Vencimiento del seguro, registro e inspección de un '
+                    'vistazo. Abra un vehículo para editar su perfil y '
+                    'registro de mantenimiento.',
               ).of(context),
             ),
             LayoutBuilder(
@@ -432,6 +507,8 @@ class _VehicleCard extends StatelessWidget {
                             S(
                               '${bus.capacity} seats',
                               '${bus.capacity} كرسي',
+                              fr: '${bus.capacity} places',
+                              es: '${bus.capacity} asientos',
                             ).of(context),
                         ].where((part) => part.isNotEmpty).join(' · '),
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -448,6 +525,12 @@ class _VehicleCard extends StatelessWidget {
                       'One or more documents expire within 30 days, or have '
                           'already expired.',
                       'فيه ورقة أو أكتر هتنتهي خلال 30 يوم أو منتهية خلاص.',
+                      fr:
+                          "Un ou plusieurs documents expirent dans les 30 "
+                          "jours, ou ont déjà expiré.",
+                      es:
+                          'Uno o más documentos vencen dentro de 30 días, o '
+                          'ya han vencido.',
                     ).of(context),
                     child: Icon(
                       Icons.warning_amber_rounded,
@@ -458,17 +541,32 @@ class _VehicleCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             _ExpiryRow(
-              label: const S('Insurance', 'التأمين').of(context),
+              label: const S(
+                'Insurance',
+                'التأمين',
+                fr: 'Assurance',
+                es: 'Seguro',
+              ).of(context),
               expiry: bus.insuranceExpiry,
               now: now,
             ),
             _ExpiryRow(
-              label: const S('Registration', 'رخصة التسيير').of(context),
+              label: const S(
+                'Registration',
+                'رخصة التسيير',
+                fr: 'Immatriculation',
+                es: 'Registro',
+              ).of(context),
               expiry: bus.registrationExpiry,
               now: now,
             ),
             _ExpiryRow(
-              label: const S('Inspection', 'الفحص الفني').of(context),
+              label: const S(
+                'Inspection',
+                'الفحص الفني',
+                fr: 'Inspection',
+                es: 'Inspección',
+              ).of(context),
               expiry: bus.inspectionExpiry,
               now: now,
             ),
@@ -477,8 +575,18 @@ class _VehicleCard extends StatelessWidget {
               children: [
                 StatusBadge(
                   label: bus.isActive
-                      ? const S('Active', 'نشطة').of(context)
-                      : const S('Inactive', 'غير نشطة').of(context),
+                      ? const S(
+                          'Active',
+                          'نشطة',
+                          fr: 'Actif',
+                          es: 'Activo',
+                        ).of(context)
+                      : const S(
+                          'Inactive',
+                          'غير نشطة',
+                          fr: 'Inactif',
+                          es: 'Inactivo',
+                        ).of(context),
                   tone: bus.isActive ? StatusTone.success : StatusTone.neutral,
                 ),
                 const Spacer(),
@@ -533,7 +641,12 @@ class _ExpiryRow extends StatelessWidget {
           ),
           if (expiry == null)
             Text(
-              const S('Not recorded', 'مش مسجلة').of(context),
+              const S(
+                'Not recorded',
+                'مش مسجلة',
+                fr: 'Non enregistré',
+                es: 'No registrado',
+              ).of(context),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.textMuted,
               ),

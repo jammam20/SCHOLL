@@ -29,8 +29,9 @@ class VehicleDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => VehicleDetailBloc(VehiclesRepository())
-        ..add(VehicleDetailStarted(schoolId: schoolId, busId: busId)),
+      create: (_) =>
+          VehicleDetailBloc(VehiclesRepository())
+            ..add(VehicleDetailStarted(schoolId: schoolId, busId: busId)),
       child: _VehicleDetailView(schoolId: schoolId, busId: busId),
     );
   }
@@ -60,25 +61,38 @@ class _VehicleDetailView extends StatelessWidget {
           VehicleDetailAction.profileSaved => const S(
             'Vehicle profile saved.',
             'تم حفظ بيانات المركبة.',
+            fr: 'Profil du véhicule enregistré.',
+            es: 'Perfil del vehículo guardado.',
           ).of(context),
           VehicleDetailAction.maintenanceAdded => const S(
             'Maintenance item added.',
             'تمت إضافة بند الصيانة.',
+            fr: "Élément de maintenance ajouté.",
+            es: 'Elemento de mantenimiento añadido.',
           ).of(context),
           VehicleDetailAction.maintenanceCompleted => const S(
             'Marked complete.',
             'تم تسجيله كمنجز.',
+            fr: 'Marqué comme terminé.',
+            es: 'Marcado como completado.',
           ).of(context),
           VehicleDetailAction.maintenanceDeleted => const S(
             'Record deleted.',
             'تم مسح السجل.',
+            fr: 'Enregistrement supprimé.',
+            es: 'Registro eliminado.',
           ).of(context),
         });
       },
       builder: (context, state) {
         final title = state is VehicleDetailLoaded
             ? state.bus.name
-            : const S('Vehicle', 'المركبة').of(context);
+            : const S(
+                'Vehicle',
+                'المركبة',
+                fr: 'Véhicule',
+                es: 'Vehículo',
+              ).of(context);
 
         Widget body;
         if (state is VehicleDetailLoading || state is VehicleDetailInitial) {
@@ -94,10 +108,14 @@ class _VehicleDetailView extends StatelessWidget {
                   title: const S(
                     'This bus no longer exists.',
                     'الأتوبيس ده مبقاش موجود.',
+                    fr: "Ce bus n'existe plus.",
+                    es: 'Este autobús ya no existe.',
                   ).of(context),
                   message: const S(
                     'It may have been removed while this page was open.',
                     'يمكن يكون اتشال والصفحة دي مفتوحة.',
+                    fr: 'Il a peut-être été supprimé pendant que cette page était ouverte.',
+                    es: 'Puede haber sido eliminado mientras esta página estaba abierta.',
                   ).of(context),
                 )
               : ErrorStateView(
@@ -115,7 +133,10 @@ class _VehicleDetailView extends StatelessWidget {
           );
         }
 
-        return Scaffold(appBar: AppBar(title: Text(title)), body: body);
+        return Scaffold(
+          appBar: AppBar(title: Text(title)),
+          body: body,
+        );
       },
     );
   }
@@ -212,9 +233,8 @@ class _DocumentSummary extends StatelessWidget {
     final overdue = openItems.where((item) => item.isOverdue(now)).length;
     final dueSoon = openItems.where((item) => item.isDueSoon(now)).length;
 
-    String expiryValue(DateTime? expiry) => expiry == null
-        ? '—'
-        : DateFormat.yMMMd().format(expiry);
+    String expiryValue(DateTime? expiry) =>
+        expiry == null ? '—' : DateFormat.yMMMd().format(expiry);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -226,7 +246,12 @@ class _DocumentSummary extends StatelessWidget {
           MetricStatCard(
             icon: Icons.shield_outlined,
             tone: toneColor(colors, dueDateTone(bus.insuranceExpiry, now)),
-            label: const S('Insurance expiry', 'انتهاء التأمين').of(context),
+            label: const S(
+              'Insurance expiry',
+              'انتهاء التأمين',
+              fr: "Expiration de l'assurance",
+              es: 'Vencimiento del seguro',
+            ).of(context),
             value: expiryValue(bus.insuranceExpiry),
           ),
           MetricStatCard(
@@ -235,13 +260,20 @@ class _DocumentSummary extends StatelessWidget {
             label: const S(
               'Registration expiry',
               'انتهاء رخصة التسيير',
+              fr: "Expiration de l'immatriculation",
+              es: 'Vencimiento de la matriculación',
             ).of(context),
             value: expiryValue(bus.registrationExpiry),
           ),
           MetricStatCard(
             icon: Icons.fact_check_outlined,
             tone: toneColor(colors, dueDateTone(bus.inspectionExpiry, now)),
-            label: const S('Inspection expiry', 'انتهاء الفحص').of(context),
+            label: const S(
+              'Inspection expiry',
+              'انتهاء الفحص',
+              fr: "Expiration de l'inspection",
+              es: 'Vencimiento de la inspección',
+            ).of(context),
             value: expiryValue(bus.inspectionExpiry),
           ),
           MetricStatCard(
@@ -254,11 +286,15 @@ class _DocumentSummary extends StatelessWidget {
             label: const S(
               'Open maintenance items',
               'بنود صيانة مفتوحة',
+              fr: 'Éléments de maintenance ouverts',
+              es: 'Elementos de mantenimiento abiertos',
             ).of(context),
             value: overdue > 0
                 ? S(
                     '${openItems.length} ($overdue overdue)',
                     '${openItems.length} ($overdue متأخر)',
+                    fr: '${openItems.length} ($overdue en retard)',
+                    es: '${openItems.length} ($overdue atrasados)',
                   ).of(context)
                 : '${openItems.length}',
           ),
@@ -346,16 +382,28 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            title: const S('Vehicle profile', 'بيانات المركبة').of(context),
+            title: const S(
+              'Vehicle profile',
+              'بيانات المركبة',
+              fr: 'Profil du véhicule',
+              es: 'Perfil del vehículo',
+            ).of(context),
             subtitle: S(
               '${widget.bus.name} · ${widget.bus.plateNumber}',
               '${widget.bus.name} · ${widget.bus.plateNumber}',
+              fr: '${widget.bus.name} · ${widget.bus.plateNumber}',
+              es: '${widget.bus.name} · ${widget.bus.plateNumber}',
             ).of(context),
           ),
           TextField(
             controller: _model,
             decoration: InputDecoration(
-              labelText: const S('Model', 'الموديل').of(context),
+              labelText: const S(
+                'Model',
+                'الموديل',
+                fr: 'Modèle',
+                es: 'Modelo',
+              ).of(context),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -366,7 +414,12 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
                   controller: _year,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: const S('Year', 'سنة الصنع').of(context),
+                    labelText: const S(
+                      'Year',
+                      'سنة الصنع',
+                      fr: 'Année',
+                      es: 'Año',
+                    ).of(context),
                   ),
                 ),
               ),
@@ -376,7 +429,12 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
                   controller: _capacity,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: const S('Capacity', 'السعة').of(context),
+                    labelText: const S(
+                      'Capacity',
+                      'السعة',
+                      fr: 'Capacité',
+                      es: 'Capacidad',
+                    ).of(context),
                   ),
                 ),
               ),
@@ -406,13 +464,20 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
                   labelText: const S(
                     'Assigned driver',
                     'السائق المخصص',
+                    fr: 'Chauffeur assigné',
+                    es: 'Conductor asignado',
                   ).of(context),
                 ),
                 items: [
                   DropdownMenuItem<String?>(
                     value: null,
                     child: Text(
-                      const S('No assigned driver', 'من غير سائق').of(context),
+                      const S(
+                        'No assigned driver',
+                        'من غير سائق',
+                        fr: 'Aucun chauffeur assigné',
+                        es: 'Sin conductor asignado',
+                      ).of(context),
                     ),
                   ),
                   for (final doc in drivers)
@@ -429,7 +494,12 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
           ),
           const SizedBox(height: AppSpacing.xl),
           _DateField(
-            label: const S('Insurance expiry', 'انتهاء التأمين').of(context),
+            label: const S(
+              'Insurance expiry',
+              'انتهاء التأمين',
+              fr: "Expiration de l'assurance",
+              es: 'Vencimiento del seguro',
+            ).of(context),
             value: _insuranceExpiry,
             onChanged: (value) => setState(() => _insuranceExpiry = value),
           ),
@@ -438,13 +508,20 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
             label: const S(
               'Registration expiry',
               'انتهاء رخصة التسيير',
+              fr: "Expiration de l'immatriculation",
+              es: 'Vencimiento de la matriculación',
             ).of(context),
             value: _registrationExpiry,
             onChanged: (value) => setState(() => _registrationExpiry = value),
           ),
           const SizedBox(height: AppSpacing.md),
           _DateField(
-            label: const S('Inspection expiry', 'انتهاء الفحص').of(context),
+            label: const S(
+              'Inspection expiry',
+              'انتهاء الفحص',
+              fr: "Expiration de l'inspection",
+              es: 'Vencimiento de la inspección',
+            ).of(context),
             value: _inspectionExpiry,
             onChanged: (value) => setState(() => _inspectionExpiry = value),
           ),
@@ -460,10 +537,15 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
                         '${DateFormat.yMMMd().format(widget.bus.lastMaintenanceAt!)}',
                     'آخر صيانة '
                         '${DateFormat.yMMMd().format(widget.bus.lastMaintenanceAt!)}',
+                    fr:
+                        'Dernière maintenance '
+                        '${DateFormat.yMMMd().format(widget.bus.lastMaintenanceAt!)}',
+                    es:
+                        'Último mantenimiento '
+                        '${DateFormat.yMMMd().format(widget.bus.lastMaintenanceAt!)}',
                   ).of(context),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.textSecondary,
-                  ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: colors.textSecondary),
                 ),
               ],
             ),
@@ -471,7 +553,12 @@ class _VehicleProfileCardState extends State<_VehicleProfileCard> {
           const SizedBox(height: AppSpacing.xl),
           AppButton.primary(
             icon: Icons.save_outlined,
-            label: const S('Save profile', 'حفظ البيانات').of(context),
+            label: const S(
+              'Save profile',
+              'حفظ البيانات',
+              fr: 'Enregistrer le profil',
+              es: 'Guardar perfil',
+            ).of(context),
             onPressed: _save,
           ),
         ],
@@ -518,14 +605,24 @@ class _DateField extends StatelessWidget {
           suffixIcon: value == null
               ? const Icon(Icons.event_outlined)
               : IconButton(
-                  tooltip: const S('Clear', 'مسح').of(context),
+                  tooltip: const S(
+                    'Clear',
+                    'مسح',
+                    fr: 'Effacer',
+                    es: 'Borrar',
+                  ).of(context),
                   icon: const Icon(Icons.close),
                   onPressed: () => onChanged(null),
                 ),
         ),
         child: Text(
           value == null
-              ? const S('Not set', 'مش متحدد').of(context)
+              ? const S(
+                  'Not set',
+                  'مش متحدد',
+                  fr: 'Non défini',
+                  es: 'No establecido',
+                ).of(context)
               : DateFormat.yMMMd().format(value!),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: value == null ? colors.textMuted : colors.textPrimary,
@@ -566,10 +663,20 @@ class _MaintenanceLogCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            title: const S('Maintenance log', 'سجل الصيانة').of(context),
+            title: const S(
+              'Maintenance log',
+              'سجل الصيانة',
+              fr: 'Journal de maintenance',
+              es: 'Registro de mantenimiento',
+            ).of(context),
             trailing: AppButton.secondary(
               icon: Icons.add,
-              label: const S('Add item', 'إضافة بند').of(context),
+              label: const S(
+                'Add item',
+                'إضافة بند',
+                fr: 'Ajouter un élément',
+                es: 'Añadir elemento',
+              ).of(context),
               onPressed: () => _addItem(context),
             ),
           ),
@@ -580,21 +687,35 @@ class _MaintenanceLogCard extends StatelessWidget {
               title: const S(
                 'Nothing scheduled yet.',
                 'مفيش حاجة متجدولة لسه.',
+                fr: "Rien n'est encore programmé.",
+                es: 'Nada programado todavía.',
               ).of(context),
               message: const S(
                 'Add an oil change, tire, brake, inspection, insurance or '
                     'registration item with its due date.',
                 'ضيف بند تغيير زيت أو كاوتش أو فرامل أو فحص أو تأمين أو '
                     'رخصة تسيير بتاريخ استحقاقه.',
+                fr:
+                    "Ajoutez une vidange, un pneu, un frein, une inspection, "
+                    "une assurance ou une immatriculation avec sa date "
+                    "d'échéance.",
+                es:
+                    'Añada un cambio de aceite, neumático, freno, '
+                    'inspección, seguro o matriculación con su fecha de '
+                    'vencimiento.',
               ).of(context),
             )
           else ...[
             if (open.isNotEmpty) ...[
               Text(
-                const S('Due', 'مستحق').of(context).toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.textSecondary,
-                ),
+                const S(
+                  'Due',
+                  'مستحق',
+                  fr: 'Échéance',
+                  es: 'Vencimiento',
+                ).of(context).toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: colors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.sm),
               for (final record in open)
@@ -609,10 +730,14 @@ class _MaintenanceLogCard extends StatelessWidget {
             if (completed.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.lg),
               Text(
-                const S('Completed', 'مكتمل').of(context).toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: colors.textSecondary,
-                ),
+                const S(
+                  'Completed',
+                  'مكتمل',
+                  fr: 'Terminé',
+                  es: 'Completado',
+                ).of(context).toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall
+                    ?.copyWith(color: colors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.sm),
               for (final record in completed.take(10))
@@ -717,6 +842,12 @@ class _MaintenanceTile extends StatelessWidget {
                     label: S(
                       'Completed ${DateFormat.yMMMd().format(record.completedAt!)}',
                       'اكتمل ${DateFormat.yMMMd().format(record.completedAt!)}',
+                      fr:
+                          'Terminé le '
+                          '${DateFormat.yMMMd().format(record.completedAt!)}',
+                      es:
+                          'Completado el '
+                          '${DateFormat.yMMMd().format(record.completedAt!)}',
                     ).of(context),
                     tone: StatusTone.success,
                   )
@@ -751,12 +882,22 @@ class _MaintenanceTile extends StatelessWidget {
           ),
           if (!record.isCompleted)
             AppButton.secondary(
-              label: const S('Complete', 'تم').of(context),
+              label: const S(
+                'Complete',
+                'تم',
+                fr: 'Terminer',
+                es: 'Completar',
+              ).of(context),
               onPressed: () => _complete(context),
             )
           else
             IconButton(
-              tooltip: const S('Delete record', 'حذف السجل').of(context),
+              tooltip: const S(
+                'Delete record',
+                'حذف السجل',
+                fr: "Supprimer l'enregistrement",
+                es: 'Eliminar registro',
+              ).of(context),
               icon: Icon(Icons.delete_outline, color: colors.textMuted),
               onPressed: () => _delete(context),
             ),
@@ -792,14 +933,27 @@ class _MaintenanceTile extends StatelessWidget {
       title: const S(
         'Delete this record?',
         'تمسح السجل ده؟',
+        fr: 'Supprimer cet enregistrement ?',
+        es: '¿Eliminar este registro?',
       ).of(context),
       message: const S(
         'This removes the completed maintenance record from this vehicle’s '
             'history. This cannot be undone.',
         'ده هيشيل سجل الصيانة المكتمل من تاريخ المركبة دي. الإجراء ده '
             'مينفعش يتراجع فيه.',
+        fr:
+            "Ceci supprime l'enregistrement de maintenance terminé de "
+            "l'historique de ce véhicule. Cette action est irréversible.",
+        es:
+            'Esto elimina el registro de mantenimiento completado del '
+            'historial de este vehículo. Esta acción no se puede deshacer.',
       ).of(context),
-      confirmLabel: const S('Delete', 'مسح').of(context),
+      confirmLabel: const S(
+        'Delete',
+        'مسح',
+        fr: 'Supprimer',
+        es: 'Eliminar',
+      ).of(context),
       destructive: true,
     );
     if (confirmed != true) return;
@@ -852,7 +1006,12 @@ class _MaintenanceDialogState extends State<_MaintenanceDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        const S('Add maintenance item', 'إضافة بند صيانة').of(context),
+        const S(
+          'Add maintenance item',
+          'إضافة بند صيانة',
+          fr: 'Ajouter un élément de maintenance',
+          es: 'Añadir elemento de mantenimiento',
+        ).of(context),
       ),
       content: SizedBox(
         width: 440,
@@ -864,7 +1023,12 @@ class _MaintenanceDialogState extends State<_MaintenanceDialog> {
               DropdownButtonFormField<MaintenanceItemType>(
                 initialValue: _itemType,
                 decoration: InputDecoration(
-                  labelText: const S('Item', 'البند').of(context),
+                  labelText: const S(
+                    'Item',
+                    'البند',
+                    fr: 'Élément',
+                    es: 'Elemento',
+                  ).of(context),
                 ),
                 items: [
                   for (final type in MaintenanceItemType.values)
@@ -878,7 +1042,12 @@ class _MaintenanceDialogState extends State<_MaintenanceDialog> {
               ),
               const SizedBox(height: AppSpacing.md),
               _DateField(
-                label: const S('Due date', 'تاريخ الاستحقاق').of(context),
+                label: const S(
+                  'Due date',
+                  'تاريخ الاستحقاق',
+                  fr: "Date d'échéance",
+                  es: 'Fecha de vencimiento',
+                ).of(context),
                 value: _dueAt,
                 onChanged: (value) {
                   if (value != null) setState(() => _dueAt = value);
@@ -888,7 +1057,12 @@ class _MaintenanceDialogState extends State<_MaintenanceDialog> {
               TextField(
                 controller: _description,
                 decoration: InputDecoration(
-                  labelText: const S('Description', 'الوصف').of(context),
+                  labelText: const S(
+                    'Description',
+                    'الوصف',
+                    fr: 'Description',
+                    es: 'Descripción',
+                  ).of(context),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -897,7 +1071,12 @@ class _MaintenanceDialogState extends State<_MaintenanceDialog> {
                 minLines: 2,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  labelText: const S('Notes', 'ملاحظات').of(context),
+                  labelText: const S(
+                    'Notes',
+                    'ملاحظات',
+                    fr: 'Notes',
+                    es: 'Notas',
+                  ).of(context),
                 ),
               ),
             ],
@@ -906,11 +1085,21 @@ class _MaintenanceDialogState extends State<_MaintenanceDialog> {
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Cancel', 'إلغاء').of(context),
+          label: const S(
+            'Cancel',
+            'إلغاء',
+            fr: 'Annuler',
+            es: 'Cancelar',
+          ).of(context),
           onPressed: () => Navigator.pop(context),
         ),
         AppButton.primary(
-          label: const S('Add', 'إضافة').of(context),
+          label: const S(
+            'Add',
+            'إضافة',
+            fr: 'Ajouter',
+            es: 'Añadir',
+          ).of(context),
           onPressed: () => Navigator.pop(
             context,
             _MaintenanceDraft(
@@ -969,6 +1158,12 @@ class _CompleteMaintenanceDialogState
         S(
           'Complete ${maintenanceItemLabel(widget.record.itemType, context)}',
           'إنهاء ${maintenanceItemLabel(widget.record.itemType, context)}',
+          fr:
+              'Terminer '
+              '${maintenanceItemLabel(widget.record.itemType, context)}',
+          es:
+              'Completar '
+              '${maintenanceItemLabel(widget.record.itemType, context)}',
         ).of(context),
       ),
       content: SizedBox(
@@ -985,24 +1180,47 @@ class _CompleteMaintenanceDialogState
                             'document status and schedules the next item.',
                         'حدد تاريخ الانتهاء الجديد. ده هيحدّث حالة أوراق '
                             'المركبة ويجدول البند اللي بعده.',
+                        fr:
+                            "Définissez la nouvelle date d'expiration. Cela "
+                            "met à jour l'état des documents de ce véhicule "
+                            "et planifie l'élément suivant.",
+                        es:
+                            'Establezca la nueva fecha de vencimiento. Esto '
+                            'actualiza el estado de los documentos de este '
+                            'vehículo y programa el siguiente elemento.',
                       ).of(context)
                     : const S(
                         'Set when this is next due to schedule the following '
                             'item, or clear it to just close this one.',
                         'حدد إمتى البند ده مستحق تاني عشان يتجدول، أو امسح '
                             'التاريخ عشان تقفل البند ده بس.',
+                        fr:
+                            "Définissez la prochaine échéance pour planifier "
+                            "l'élément suivant, ou effacez-la pour simplement "
+                            "clore celui-ci.",
+                        es:
+                            'Establezca cuándo vence lo siguiente para '
+                            'programar el próximo elemento, o bórrelo para '
+                            'simplemente cerrar este.',
                       ).of(context),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: context.appColors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.lg),
               _DateField(
                 label: _updatesVehicleDocument
-                    ? const S('New expiry date', 'تاريخ الانتهاء الجديد').of(
-                        context,
-                      )
-                    : const S('Next due date', 'الاستحقاق الجاي').of(context),
+                    ? const S(
+                        'New expiry date',
+                        'تاريخ الانتهاء الجديد',
+                        fr: "Nouvelle date d'expiration",
+                        es: 'Nueva fecha de vencimiento',
+                      ).of(context)
+                    : const S(
+                        'Next due date',
+                        'الاستحقاق الجاي',
+                        fr: "Prochaine date d'échéance",
+                        es: 'Próxima fecha de vencimiento',
+                      ).of(context),
                 value: _nextDueAt,
                 onChanged: (value) => setState(() => _nextDueAt = value),
               ),
@@ -1012,7 +1230,12 @@ class _CompleteMaintenanceDialogState
                 minLines: 2,
                 maxLines: 4,
                 decoration: InputDecoration(
-                  labelText: const S('Notes', 'ملاحظات').of(context),
+                  labelText: const S(
+                    'Notes',
+                    'ملاحظات',
+                    fr: 'Notes',
+                    es: 'Notas',
+                  ).of(context),
                 ),
               ),
             ],
@@ -1021,11 +1244,21 @@ class _CompleteMaintenanceDialogState
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Cancel', 'إلغاء').of(context),
+          label: const S(
+            'Cancel',
+            'إلغاء',
+            fr: 'Annuler',
+            es: 'Cancelar',
+          ).of(context),
           onPressed: () => Navigator.pop(context),
         ),
         AppButton.primary(
-          label: const S('Mark complete', 'تم الإنجاز').of(context),
+          label: const S(
+            'Mark complete',
+            'تم الإنجاز',
+            fr: 'Marquer comme terminé',
+            es: 'Marcar como completado',
+          ).of(context),
           onPressed: () => Navigator.pop(
             context,
             _CompletionDraft(

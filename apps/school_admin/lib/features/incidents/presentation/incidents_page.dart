@@ -130,7 +130,12 @@ class _IncidentsViewState extends State<_IncidentsView> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              const S('Incidents', 'الحوادث والبلاغات').of(context),
+              const S(
+                'Incidents',
+                'الحوادث والبلاغات',
+                fr: 'Incidents',
+                es: 'Incidentes',
+              ).of(context),
             ),
           ),
           body: body,
@@ -175,12 +180,21 @@ class _IncidentsBody extends StatelessWidget {
         title: const S(
           'No incidents reported',
           'مفيش بلاغات',
+          fr: 'Aucun incident signalé',
+          es: 'No hay incidentes reportados',
         ).of(context),
         message: const S(
           'Incidents filed by drivers during a trip appear here for you to '
               'acknowledge and resolve.',
           'البلاغات اللي السواقين بيسجلوها أثناء الرحلة هتظهر هنا عشان '
               'تطلع عليها وتحلها.',
+          fr:
+              'Les incidents signalés par les chauffeurs pendant un trajet '
+              'apparaissent ici pour que vous puissiez les accuser réception '
+              'et les résoudre.',
+          es:
+              'Los incidentes reportados por los conductores durante un '
+              'viaje aparecen aquí para que usted los reconozca y resuelva.',
         ).of(context),
       );
     }
@@ -219,6 +233,8 @@ class _IncidentsBody extends StatelessWidget {
                     label: const S(
                       'Awaiting acknowledgement',
                       'في انتظار الاطلاع',
+                      fr: "En attente d'accusé de réception",
+                      es: 'Esperando confirmación',
                     ).of(context),
                     value: '$reported',
                   ),
@@ -228,13 +244,20 @@ class _IncidentsBody extends StatelessWidget {
                     label: const S(
                       'Acknowledged, open',
                       'تم الاطلاع، لسه مفتوحة',
+                      fr: 'Accusé de réception, ouvert',
+                      es: 'Confirmado, abierto',
                     ).of(context),
                     value: '$acknowledged',
                   ),
                   MetricStatCard(
                     icon: Icons.task_alt,
                     tone: colors.success,
-                    label: const S('Resolved', 'تم حلها').of(context),
+                    label: const S(
+                      'Resolved',
+                      'تم حلها',
+                      fr: 'Résolu',
+                      es: 'Resuelto',
+                    ).of(context),
                     value: '$resolved',
                   ),
                 ];
@@ -250,10 +273,17 @@ class _IncidentsBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl2),
             SectionHeader(
-              title: const S('Incident log', 'سجل البلاغات').of(context),
+              title: const S(
+                'Incident log',
+                'سجل البلاغات',
+                fr: 'Journal des incidents',
+                es: 'Registro de incidentes',
+              ).of(context),
               subtitle: S(
                 'Showing ${visible.length} of ${all.length}',
                 'بيتعرض ${visible.length} من ${all.length}',
+                fr: '${visible.length} affichés sur ${all.length}',
+                es: 'Mostrando ${visible.length} de ${all.length}',
               ).of(context),
             ),
             Wrap(
@@ -267,13 +297,23 @@ class _IncidentsBody extends StatelessWidget {
                     initialValue: statusFilter,
                     isDense: true,
                     decoration: InputDecoration(
-                      labelText: const S('Status', 'الحالة').of(context),
+                      labelText: const S(
+                        'Status',
+                        'الحالة',
+                        fr: 'Statut',
+                        es: 'Estado',
+                      ).of(context),
                     ),
                     items: [
                       DropdownMenuItem<IncidentStatus?>(
                         value: null,
                         child: Text(
-                          const S('All statuses', 'كل الحالات').of(context),
+                          const S(
+                            'All statuses',
+                            'كل الحالات',
+                            fr: 'Tous les statuts',
+                            es: 'Todos los estados',
+                          ).of(context),
                         ),
                       ),
                       for (final status in IncidentStatus.values)
@@ -291,13 +331,23 @@ class _IncidentsBody extends StatelessWidget {
                     initialValue: typeFilter,
                     isDense: true,
                     decoration: InputDecoration(
-                      labelText: const S('Type', 'النوع').of(context),
+                      labelText: const S(
+                        'Type',
+                        'النوع',
+                        fr: 'Type',
+                        es: 'Tipo',
+                      ).of(context),
                     ),
                     items: [
                       DropdownMenuItem<IncidentType?>(
                         value: null,
                         child: Text(
-                          const S('All types', 'كل الأنواع').of(context),
+                          const S(
+                            'All types',
+                            'كل الأنواع',
+                            fr: 'Tous les types',
+                            es: 'Todos los tipos',
+                          ).of(context),
                         ),
                       ),
                       for (final type in IncidentType.values)
@@ -319,6 +369,8 @@ class _IncidentsBody extends StatelessWidget {
                 title: const S(
                   'No incidents match these filters.',
                   'مفيش بلاغات مطابقة للفلاتر دي.',
+                  fr: 'Aucun incident ne correspond à ces filtres.',
+                  es: 'Ningún incidente coincide con estos filtros.',
                 ).of(context),
               )
             else
@@ -354,7 +406,12 @@ class _IncidentsBody extends StatelessWidget {
               const SizedBox(height: AppSpacing.lg),
               Center(
                 child: AppButton.secondary(
-                  label: const S('Load more', 'حمّل المزيد').of(context),
+                  label: const S(
+                    'Load more',
+                    'حمّل المزيد',
+                    fr: 'Charger plus',
+                    es: 'Cargar más',
+                  ).of(context),
                   icon: Icons.expand_more,
                   onPressed: () => context.read<IncidentsBloc>().add(
                     IncidentsLoadMoreRequested(),
@@ -384,12 +441,13 @@ class _IncidentTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final style = Theme.of(
-      context,
-    ).textTheme.labelSmall?.copyWith(color: colors.textSecondary);
+    final style = Theme.of(context).textTheme.labelSmall
+        ?.copyWith(color: colors.textSecondary);
 
-    Widget cell(int flex, String text) =>
-        Expanded(flex: flex, child: Text(text.toUpperCase(), style: style));
+    Widget cell(int flex, String text) => Expanded(
+      flex: flex,
+      child: Text(text.toUpperCase(), style: style),
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -402,16 +460,46 @@ class _IncidentTableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          cell(_flexType, const S('Incident', 'البلاغ').of(context)),
+          cell(
+            _flexType,
+            const S(
+              'Incident',
+              'البلاغ',
+              fr: 'Incident',
+              es: 'Incidente',
+            ).of(context),
+          ),
           cell(
             _flexContext,
-            const S('Bus · route · driver', 'الأتوبيس · الخط · السائق').of(
-              context,
-            ),
+            const S(
+              'Bus · route · driver',
+              'الأتوبيس · الخط · السائق',
+              fr: 'Bus · itinéraire · chauffeur',
+              es: 'Autobús · ruta · conductor',
+            ).of(context),
           ),
-          cell(_flexTime, const S('Reported', 'وقت البلاغ').of(context)),
-          cell(_flexStatus, const S('Status', 'الحالة').of(context)),
-          cell(_flexActions, const S('Actions', 'إجراءات').of(context)),
+          cell(
+            _flexTime,
+            const S(
+              'Reported',
+              'وقت البلاغ',
+              fr: 'Signalé',
+              es: 'Reportado',
+            ).of(context),
+          ),
+          cell(
+            _flexStatus,
+            const S('Status', 'الحالة', fr: 'Statut', es: 'Estado').of(context),
+          ),
+          cell(
+            _flexActions,
+            const S(
+              'Actions',
+              'إجراءات',
+              fr: 'Actions',
+              es: 'Acciones',
+            ).of(context),
+          ),
         ],
       ),
     );
@@ -522,7 +610,12 @@ class _IncidentRow extends StatelessWidget {
                   Icon(Icons.place_outlined, size: 14, color: colors.info),
                   const SizedBox(width: 2),
                   Text(
-                    const S('View on map', 'شوفها على الخريطة').of(context),
+                    const S(
+                      'View on map',
+                      'شوفها على الخريطة',
+                      fr: 'Voir sur la carte',
+                      es: 'Ver en el mapa',
+                    ).of(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.info,
                     ),
@@ -563,7 +656,12 @@ class _IncidentRow extends StatelessWidget {
 
     final actionsCell = readOnly
         ? Text(
-            const S('View only', 'للعرض فقط').of(context),
+            const S(
+              'View only',
+              'للعرض فقط',
+              fr: 'Lecture seule',
+              es: 'Solo lectura',
+            ).of(context),
             style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
           )
         : Wrap(
@@ -573,7 +671,12 @@ class _IncidentRow extends StatelessWidget {
               if (incident.status == IncidentStatus.reported)
                 AppButton.secondary(
                   icon: Icons.visibility_outlined,
-                  label: const S('Acknowledge', 'اطّلعت').of(context),
+                  label: const S(
+                    'Acknowledge',
+                    'اطّلعت',
+                    fr: 'Accuser réception',
+                    es: 'Confirmar',
+                  ).of(context),
                   onPressed: () => context.read<IncidentsBloc>().add(
                     IncidentAcknowledged(
                       schoolId: schoolId,
@@ -584,7 +687,12 @@ class _IncidentRow extends StatelessWidget {
               if (incident.status != IncidentStatus.resolved)
                 AppButton.primary(
                   icon: Icons.task_alt,
-                  label: const S('Resolve', 'حل').of(context),
+                  label: const S(
+                    'Resolve',
+                    'حل',
+                    fr: 'Résoudre',
+                    es: 'Resolver',
+                  ).of(context),
                   onPressed: () => _promptResolve(context),
                 ),
             ],
@@ -680,7 +788,14 @@ class _ResolveIncidentDialogState extends State<_ResolveIncidentDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(const S('Resolve incident', 'حل البلاغ').of(context)),
+      title: Text(
+        const S(
+          'Resolve incident',
+          'حل البلاغ',
+          fr: "Résoudre l'incident",
+          es: 'Resolver incidente',
+        ).of(context),
+      ),
       content: SizedBox(
         width: 460,
         child: Column(
@@ -696,9 +811,8 @@ class _ResolveIncidentDialogState extends State<_ResolveIncidentDialog> {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 widget.incident.notes!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.appColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: context.appColors.textSecondary),
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
@@ -711,10 +825,14 @@ class _ResolveIncidentDialogState extends State<_ResolveIncidentDialog> {
                 labelText: const S(
                   'Resolution notes',
                   'ملاحظات الحل',
+                  fr: 'Notes de résolution',
+                  es: 'Notas de resolución',
                 ).of(context),
                 hintText: const S(
                   'What was done about this?',
                   'اتعمل إيه بخصوص ده؟',
+                  fr: "Qu'a-t-on fait à ce sujet ?",
+                  es: '¿Qué se hizo al respecto?',
                 ).of(context),
               ),
             ),
@@ -723,11 +841,21 @@ class _ResolveIncidentDialogState extends State<_ResolveIncidentDialog> {
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Cancel', 'إلغاء').of(context),
+          label: const S(
+            'Cancel',
+            'إلغاء',
+            fr: 'Annuler',
+            es: 'Cancelar',
+          ).of(context),
           onPressed: () => Navigator.pop(context),
         ),
         AppButton.primary(
-          label: const S('Resolve', 'حل').of(context),
+          label: const S(
+            'Resolve',
+            'حل',
+            fr: 'Résoudre',
+            es: 'Resolver',
+          ).of(context),
           onPressed: () => Navigator.pop(context, _notes.text),
         ),
       ],
@@ -828,6 +956,8 @@ class _IncidentSummaryCard extends StatelessWidget {
               S(
                 'Resolution: ${incident.resolutionNotes}',
                 'الحل: ${incident.resolutionNotes}',
+                fr: 'Résolution : ${incident.resolutionNotes}',
+                es: 'Resolución: ${incident.resolutionNotes}',
               ).of(context),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.textSecondary,

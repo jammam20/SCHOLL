@@ -54,6 +54,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
           const S(
             "Couldn't post your comment — try again.",
             'معرفناش ننشر التعليق — جرب تاني.',
+            fr: "Impossible de publier votre commentaire — réessayez.",
+            es: 'No se pudo publicar su comentario — inténtelo de nuevo.',
           ).of(context),
         );
       }
@@ -79,6 +81,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
           const S(
             'Thanks — your school will review this.',
             'شكراً — مدرستك هتراجع البلاغ ده.',
+            fr: 'Merci — votre école va examiner cela.',
+            es: 'Gracias — su escuela revisará esto.',
           ).of(context),
         );
       }
@@ -86,8 +90,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
       if (mounted) {
         AppSnackbar.error(
           context,
-          const S("Couldn't send the report — try again.", 'معرفناش نبعت البلاغ — جرب تاني.')
-              .of(context),
+          const S(
+            "Couldn't send the report — try again.",
+            'معرفناش نبعت البلاغ — جرب تاني.',
+            fr: "Impossible d'envoyer le signalement — réessayez.",
+            es: 'No se pudo enviar el reporte — inténtelo de nuevo.',
+          ).of(context),
         );
       }
     }
@@ -101,10 +109,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Post', 'المنشور').of(context)),
+        title: Text(const S('Post', 'المنشور', fr: 'Publication', es: 'Publicación').of(context)),
         actions: [
           IconButton(
-            tooltip: const S('Report', 'إبلاغ').of(context),
+            tooltip: const S('Report', 'إبلاغ', fr: 'Signaler', es: 'Reportar').of(context),
             icon: const Icon(Icons.flag_outlined),
             onPressed: _report,
           ),
@@ -130,7 +138,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            const S('Parent', 'ولي أمر').of(context),
+                            const S('Parent', 'ولي أمر', fr: 'Parent', es: 'Padre/Madre').of(context),
                             style: theme.textTheme.titleSmall,
                           ),
                           Text(
@@ -176,7 +184,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ),
                 const Divider(height: AppSpacing.xl2),
                 Text(
-                  const S('Comments', 'التعليقات').of(context),
+                  const S('Comments', 'التعليقات', fr: 'Commentaires', es: 'Comentarios').of(context),
                   style: theme.textTheme.titleSmall,
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -200,6 +208,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         message: const S(
                           "Couldn't load comments.",
                           'معرفناش نحمّل التعليقات.',
+                          fr: 'Impossible de charger les commentaires.',
+                          es: 'No se pudieron cargar los comentarios.',
                         ).of(context),
                       );
                     }
@@ -213,6 +223,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           const S(
                             'No comments yet — be the first to reply.',
                             'لسه مفيش تعليقات — كن أول واحد يرد.',
+                            fr: 'Aucun commentaire pour le moment — soyez le premier à répondre.',
+                            es: 'Aún no hay comentarios — sea el primero en responder.',
                           ).of(context),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colors.textSecondary,
@@ -259,10 +271,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                                 ? const S(
                                                     'School Admin',
                                                     'إدارة المدرسة',
+                                                    fr: "Administration de l'école",
+                                                    es: 'Administración de la escuela',
                                                   ).of(context)
                                                 : const S(
                                                     'Parent',
                                                     'ولي أمر',
+                                                    fr: 'Parent',
+                                                    es: 'Padre/Madre',
                                                   ).of(context),
                                             style: theme.textTheme.labelMedium
                                                 ?.copyWith(
@@ -321,6 +337,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         hintText: const S(
                           'Write a comment…',
                           'اكتب تعليق…',
+                          fr: 'Écrivez un commentaire…',
+                          es: 'Escriba un comentario…',
                         ).of(context),
                       ),
                     ),
@@ -392,7 +410,7 @@ class _ReactionRow extends StatelessWidget {
             size: 18,
             color: reacted ? Theme.of(context).colorScheme.primary : null,
           ),
-          label: Text(const S('Helpful', 'مفيد').of(context)),
+          label: Text(const S('Helpful', 'مفيد', fr: 'Utile', es: 'Útil').of(context)),
         );
       },
     );

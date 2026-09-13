@@ -58,13 +58,28 @@ bool isSameDay(DateTime date, DateTime other) =>
 String friendlyDay(BuildContext context, DateTime date) {
   final now = DateTime.now();
   if (isSameDay(date, now)) {
-    return const S('Today', 'النهاردة').of(context);
+    return const S(
+      'Today',
+      'النهاردة',
+      fr: "Aujourd'hui",
+      es: 'Hoy',
+    ).of(context);
   }
   if (isSameDay(date, now.subtract(const Duration(days: 1)))) {
-    return const S('Yesterday', 'إمبارح').of(context);
+    return const S(
+      'Yesterday',
+      'إمبارح',
+      fr: 'Hier',
+      es: 'Ayer',
+    ).of(context);
   }
   if (isSameDay(date, now.add(const Duration(days: 1)))) {
-    return const S('Tomorrow', 'بكرة').of(context);
+    return const S(
+      'Tomorrow',
+      'بكرة',
+      fr: 'Demain',
+      es: 'Mañana',
+    ).of(context);
   }
   if (date.year == now.year) return DateFormat('EEE, d MMM').format(date);
   return DateFormat('d MMM yyyy').format(date);

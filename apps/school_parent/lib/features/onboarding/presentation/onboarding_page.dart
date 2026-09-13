@@ -53,31 +53,62 @@ class _Slide {
 const _slides = [
   _Slide(
     Icons.location_on_outlined,
-    S("Follow your child's bus, live", 'تابع أتوبيس ابنك لحظة بلحظة'),
+    S(
+      "Follow your child's bus, live",
+      'تابع أتوبيس ابنك لحظة بلحظة',
+      fr: "Suivez le bus de votre enfant, en direct",
+      es: 'Siga el autobús de su hijo, en vivo',
+    ),
     S(
       'See exactly where the bus is and how many minutes until it reaches '
           "your child's pickup point.",
       'شوف بالظبط الأتوبيس فين وهيوصل نقطة استلام ابنك بعد كام دقيقة.',
+      fr: "Voyez exactement où se trouve le bus et dans combien de minutes "
+          "il atteindra le point de ramassage de votre enfant.",
+      es: 'Vea exactamente dónde está el autobús y en cuántos minutos '
+          'llegará al punto de recogida de su hijo.',
     ),
   ),
   _Slide(
     Icons.check_circle_outline,
-    S('Know the moment they board', 'اعرف اللحظة اللي بيركب فيها'),
+    S(
+      'Know the moment they board',
+      'اعرف اللحظة اللي بيركب فيها',
+      fr: "Sachez à l'instant où il/elle monte",
+      es: 'Sepa el momento en que sube',
+    ),
     S(
       'The app tells you the instant your child boards the bus — no need '
           'to call the driver or wait and wonder.',
       'التطبيق بيقولك أول ما ابنك يركب الأتوبيس — من غير ما تكلم السواق '
           'أو تستنى قلقان.',
+      fr: "L'application vous prévient dès que votre enfant monte dans le "
+          "bus — plus besoin d'appeler le chauffeur ou d'attendre en vous "
+          "demandant.",
+      es: 'La aplicación le avisa en el instante en que su hijo sube al '
+          'autobús — sin necesidad de llamar al conductor ni esperar con '
+          'incertidumbre.',
     ),
   ),
   _Slide(
     Icons.event_busy_outlined,
-    S("Not riding today? One tap.", 'مش هيركب النهاردة؟ ضغطة واحدة'),
+    S(
+      "Not riding today? One tap.",
+      'مش هيركب النهاردة؟ ضغطة واحدة',
+      fr: "Absent aujourd'hui ? Un seul geste.",
+      es: '¿No viaja hoy? Un solo toque.',
+    ),
     S(
       "Mark your child absent and the driver's route skips their stop "
           'automatically — no wasted trip to an empty house.',
       'حدد إن ابنك غايب وخط سير السواق هيتخطى محطته تلقائي — من غير لف '
           'على بيت فاضي.',
+      fr: "Signalez l'absence de votre enfant et l'itinéraire du chauffeur "
+          "saute automatiquement son arrêt — plus de détour inutile devant "
+          "une maison vide.",
+      es: 'Marque a su hijo como ausente y la ruta del conductor se salta su '
+          'parada automáticamente — sin viajes innecesarios a una casa '
+          'vacía.',
     ),
   ),
 ];
@@ -133,7 +164,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     const SizedBox(width: AppSpacing.sm),
                     TextButton(
                       onPressed: _finish,
-                      child: Text(const S('Skip', 'تخطي').of(context)),
+                      child: Text(const S('Skip', 'تخطي', fr: 'Passer', es: 'Omitir').of(context)),
                     ),
                   ],
                 ),
@@ -220,8 +251,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
                 child: Text(
                   isLast
-                      ? const S('Get started', 'يلا نبدأ').of(context)
-                      : const S('Next', 'التالي').of(context),
+                      ? const S(
+                          'Get started',
+                          'يلا نبدأ',
+                          fr: 'Commencer',
+                          es: 'Empezar',
+                        ).of(context)
+                      : const S('Next', 'التالي', fr: 'Suivant', es: 'Siguiente').of(context),
                 ),
               ),
             ),

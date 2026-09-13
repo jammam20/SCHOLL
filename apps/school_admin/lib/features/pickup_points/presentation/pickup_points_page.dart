@@ -62,7 +62,12 @@ class _PickupPointsView extends StatelessWidget {
             appBar: showAppBar
                 ? AppBar(
                     title: Text(
-                      const S('Pickup points', 'نقاط الاستلام').of(context),
+                      const S(
+                        'Pickup points',
+                        'نقاط الاستلام',
+                        fr: "Points de ramassage",
+                        es: "Puntos de recogida",
+                      ).of(context),
                     ),
                   )
                 : null,
@@ -79,7 +84,12 @@ class _PickupPointsView extends StatelessWidget {
             appBar: showAppBar
                 ? AppBar(
                     title: Text(
-                      const S('Pickup points', 'نقاط الاستلام').of(context),
+                      const S(
+                        'Pickup points',
+                        'نقاط الاستلام',
+                        fr: "Points de ramassage",
+                        es: "Puntos de recogida",
+                      ).of(context),
                     ),
                   )
                 : null,
@@ -101,16 +111,32 @@ class _PickupPointsView extends StatelessWidget {
           child: Scaffold(
             appBar: AppBar(
               title: showAppBar
-                  ? Text(const S('Pickup points', 'نقاط الاستلام').of(context))
+                  ? Text(
+                      const S(
+                        'Pickup points',
+                        'نقاط الاستلام',
+                        fr: "Points de ramassage",
+                        es: "Puntos de recogida",
+                      ).of(context),
+                    )
                   : null,
               toolbarHeight: showAppBar ? null : 0,
               bottom: TabBar(
                 tabs: [
-                  Tab(text: const S('Points', 'النقاط').of(context)),
+                  Tab(
+                    text: const S(
+                      'Points',
+                      'النقاط',
+                      fr: "Points",
+                      es: "Puntos",
+                    ).of(context),
+                  ),
                   Tab(
                     text: const S(
                       'Student assignment',
                       'تخصيص الطلاب',
+                      fr: "Affectation des élèves",
+                      es: "Asignación de estudiantes",
                     ).of(context),
                   ),
                 ],
@@ -123,7 +149,14 @@ class _PickupPointsView extends StatelessWidget {
               heroTag: 'pickup-points-add-fab',
               onPressed: () => _createPoint(context, schoolId),
               icon: const Icon(Icons.add_location_alt_outlined),
-              label: Text(const S('Pickup point', 'نقطة استلام').of(context)),
+              label: Text(
+                const S(
+                  'Pickup point',
+                  'نقطة استلام',
+                  fr: "Point de ramassage",
+                  es: "Punto de recogida",
+                ).of(context),
+              ),
             ),
             body: TabBarView(
               children: [
@@ -172,14 +205,29 @@ class _PointsTab extends StatelessWidget {
         title: const S(
           'No pickup points yet',
           'مفيش نقاط استلام لسه',
+          fr: "Aucun point de ramassage pour le moment",
+          es: "Aún no hay puntos de recogida",
         ).of(context),
         message: const S(
           'Create shared pickup locations so students can be collected at a '
               'nearby safe point instead of at their exact home address.',
           'اعمل نقاط استلام مشتركة عشان الطلاب يتاخدوا من نقطة آمنة قريبة '
               'بدل عنوان البيت بالظبط.',
+          fr:
+              "Créez des lieux de ramassage partagés pour que les élèves "
+              "puissent être récupérés à un point sûr à proximité au lieu "
+              "de leur adresse exacte.",
+          es:
+              "Cree ubicaciones de recogida compartidas para que los "
+              "estudiantes puedan ser recogidos en un punto seguro cercano "
+              "en lugar de en su dirección exacta.",
         ).of(context),
-        actionLabel: const S('Add pickup point', 'إضافة نقطة').of(context),
+        actionLabel: const S(
+          'Add pickup point',
+          'إضافة نقطة',
+          fr: "Ajouter un point de ramassage",
+          es: "Añadir punto de recogida",
+        ).of(context),
         onAction: () => _createPoint(context, schoolId),
       );
     }
@@ -207,12 +255,20 @@ class _PointsTab extends StatelessWidget {
                   title: const S(
                     'Shared pickup locations',
                     'نقاط الاستلام المشتركة',
+                    fr: "Lieux de ramassage partagés",
+                    es: "Ubicaciones de recogida compartidas",
                   ).of(context),
                   subtitle: S(
                     '${points.where((p) => p.isActive).length} active of '
                         '${points.length}',
                     '${points.where((p) => p.isActive).length} نشطة من '
                         '${points.length}',
+                    fr:
+                        "${points.where((p) => p.isActive).length} actif(s) sur "
+                        "${points.length}",
+                    es:
+                        "${points.where((p) => p.isActive).length} activo(s) de "
+                        "${points.length}",
                   ).of(context),
                 ),
                 LayoutBuilder(
@@ -311,7 +367,12 @@ class _PickupPointCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       routeName ??
-                          const S('No route', 'من غير خط').of(context),
+                          const S(
+                            'No route',
+                            'من غير خط',
+                            fr: "Aucun itinéraire",
+                            es: "Sin ruta",
+                          ).of(context),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.textMuted,
                       ),
@@ -322,8 +383,18 @@ class _PickupPointCard extends StatelessWidget {
               ),
               StatusBadge(
                 label: point.isActive
-                    ? const S('Active', 'نشطة').of(context)
-                    : const S('Inactive', 'غير نشطة').of(context),
+                    ? const S(
+                        'Active',
+                        'نشطة',
+                        fr: "Actif",
+                        es: "Activo",
+                      ).of(context)
+                    : const S(
+                        'Inactive',
+                        'غير نشطة',
+                        fr: "Inactif",
+                        es: "Inactivo",
+                      ).of(context),
                 tone: point.isActive ? StatusTone.success : StatusTone.neutral,
               ),
             ],
@@ -356,6 +427,8 @@ class _PickupPointCard extends StatelessWidget {
                 S(
                   'Safe zone ${point.radiusMeters.round()} m',
                   'نطاق آمن ${point.radiusMeters.round()} متر',
+                  fr: "Zone sûre ${point.radiusMeters.round()} m",
+                  es: "Zona segura ${point.radiusMeters.round()} m",
                 ).of(context),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.textSecondary,
@@ -368,7 +441,12 @@ class _PickupPointCard extends StatelessWidget {
             children: [
               AppButton.secondary(
                 icon: Icons.edit_outlined,
-                label: const S('Edit', 'تعديل').of(context),
+                label: const S(
+                  'Edit',
+                  'تعديل',
+                  fr: "Modifier",
+                  es: "Editar",
+                ).of(context),
                 onPressed: () => _edit(context),
               ),
               const Spacer(),
@@ -383,7 +461,12 @@ class _PickupPointCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: const S('Delete', 'مسح').of(context),
+                tooltip: const S(
+                  'Delete',
+                  'مسح',
+                  fr: "Supprimer",
+                  es: "Eliminar",
+                ).of(context),
                 icon: Icon(Icons.delete_outline, color: colors.textMuted),
                 onPressed: () => _delete(context),
               ),
@@ -424,14 +507,29 @@ class _PickupPointCard extends StatelessWidget {
       title: const S(
         'Delete this pickup point?',
         'تمسح نقطة الاستلام دي؟',
+        fr: "Supprimer ce point de ramassage ?",
+        es: "¿Eliminar este punto de recogida?",
       ).of(context),
       message: const S(
         'Students currently assigned to it will fall back to their own home '
             'coordinate. This cannot be undone.',
         'الطلاب المخصصين ليها هيرجعوا لإحداثيات بيتهم. الإجراء ده مينفعش '
             'يتراجع فيه.',
+        fr:
+            "Les élèves actuellement affectés à ce point reviendront à "
+            "leurs propres coordonnées de domicile. Cette action est "
+            "irréversible.",
+        es:
+            "Los estudiantes actualmente asignados a él volverán a sus "
+            "propias coordenadas de domicilio. Esta acción no se puede "
+            "deshacer.",
       ).of(context),
-      confirmLabel: const S('Delete', 'مسح').of(context),
+      confirmLabel: const S(
+        'Delete',
+        'مسح',
+        fr: "Supprimer",
+        es: "Eliminar",
+      ).of(context),
       destructive: true,
     );
     if (confirmed != true) return;
@@ -496,8 +594,18 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
     return AlertDialog(
       title: Text(
         widget.existing == null
-            ? const S('Add pickup point', 'إضافة نقطة استلام').of(context)
-            : const S('Edit pickup point', 'تعديل نقطة الاستلام').of(context),
+            ? const S(
+                'Add pickup point',
+                'إضافة نقطة استلام',
+                fr: "Ajouter un point de ramassage",
+                es: "Añadir punto de recogida",
+              ).of(context)
+            : const S(
+                'Edit pickup point',
+                'تعديل نقطة الاستلام',
+                fr: "Modifier le point de ramassage",
+                es: "Editar punto de recogida",
+              ).of(context),
       ),
       content: SizedBox(
         width: 460,
@@ -511,10 +619,17 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
                 autofocus: true,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: const S('Name', 'الاسم').of(context),
+                  labelText: const S(
+                    'Name',
+                    'الاسم',
+                    fr: "Nom",
+                    es: "Nombre",
+                  ).of(context),
                   hintText: const S(
                     'e.g. Maadi Club gate',
                     'مثلاً بوابة نادي المعادي',
+                    fr: "ex. Portail du club Maadi",
+                    es: "p. ej. Puerta del club Maadi",
                   ).of(context),
                 ),
               ),
@@ -530,13 +645,23 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
                   return DropdownButtonFormField<String?>(
                     initialValue: known ? _routeId : null,
                     decoration: InputDecoration(
-                      labelText: const S('Route', 'الخط').of(context),
+                      labelText: const S(
+                        'Route',
+                        'الخط',
+                        fr: "Itinéraire",
+                        es: "Ruta",
+                      ).of(context),
                     ),
                     items: [
                       DropdownMenuItem<String?>(
                         value: null,
                         child: Text(
-                          const S('No route', 'من غير خط').of(context),
+                          const S(
+                            'No route',
+                            'من غير خط',
+                            fr: "Aucun itinéraire",
+                            es: "Sin ruta",
+                          ).of(context),
                         ),
                       ),
                       for (final doc in routes)
@@ -559,6 +684,8 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
                   labelText: const S(
                     'Safe-zone radius (metres)',
                     'نطاق الأمان (متر)',
+                    fr: "Rayon de la zone sûre (mètres)",
+                    es: "Radio de la zona segura (metros)",
                   ).of(context),
                 ),
               ),
@@ -579,6 +706,8 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
                             const S(
                               'No location picked yet.',
                               'لسه مفيش مكان متحدد.',
+                              fr: "Aucun emplacement choisi pour l'instant.",
+                              es: "Aún no se ha elegido ninguna ubicación.",
                             ).of(context),
                             style: Theme.of(context).textTheme.bodySmall,
                           )
@@ -597,8 +726,18 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
                         ? Icons.add_location_alt
                         : Icons.edit_location_alt,
                     label: _latitude == null
-                        ? const S('Set', 'تحديد').of(context)
-                        : const S('Edit', 'تعديل').of(context),
+                        ? const S(
+                            'Set',
+                            'تحديد',
+                            fr: "Définir",
+                            es: "Definir",
+                          ).of(context)
+                        : const S(
+                            'Edit',
+                            'تعديل',
+                            fr: "Modifier",
+                            es: "Editar",
+                          ).of(context),
                     onPressed: () async {
                       final picked = await Navigator.push<LatLng>(
                         context,
@@ -607,6 +746,8 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
                             title: const S(
                               'Set pickup point',
                               'تحديد نقطة الاستلام',
+                              fr: "Définir le point de ramassage",
+                              es: "Definir punto de recogida",
                             ).of(context),
                             initialPosition:
                                 _latitude == null || _longitude == null
@@ -630,11 +771,21 @@ class _PickupPointDialogState extends State<_PickupPointDialog> {
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Cancel', 'إلغاء').of(context),
+          label: const S(
+            'Cancel',
+            'إلغاء',
+            fr: "Annuler",
+            es: "Cancelar",
+          ).of(context),
           onPressed: () => Navigator.pop(context),
         ),
         AppButton.primary(
-          label: const S('Save', 'حفظ').of(context),
+          label: const S(
+            'Save',
+            'حفظ',
+            fr: "Enregistrer",
+            es: "Guardar",
+          ).of(context),
           onPressed: _canSave
               ? () => Navigator.pop(
                   context,
@@ -671,12 +822,20 @@ class _StudentAssignmentTab extends StatelessWidget {
         title: const S(
           'Create a pickup point first',
           'اعمل نقطة استلام الأول',
+          fr: "Créez d'abord un point de ramassage",
+          es: "Cree primero un punto de recogida",
         ).of(context),
         message: const S(
           'Students can only be assigned once at least one shared pickup '
               'point exists.',
           'الطلاب مينفعش يتخصصوا غير لما تبقى فيه نقطة استلام مشتركة واحدة '
               'على الأقل.',
+          fr:
+              "Les élèves ne peuvent être affectés qu'une fois qu'au moins "
+              "un point de ramassage partagé existe.",
+          es:
+              "Los estudiantes solo se pueden asignar una vez que exista "
+              "al menos un punto de recogida compartido.",
         ).of(context),
       );
     }
@@ -704,6 +863,8 @@ class _StudentAssignmentTab extends StatelessWidget {
             title: const S(
               'No active students to assign.',
               'مفيش طلاب نشطين للتخصيص.',
+              fr: "Aucun élève actif à affecter.",
+              es: "No hay estudiantes activos para asignar.",
             ).of(context),
           );
         }
@@ -723,12 +884,22 @@ class _StudentAssignmentTab extends StatelessWidget {
                   title: const S(
                     'Assign students',
                     'تخصيص الطلاب',
+                    fr: "Affecter les élèves",
+                    es: "Asignar estudiantes",
                   ).of(context),
                   subtitle: const S(
                     'Suggestions are ordered by straight-line distance from '
                         'the student’s own pickup coordinate — nothing more.',
                     'الاقتراحات مرتبة حسب المسافة المباشرة من إحداثيات '
                         'الطالب نفسه — مفيش أكتر من كده.',
+                    fr:
+                        "Les suggestions sont classées par distance à vol "
+                        "d'oiseau depuis les coordonnées de ramassage de "
+                        "l'élève — rien de plus.",
+                    es:
+                        "Las sugerencias se ordenan por distancia en línea "
+                        "recta desde la propia coordenada de recogida del "
+                        "estudiante, nada más.",
                   ).of(context),
                 ),
                 for (final student in students)
@@ -804,10 +975,14 @@ class _StudentAssignmentRow extends StatelessWidget {
                           ? const S(
                               'Uses their own home coordinate',
                               'بيستخدم إحداثيات بيته',
+                              fr: "Utilise ses propres coordonnées de domicile",
+                              es: "Usa su propia coordenada de domicilio",
                             ).of(context)
                           : S(
                               'Assigned to ${assigned.name}',
                               'مخصص لـ ${assigned.name}',
+                              fr: "Affecté à ${assigned.name}",
+                              es: "Asignado a ${assigned.name}",
                             ).of(context),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: assigned == null
@@ -820,7 +995,12 @@ class _StudentAssignmentRow extends StatelessWidget {
               ),
               if (assigned != null)
                 AppButton.secondary(
-                  label: const S('Unassign', 'إلغاء التخصيص').of(context),
+                  label: const S(
+                    'Unassign',
+                    'إلغاء التخصيص',
+                    fr: "Désaffecter",
+                    es: "Desasignar",
+                  ).of(context),
                   onPressed: () => context.read<PickupPointsBloc>().add(
                     StudentPickupPointAssigned(
                       schoolId: schoolId,
@@ -865,6 +1045,18 @@ class _StudentAssignmentRow extends StatelessWidget {
                         'الطالب ده مش متخصص لخط نقطة الاستلام دي، فمش هيظهر '
                             'كمحطة في رحلات الخط ده. خصص الطالب لنفس الخط من '
                             'تبويب الطلاب عشان تظبط الموضوع.',
+                        fr:
+                            "Cet élève n'est pas affecté à l'itinéraire de "
+                            "ce point de ramassage, il n'apparaîtra donc PAS "
+                            "comme arrêt sur les trajets de cet itinéraire. "
+                            "Affectez l'élève au même itinéraire depuis "
+                            "l'onglet Élèves pour corriger cela.",
+                        es:
+                            "Este estudiante no está asignado a la ruta de "
+                            "este punto de recogida, por lo que NO aparecerá "
+                            "como parada en los viajes de esa ruta. Asigne "
+                            "al estudiante a la misma ruta desde la pestaña "
+                            "Estudiantes para solucionarlo.",
                       ).of(context),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.warning,
@@ -884,6 +1076,16 @@ class _StudentAssignmentRow extends StatelessWidget {
                     'or pick a point manually below.',
                 'الطالب ده مفيش ليه إحداثيات استلام، فمش هينفع نحسب أقرب '
                     'نقطة. حددها من تبويب الطلاب أو اختار نقطة يدوي تحت.',
+                fr:
+                    "Cet élève n'a pas de coordonnées de ramassage définies, "
+                    "donc aucun point le plus proche ne peut être calculé. "
+                    "Définissez-en une depuis l'onglet Élèves, ou choisissez "
+                    "un point manuellement ci-dessous.",
+                es:
+                    "Este estudiante no tiene una coordenada de recogida "
+                    "definida, por lo que no se puede calcular el punto más "
+                    "cercano. Defina una desde la pestaña Estudiantes, o "
+                    "elija un punto manualmente abajo.",
               ).of(context),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.textMuted,
@@ -929,13 +1131,20 @@ class _StudentAssignmentRow extends StatelessWidget {
               labelText: const S(
                 'Assign to any point',
                 'تخصيص لأي نقطة',
+                fr: "Affecter à n'importe quel point",
+                es: "Asignar a cualquier punto",
               ).of(context),
             ),
             items: [
               DropdownMenuItem<String?>(
                 value: null,
                 child: Text(
-                  const S('No shared point', 'من غير نقطة مشتركة').of(context),
+                  const S(
+                    'No shared point',
+                    'من غير نقطة مشتركة',
+                    fr: "Aucun point partagé",
+                    es: "Sin punto compartido",
+                  ).of(context),
                 ),
               ),
               for (final point in points.where((p) => p.isActive))

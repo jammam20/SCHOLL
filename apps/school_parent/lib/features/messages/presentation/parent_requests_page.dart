@@ -25,7 +25,12 @@ class ParentRequestsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          const S('Messages to school', 'رسايل للمدرسة').of(context),
+          const S(
+            'Messages to school',
+            'رسايل للمدرسة',
+            fr: "Messages à l'école",
+            es: 'Mensajes a la escuela',
+          ).of(context),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -35,7 +40,14 @@ class ParentRequestsPage extends StatelessWidget {
         heroTag: 'messages-new-thread-fab',
         onPressed: () => _openNewMessage(context),
         icon: const Icon(Icons.edit_outlined),
-        label: Text(const S('New message', 'رسالة جديدة').of(context)),
+        label: Text(
+          const S(
+            'New message',
+            'رسالة جديدة',
+            fr: 'Nouveau message',
+            es: 'Nuevo mensaje',
+          ).of(context),
+        ),
       ),
       body: StreamBuilder<List<ParentRequest>>(
         stream: ParentRequestsRepository().watchMyRequests(
@@ -59,6 +71,10 @@ class ParentRequestsPage extends StatelessWidget {
                 "Couldn't load your messages — check your connection and "
                     'try again.',
                 'معرفناش نحمّل رسايلك — اتأكد من الاتصال وجرب تاني.',
+                fr: "Impossible de charger vos messages — vérifiez votre "
+                    "connexion et réessayez.",
+                es: 'No se pudieron cargar sus mensajes — revise su conexión '
+                    'e inténtelo de nuevo.',
               ).of(context),
             );
           }
@@ -70,6 +86,8 @@ class ParentRequestsPage extends StatelessWidget {
               title: const S(
                 'No messages yet',
                 'مفيش رسايل لسه',
+                fr: 'Aucun message pour le moment',
+                es: 'Aún no hay mensajes',
               ).of(context),
               message: const S(
                 'Send your school a message — about a pickup change, a '
@@ -77,10 +95,18 @@ class ParentRequestsPage extends StatelessWidget {
                     'know.',
                 'ابعت لمدرستك رسالة — تغيير في الاستلام، سؤال عن رحلة، أي '
                     'حاجة لازم السواق يعرفها.',
+                fr: "Envoyez un message à votre école — un changement de "
+                    "récupération, une question sur un trajet, tout ce que "
+                    "le chauffeur doit savoir.",
+                es: 'Envíe un mensaje a su escuela — un cambio de recogida, '
+                    'una pregunta sobre un viaje, cualquier cosa que el '
+                    'conductor deba saber.',
               ).of(context),
               actionLabel: const S(
                 'Write your first message',
                 'اكتب أول رسالة',
+                fr: 'Écrivez votre premier message',
+                es: 'Escriba su primer mensaje',
               ).of(context),
               onAction: () => _openNewMessage(context),
             );
@@ -130,20 +156,36 @@ class _ListHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
-          title: const S('Your conversations', 'محادثاتك').of(context),
+          title: const S(
+            'Your conversations',
+            'محادثاتك',
+            fr: 'Vos conversations',
+            es: 'Sus conversaciones',
+          ).of(context),
           subtitle: const S(
             'With the school office. They pass anything the driver needs '
                 'on to them.',
             'مع إدارة المدرسة. وهم بيبلغوا السواق باللي يهمه.',
+            fr: "Avec le secrétariat de l'école. Il transmet au chauffeur ce "
+                "qu'il doit savoir.",
+            es: 'Con la oficina de la escuela. Le transmiten al conductor lo '
+                'que necesite saber.',
           ).of(context),
           trailing: unreadCount == 0
               ? null
               : StatusBadge(
                   label: unreadCount == 1
-                      ? const S('1 new reply', 'رد جديد').of(context)
+                      ? const S(
+                          '1 new reply',
+                          'رد جديد',
+                          fr: 'Une nouvelle réponse',
+                          es: 'Una respuesta nueva',
+                        ).of(context)
                       : S(
                           '$unreadCount new replies',
                           '$unreadCount ردود جديدة',
+                          fr: '$unreadCount nouvelles réponses',
+                          es: '$unreadCount respuestas nuevas',
                         ).of(context),
                   tone: StatusTone.info,
                 ),
@@ -168,7 +210,12 @@ class _ThreadCard extends StatelessWidget {
     final unread = request.unreadByParent;
     final accent = theme.colorScheme.primary;
     final subject = request.subject.isEmpty
-        ? const S('General question', 'سؤال عام').of(context)
+        ? const S(
+            'General question',
+            'سؤال عام',
+            fr: 'Question générale',
+            es: 'Pregunta general',
+          ).of(context)
         : request.subject;
     final studentName = request.studentName;
 
@@ -267,6 +314,8 @@ class _ThreadCard extends StatelessWidget {
                               label: const S(
                                 'New reply',
                                 'رد جديد',
+                                fr: 'Nouvelle réponse',
+                                es: 'Respuesta nueva',
                               ).of(context),
                               tone: StatusTone.info,
                             )
@@ -370,9 +419,14 @@ class _ThreadCardSkeleton extends StatelessWidget {
 /// should expect next — nothing in this app promises a reply, because the
 /// reply channel (a phone call, a note home) lives outside it.
 S _statusLabel(ParentRequestStatus status) => switch (status) {
-  ParentRequestStatus.open => const S('Sent', 'اتبعتت'),
-  ParentRequestStatus.read => const S('Seen by school', 'المدرسة شافتها'),
-  ParentRequestStatus.closed => const S('Closed', 'اتقفلت'),
+  ParentRequestStatus.open => const S('Sent', 'اتبعتت', fr: 'Envoyé', es: 'Enviado'),
+  ParentRequestStatus.read => const S(
+    'Seen by school',
+    'المدرسة شافتها',
+    fr: "Vu par l'école",
+    es: 'Visto por la escuela',
+  ),
+  ParentRequestStatus.closed => const S('Closed', 'اتقفلت', fr: 'Fermé', es: 'Cerrado'),
 };
 
 StatusTone _statusTone(ParentRequestStatus status) => switch (status) {

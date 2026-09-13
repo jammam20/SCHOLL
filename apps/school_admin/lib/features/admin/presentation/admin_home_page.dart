@@ -145,22 +145,22 @@ class _AdminHomePageState extends State<AdminHomePage> {
             NavigationDestination(
               icon: const Icon(Icons.dashboard_outlined),
               selectedIcon: const Icon(Icons.dashboard),
-              label: const S('Dashboard', 'الرئيسية').of(context),
+              label: const S('Dashboard', 'الرئيسية', fr: 'Tableau de bord', es: 'Panel').of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.groups_outlined),
               selectedIcon: const Icon(Icons.groups),
-              label: const S('People', 'الأشخاص').of(context),
+              label: const S('People', 'الأشخاص', fr: 'Personnes', es: 'Personas').of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.alt_route_outlined),
               selectedIcon: const Icon(Icons.alt_route),
-              label: const S('Operations', 'العمليات').of(context),
+              label: const S('Operations', 'العمليات', fr: 'Opérations', es: 'Operaciones').of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.bar_chart_outlined),
               selectedIcon: const Icon(Icons.bar_chart),
-              label: const S('Reports', 'التقارير').of(context),
+              label: const S('Reports', 'التقارير', fr: 'Rapports', es: 'Informes').of(context),
             ),
             NavigationDestination(
               icon: _MessagesIcon(
@@ -171,17 +171,17 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 schoolId: schoolId,
                 selected: true,
               ),
-              label: const S('Messages', 'الرسايل').of(context),
+              label: const S('Messages', 'الرسايل', fr: 'Messages', es: 'Mensajes').of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.forum_outlined),
               selectedIcon: const Icon(Icons.forum_rounded),
-              label: const S('Community', 'المجتمع').of(context),
+              label: const S('Community', 'المجتمع', fr: 'Communauté', es: 'Comunidad').of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person),
-              label: const S('Profile', 'حسابي').of(context),
+              label: const S('Profile', 'حسابي', fr: 'Profil', es: 'Perfil').of(context),
             ),
           ],
         ),
@@ -228,12 +228,12 @@ class _PeopleSection extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(const S('People', 'الأشخاص').of(context)),
+          title: Text(const S('People', 'الأشخاص', fr: 'Personnes', es: 'Personas').of(context)),
           bottom: TabBar(
             tabs: [
-              Tab(text: const S('Students', 'الطلاب').of(context)),
-              Tab(text: const S('Drivers', 'السائقين').of(context)),
-              Tab(text: const S('Parents', 'أولياء الأمور').of(context)),
+              Tab(text: const S('Students', 'الطلاب', fr: 'Élèves', es: 'Estudiantes').of(context)),
+              Tab(text: const S('Drivers', 'السائقين', fr: 'Chauffeurs', es: 'Conductores').of(context)),
+              Tab(text: const S('Parents', 'أولياء الأمور', fr: 'Parents', es: 'Padres').of(context)),
             ],
           ),
         ),
@@ -314,12 +314,14 @@ class _OperationsSectionState extends State<_OperationsSection>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Operations', 'العمليات').of(context)),
+        title: Text(const S('Operations', 'العمليات', fr: 'Opérations', es: 'Operaciones').of(context)),
         actions: [
           IconButton(
             tooltip: const S(
               'Route deviations',
               'الخروج عن المسار',
+              fr: "Écarts d'itinéraire",
+              es: 'Desvíos de ruta',
             ).of(context),
             icon: const Icon(Icons.alt_route),
             onPressed: () => Navigator.push(
@@ -330,7 +332,7 @@ class _OperationsSectionState extends State<_OperationsSection>
             ),
           ),
           IconButton(
-            tooltip: const S('Drivers', 'إدارة السائقين').of(context),
+            tooltip: const S('Drivers', 'إدارة السائقين', fr: 'Chauffeurs', es: 'Conductores').of(context),
             icon: const Icon(Icons.badge_outlined),
             onPressed: () => Navigator.push(
               context,
@@ -341,7 +343,7 @@ class _OperationsSectionState extends State<_OperationsSection>
             ),
           ),
           IconButton(
-            tooltip: const S('Audit trail', 'سجل التدقيق').of(context),
+            tooltip: const S('Audit trail', 'سجل التدقيق', fr: "Journal d'audit", es: 'Registro de auditoría').of(context),
             icon: const Icon(Icons.receipt_long_outlined),
             onPressed: () => Navigator.push(
               context,
@@ -355,12 +357,12 @@ class _OperationsSectionState extends State<_OperationsSection>
           controller: _controller,
           isScrollable: true,
           tabs: [
-            Tab(text: const S('Vehicles', 'المركبات').of(context)),
-            Tab(text: const S('Routes', 'الخطوط').of(context)),
-            Tab(text: const S('Trips', 'الرحلات').of(context)),
-            Tab(text: const S('Live map', 'الخريطة المباشرة').of(context)),
-            Tab(text: const S('Incidents', 'البلاغات').of(context)),
-            Tab(text: const S('Pickup points', 'نقاط الاستلام').of(context)),
+            Tab(text: const S('Vehicles', 'المركبات', fr: 'Véhicules', es: 'Vehículos').of(context)),
+            Tab(text: const S('Routes', 'الخطوط', fr: 'Itinéraires', es: 'Rutas').of(context)),
+            Tab(text: const S('Trips', 'الرحلات', fr: 'Trajets', es: 'Viajes').of(context)),
+            Tab(text: const S('Live map', 'الخريطة المباشرة', fr: 'Carte en direct', es: 'Mapa en vivo').of(context)),
+            Tab(text: const S('Incidents', 'البلاغات', fr: 'Incidents', es: 'Incidentes').of(context)),
+            Tab(text: const S('Pickup points', 'نقاط الاستلام', fr: 'Points de ramassage', es: 'Puntos de recogida').of(context)),
           ],
         ),
       ),
@@ -417,14 +419,14 @@ StatusTone _memberStatusTone(String status) {
 String _memberStatusLabel(BuildContext context, String status) {
   switch (status) {
     case 'approved':
-      return const S('Approved', 'مقبول').of(context);
+      return const S('Approved', 'مقبول', fr: 'Approuvé', es: 'Aprobado').of(context);
     case 'suspended':
-      return const S('Suspended', 'موقوف').of(context);
+      return const S('Suspended', 'موقوف', fr: 'Suspendu', es: 'Suspendido').of(context);
     case 'rejected':
-      return const S('Rejected', 'مرفوض').of(context);
+      return const S('Rejected', 'مرفوض', fr: 'Rejeté', es: 'Rechazado').of(context);
     case 'pending':
     default:
-      return const S('Pending', 'قيد الانتظار').of(context);
+      return const S('Pending', 'قيد الانتظار', fr: 'En attente', es: 'Pendiente').of(context);
   }
 }
 
@@ -446,23 +448,27 @@ Future<void> _handleMemberAction(
   final confirmed = await showAppConfirmDialog(
     context,
     title: isReject
-        ? S('Reject $name?', 'رفض $name؟').of(context)
-        : S('Suspend $name?', 'إيقاف $name؟').of(context),
+        ? S('Reject $name?', 'رفض $name؟', fr: 'Rejeter $name ?', es: '¿Rechazar a $name?').of(context)
+        : S('Suspend $name?', 'إيقاف $name؟', fr: 'Suspendre $name ?', es: '¿Suspender a $name?').of(context),
     message: isReject
         ? const S(
             'They will lose access immediately.',
             'هيفقد الوصول فوراً.',
+            fr: "Il ou elle perdra l'accès immédiatement.",
+            es: 'Perderá el acceso de inmediato.',
           ).of(context)
         : const S(
             'They can be re-approved later.',
             'ممكن تتوافق عليه تاني بعدين.',
+            fr: 'Il ou elle pourra être approuvé(e) à nouveau plus tard.',
+            es: 'Podrá volver a aprobarse más adelante.',
           ).of(context),
     confirmLabel: isReject
-        ? const S('Reject', 'رفض').of(context)
-        : const S('Suspend', 'إيقاف').of(context),
+        ? const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(context)
+        : const S('Suspend', 'إيقاف', fr: 'Suspendre', es: 'Suspender').of(context),
     destructive: true,
     reasonController: reasonController,
-    reasonHint: const S('Reason (visible in the audit log)', 'السبب (يظهر في سجل التدقيق)')
+    reasonHint: const S('Reason (visible in the audit log)', 'السبب (يظهر في سجل التدقيق)', fr: "Motif (visible dans le journal d'audit)", es: 'Motivo (visible en el registro de auditoría)')
         .of(context),
   );
   final reason = reasonController.text.trim();
@@ -518,15 +524,19 @@ class _StudentsTab extends StatelessWidget {
                 ? EmptyStateView(
                     key: const ValueKey('empty'),
                     icon: Icons.groups_outlined,
-                    title: const S('No students yet', 'مفيش طلاب لسه').of(
+                    title: const S('No students yet', 'مفيش طلاب لسه', fr: "Pas encore d'élèves", es: 'Aún no hay estudiantes').of(
                       context,
                     ),
                     message: const S(
                       'Add your first student to start assigning routes '
                           'and pickup points.',
                       'ضيف أول طالب عشان تبدأ تحدد الخطوط ونقاط الاستلام.',
+                      fr: 'Ajoutez votre premier élève pour commencer à '
+                          'attribuer des itinéraires et des points de ramassage.',
+                      es: 'Agregue su primer estudiante para empezar a '
+                          'asignar rutas y puntos de recogida.',
                     ).of(context),
-                    actionLabel: const S('Add student', 'إضافة طالب').of(
+                    actionLabel: const S('Add student', 'إضافة طالب', fr: 'Ajouter un élève', es: 'Agregar estudiante').of(
                       context,
                     ),
                     onAction: () => _createStudent(context),
@@ -544,7 +554,7 @@ class _StudentsTab extends StatelessWidget {
                           ),
                           child: Center(
                             child: AppButton.secondary(
-                              label: const S('Load more', 'حمّل المزيد').of(
+                              label: const S('Load more', 'حمّل المزيد', fr: 'Charger plus', es: 'Cargar más').of(
                                 context,
                               ),
                               icon: Icons.expand_more,
@@ -574,10 +584,6 @@ class _StudentsTab extends StatelessWidget {
                       final absentOn = data['absentOn'] as String?;
                       final isAbsentToday =
                           absentOn != null && absentOn == todayIsoDate();
-                      final isArabic =
-                          Localizations.localeOf(context).languageCode ==
-                          'ar';
-
                       if (!approved) {
                         final studentName = data['name']?.toString() ?? '';
                         final bloc = context.read<StudentsBloc>();
@@ -590,10 +596,12 @@ class _StudentsTab extends StatelessWidget {
                             subtitle: const S(
                               'Awaiting approval',
                               'في انتظار الموافقة',
+                              fr: "En attente d'approbation",
+                              es: 'Pendiente de aprobación',
                             ).of(context),
                             actions: [
                               ApprovalAction(
-                                label: const S('Approve', 'موافقة').of(context),
+                                label: const S('Approve', 'موافقة', fr: 'Approuver', es: 'Aprobar').of(context),
                                 icon: Icons.check_circle_outline,
                                 onConfirmed: (_) async => bloc.add(
                                   StudentApproved(
@@ -603,13 +611,15 @@ class _StudentsTab extends StatelessWidget {
                                 ),
                               ),
                               ApprovalAction(
-                                label: const S('Reject', 'رفض').of(context),
+                                label: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(context),
                                 icon: Icons.cancel_outlined,
                                 destructive: true,
                                 requiresReason: true,
                                 confirmTitle: const S(
                                   'Reject this student?',
                                   'رفض الطالب ده؟',
+                                  fr: 'Rejeter cet élève ?',
+                                  es: '¿Rechazar a este estudiante?',
                                 ).of(context),
                                 confirmMessage: const S(
                                   "This removes the parent's request — it "
@@ -617,6 +627,10 @@ class _StudentsTab extends StatelessWidget {
                                       'them.',
                                   'ده هيمسح طلب ولي الأمر — كان مش ظاهر لحد '
                                       'غيره.',
+                                  fr: "Cela supprime la demande du parent — elle "
+                                      "n'a jamais été visible que par lui.",
+                                  es: 'Esto elimina la solicitud del padre o '
+                                      'madre; nunca fue visible para nadie más.',
                                 ).of(context),
                                 onConfirmed: (reason) async => bloc.add(
                                   StudentRejected(
@@ -678,15 +692,26 @@ class _StudentsTab extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      isArabic
-                                          ? 'الصف: ${data['grade'] ?? '-'} · '
-                                                '${routeId == null || routeId.isEmpty ? 'من غير خط' : 'الخط متحدد'} · '
-                                                '${parentIds.length} ولي أمر مرتبط · '
-                                                '${latitude == null ? 'من غير نقطة استلام' : 'نقطة الاستلام متحددة'}'
-                                          : 'Grade: ${data['grade'] ?? '-'} · '
-                                                '${routeId == null || routeId.isEmpty ? 'No route' : 'Route assigned'} · '
-                                                '${parentIds.length} parent(s) linked · '
-                                                '${latitude == null ? 'No pickup point' : 'Pickup point set'}',
+                                      S(
+                                        'Grade: ${data['grade'] ?? '-'} · '
+                                            '${routeId == null || routeId.isEmpty ? 'No route' : 'Route assigned'} · '
+                                            '${parentIds.length} parent(s) linked · '
+                                            '${latitude == null ? 'No pickup point' : 'Pickup point set'}',
+                                        'الصف: ${data['grade'] ?? '-'} · '
+                                            '${routeId == null || routeId.isEmpty ? 'من غير خط' : 'الخط متحدد'} · '
+                                            '${parentIds.length} ولي أمر مرتبط · '
+                                            '${latitude == null ? 'من غير نقطة استلام' : 'نقطة الاستلام متحددة'}',
+                                        fr:
+                                            'Classe : ${data['grade'] ?? '-'} · '
+                                            '${routeId == null || routeId.isEmpty ? "Aucun itinéraire" : "Itinéraire attribué"} · '
+                                            '${parentIds.length} parent(s) lié(s) · '
+                                            '${latitude == null ? "Aucun point de ramassage" : "Point de ramassage défini"}',
+                                        es:
+                                            'Curso: ${data['grade'] ?? '-'} · '
+                                            '${routeId == null || routeId.isEmpty ? 'Sin ruta' : 'Ruta asignada'} · '
+                                            '${parentIds.length} padre(s) vinculado(s) · '
+                                            '${latitude == null ? 'Sin punto de recogida' : 'Punto de recogida definido'}',
+                                      ).of(context),
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
@@ -701,6 +726,8 @@ class _StudentsTab extends StatelessWidget {
                                         label: const S(
                                           'Absent today',
                                           'غايب النهاردة',
+                                          fr: "Absent aujourd'hui",
+                                          es: 'Ausente hoy',
                                         ).of(context),
                                       ),
                                     ],
@@ -711,6 +738,8 @@ class _StudentsTab extends StatelessWidget {
                                         label: const S(
                                           'Location suggested by parent',
                                           'موقع مقترح من ولي الأمر',
+                                          fr: 'Emplacement suggéré par un parent',
+                                          es: 'Ubicación sugerida por un padre',
                                         ).of(context),
                                       ),
                                     ],
@@ -721,6 +750,10 @@ class _StudentsTab extends StatelessWidget {
                                 tooltip: const S(
                                   'Assign route, pickup point & link parents',
                                   'تحديد الخط ونقطة الاستلام وربط أولياء الأمور',
+                                  fr: 'Attribuer un itinéraire, un point de '
+                                      'ramassage et lier des parents',
+                                  es: 'Asignar ruta, punto de recogida y '
+                                      'vincular padres',
                                 ).of(context),
                                 icon: Icon(
                                   Icons.manage_accounts,
@@ -770,7 +803,7 @@ class _StudentsTab extends StatelessWidget {
               heroTag: 'students-add-fab',
               onPressed: () => _createStudent(context),
               icon: const Icon(Icons.add),
-              label: Text(const S('Student', 'طالب').of(context)),
+              label: Text(const S('Student', 'طالب', fr: 'Élève', es: 'Estudiante').of(context)),
             ),
             body: AnimatedSwitcher(
               duration: reduceMotion
@@ -792,39 +825,39 @@ class _StudentsTab extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Add student', 'إضافة طالب').of(dialogContext)),
+        title: Text(const S('Add student', 'إضافة طالب', fr: 'Ajouter un élève', es: 'Agregar estudiante').of(dialogContext)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: name,
               decoration: InputDecoration(
-                labelText: const S('Name', 'الاسم').of(dialogContext),
+                labelText: const S('Name', 'الاسم', fr: 'Nom', es: 'Nombre').of(dialogContext),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: grade,
               decoration: InputDecoration(
-                labelText: const S('Grade', 'الصف').of(dialogContext),
+                labelText: const S('Grade', 'الصف', fr: 'Classe', es: 'Grado').of(dialogContext),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: phone,
               decoration: InputDecoration(
-                labelText: const S('Phone', 'التليفون').of(dialogContext),
+                labelText: const S('Phone', 'التليفون', fr: 'Téléphone', es: 'Teléfono').of(dialogContext),
               ),
             ),
           ],
         ),
         actions: [
           AppButton.secondary(
-            label: const S('Cancel', 'إلغاء').of(dialogContext),
+            label: const S('Cancel', 'إلغاء', fr: 'Annuler', es: 'Cancelar').of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, false),
           ),
           AppButton.primary(
-            label: const S('Save', 'حفظ').of(dialogContext),
+            label: const S('Save', 'حفظ', fr: 'Enregistrer', es: 'Guardar').of(dialogContext),
             onPressed: () => Navigator.pop(dialogContext, true),
           ),
         ],
@@ -1011,7 +1044,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(const S('Manage student', 'إدارة الطالب').of(context)),
+      title: Text(const S('Manage student', 'إدارة الطالب', fr: "Gérer l'élève", es: 'Gestionar estudiante').of(context)),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -1019,7 +1052,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _sectionLabel(context, const S('Route', 'الخط').of(context)),
+              _sectionLabel(context, const S('Route', 'الخط', fr: 'Itinéraire', es: 'Ruta').of(context)),
               const SizedBox(height: 8),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: RoutesRepository().watchRoutes(widget.schoolId),
@@ -1055,12 +1088,14 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                       labelText: const S(
                         'Assigned route',
                         'الخط المخصص',
+                        fr: 'Itinéraire attribué',
+                        es: 'Ruta asignada',
                       ).of(context),
                     ),
                     items: [
                       DropdownMenuItem<String?>(
                         value: null,
-                        child: Text(const S('No route', 'من غير خط').of(context)),
+                        child: Text(const S('No route', 'من غير خط', fr: "Pas d'itinéraire", es: 'Sin ruta').of(context)),
                       ),
                       ...routes.map(
                         (doc) => DropdownMenuItem<String?>(
@@ -1085,6 +1120,8 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                   const S(
                     'Pending location request',
                     'طلب موقع قيد المراجعة',
+                    fr: 'Demande de localisation en attente',
+                    es: 'Solicitud de ubicación pendiente',
                   ).of(context),
                 ),
                 const SizedBox(height: 8),
@@ -1106,12 +1143,14 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                       tone: StatusTone.info,
                       actions: [
                         ApprovalAction(
-                          label: const S('Reject', 'رفض').of(context),
+                          label: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(context),
                           icon: Icons.cancel_outlined,
                           destructive: true,
                           confirmTitle: const S(
                             'Reject this suggestion?',
                             'رفض الاقتراح ده؟',
+                            fr: 'Rejeter cette suggestion ?',
+                            es: '¿Rechazar esta sugerencia?',
                           ).of(context),
                           confirmMessage: const S(
                             "The parent's suggested location will be "
@@ -1120,20 +1159,32 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                             'الموقع المقترح من ولي الأمر هيتشال — نقطة '
                                 'الاستلام الرسمية (لو موجودة) هتفضل زي ما '
                                 'هي.',
+                            fr: "L'emplacement suggéré par le parent sera "
+                                'écarté — le point de ramassage officiel '
+                                "(s'il existe) reste inchangé.",
+                            es: 'Se descartará la ubicación sugerida por el '
+                                'padre o madre; el punto de recogida oficial '
+                                '(si existe) permanece sin cambios.',
                           ).of(context),
                           onConfirmed: (_) => _resolveLocationRequest(accept: false),
                         ),
                         ApprovalAction(
-                          label: const S('Accept', 'قبول').of(context),
+                          label: const S('Accept', 'قبول', fr: 'Accepter', es: 'Aceptar').of(context),
                           icon: Icons.check_circle_outline,
                           confirmTitle: const S(
                             'Accept this location?',
                             'قبول الموقع ده؟',
+                            fr: 'Accepter cet emplacement ?',
+                            es: '¿Aceptar esta ubicación?',
                           ).of(context),
                           confirmMessage: const S(
                             "This becomes the student's official pickup "
                                 'point.',
                             'ده هيبقى نقطة الاستلام الرسمية للطالب.',
+                            fr: "Cela devient le point de ramassage officiel "
+                                "de l'élève.",
+                            es: 'Esto se convierte en el punto de recogida '
+                                'oficial del estudiante.',
                           ).of(context),
                           onConfirmed: (_) => _resolveLocationRequest(accept: true),
                         ),
@@ -1145,7 +1196,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
               const SizedBox(height: AppSpacing.xl),
               _sectionLabel(
                 context,
-                const S('Pickup point', 'نقطة الاستلام').of(context),
+                const S('Pickup point', 'نقطة الاستلام', fr: 'Point de ramassage', es: 'Punto de recogida').of(context),
               ),
               const SizedBox(height: 8),
               Row(
@@ -1168,6 +1219,10 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                                   "driver's pickup order.",
                               'لسه مش متحدد — الطالب ده مش هيظهر في ترتيب '
                                   'استلام السواق.',
+                              fr: "Non défini — cet élève n'apparaîtra pas "
+                                  "dans l'ordre de ramassage du chauffeur.",
+                              es: 'Sin definir; este estudiante no aparecerá '
+                                  'en el orden de recogida del conductor.',
                             ).of(context)
                           : 'Lat ${_latitude!.toStringAsFixed(5)}, '
                                 'Lng ${_longitude!.toStringAsFixed(5)}',
@@ -1178,8 +1233,8 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                   AppButton.secondary(
                     icon: _latitude == null ? Icons.add_location_alt : Icons.edit_location_alt,
                     label: _latitude == null
-                        ? const S('Set', 'تحديد').of(context)
-                        : const S('Edit', 'تعديل').of(context),
+                        ? const S('Set', 'تحديد', fr: 'Définir', es: 'Definir').of(context)
+                        : const S('Edit', 'تعديل', fr: 'Modifier', es: 'Editar').of(context),
                     onPressed: () async {
                       final picked = await Navigator.push<LatLng>(
                         context,
@@ -1205,7 +1260,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
               const SizedBox(height: AppSpacing.xl),
               _sectionLabel(
                 context,
-                const S('Linked parents', 'أولياء الأمور المرتبطين').of(context),
+                const S('Linked parents', 'أولياء الأمور المرتبطين', fr: 'Parents liés', es: 'Padres vinculados').of(context),
               ),
               const SizedBox(height: 8),
               StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -1243,6 +1298,8 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                                 const S(
                                   'No parents linked yet.',
                                   'مفيش أولياء أمور مرتبطين لسه.',
+                                  fr: 'Aucun parent lié pour le moment.',
+                                  es: 'Aún no hay padres vinculados.',
                                 ).of(context),
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
@@ -1278,6 +1335,8 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                                 labelText: const S(
                                   'Add parent',
                                   'إضافة ولي أمر',
+                                  fr: 'Ajouter un parent',
+                                  es: 'Agregar padre',
                                 ).of(context),
                               ),
                               items: availableParents
@@ -1295,7 +1354,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
                           const SizedBox(width: AppSpacing.sm),
                           AppButton.primary(
                             icon: Icons.link,
-                            label: const S('Link', 'ربط').of(context),
+                            label: const S('Link', 'ربط', fr: 'Lier', es: 'Vincular').of(context),
                             onPressed: _parentToAdd == null
                                 ? null
                                 : () {
@@ -1319,7 +1378,7 @@ class _ManageStudentDialogState extends State<_ManageStudentDialog> {
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Done', 'تم').of(context),
+          label: const S('Done', 'تم', fr: 'Terminé', es: 'Listo').of(context),
           onPressed: () => Navigator.pop(context),
         ),
       ],
@@ -1362,7 +1421,7 @@ class _DriversTab extends StatelessWidget {
                 ? EmptyStateView(
                     key: const ValueKey('empty'),
                     icon: Icons.badge_outlined,
-                    title: const S('No drivers found', 'مفيش سائقين').of(
+                    title: const S('No drivers found', 'مفيش سائقين', fr: 'Aucun chauffeur trouvé', es: 'No se encontraron conductores').of(
                       context,
                     ),
                     message: const S(
@@ -1370,6 +1429,10 @@ class _DriversTab extends StatelessWidget {
                           'to join your school.',
                       'السواقين هيظهروا هنا لما يسجلوا ويطلبوا الانضمام '
                           'لمدرستك.',
+                      fr: "Les chauffeurs apparaissent ici dès qu'ils "
+                          "s'inscrivent et demandent à rejoindre votre école.",
+                      es: 'Los conductores aparecen aquí cuando se registran '
+                          'y solicitan unirse a su escuela.',
                     ).of(context),
                   )
                 : ListView.builder(
@@ -1385,7 +1448,7 @@ class _DriversTab extends StatelessWidget {
                           ),
                           child: Center(
                             child: AppButton.secondary(
-                              label: const S('Load more', 'حمّل المزيد').of(
+                              label: const S('Load more', 'حمّل المزيد', fr: 'Charger plus', es: 'Cargar más').of(
                                 context,
                               ),
                               icon: Icons.expand_more,
@@ -1420,27 +1483,37 @@ class _DriversTab extends StatelessWidget {
                             subtitle: const S(
                               'Awaiting approval to join as a driver',
                               'في انتظار الموافقة على الانضمام كسائق',
+                              fr: "En attente d'approbation pour rejoindre "
+                                  'en tant que chauffeur',
+                              es: 'Pendiente de aprobación para unirse como '
+                                  'conductor',
                             ).of(context),
                             actions: [
                               ApprovalAction(
-                                label: const S('Approve', 'موافقة').of(context),
+                                label: const S('Approve', 'موافقة', fr: 'Approuver', es: 'Aprobar').of(context),
                                 icon: Icons.check_circle_outline,
                                 onConfirmed: (_) async =>
                                     bloc.add(DriverApproved(schoolId, doc.id)),
                               ),
                               ApprovalAction(
-                                label: const S('Reject', 'رفض').of(context),
+                                label: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(context),
                                 icon: Icons.cancel_outlined,
                                 destructive: true,
                                 requiresReason: true,
                                 confirmTitle: const S(
                                   'Reject this driver?',
                                   'رفض السائق ده؟',
+                                  fr: 'Rejeter ce chauffeur ?',
+                                  es: '¿Rechazar a este conductor?',
                                 ).of(context),
                                 confirmMessage: const S(
                                   'They will not be able to sign in as a '
                                       'driver at your school.',
                                   'مش هيقدر يسجل دخول كسائق في مدرستك.',
+                                  fr: 'Il ne pourra pas se connecter en tant '
+                                      'que chauffeur dans votre école.',
+                                  es: 'No podrá iniciar sesión como conductor '
+                                      'en su escuela.',
                                 ).of(context),
                                 onConfirmed: (reason) async => bloc.add(
                                   DriverRejected(schoolId, doc.id, reason: reason),
@@ -1478,6 +1551,8 @@ class _DriversTab extends StatelessWidget {
                             tooltip: const S(
                               'More actions',
                               'إجراءات إضافية',
+                              fr: "Plus d'actions",
+                              es: 'Más acciones',
                             ).of(context),
                             onSelected: (value) => _handleMemberAction(
                               context,
@@ -1496,7 +1571,7 @@ class _DriversTab extends StatelessWidget {
                                 child: _MemberActionMenuRow(
                                   icon: Icons.pause_circle_outline,
                                   color: menuContext.appColors.warning,
-                                  label: const S('Suspend', 'إيقاف').of(
+                                  label: const S('Suspend', 'إيقاف', fr: 'Suspendre', es: 'Suspender').of(
                                     menuContext,
                                   ),
                                 ),
@@ -1506,7 +1581,7 @@ class _DriversTab extends StatelessWidget {
                                 child: _MemberActionMenuRow(
                                   icon: Icons.cancel_outlined,
                                   color: menuContext.appColors.error,
-                                  label: const S('Reject', 'رفض').of(
+                                  label: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(
                                     menuContext,
                                   ),
                                 ),
@@ -1564,7 +1639,7 @@ class _ParentsTab extends StatelessWidget {
                 ? EmptyStateView(
                     key: const ValueKey('empty'),
                     icon: Icons.family_restroom_outlined,
-                    title: const S('No parents found', 'مفيش أولياء أمور').of(
+                    title: const S('No parents found', 'مفيش أولياء أمور', fr: 'Aucun parent trouvé', es: 'No se encontraron padres').of(
                       context,
                     ),
                     message: const S(
@@ -1572,6 +1647,10 @@ class _ParentsTab extends StatelessWidget {
                           'to join your school.',
                       'أولياء الأمور هيظهروا هنا لما يسجلوا ويطلبوا '
                           'الانضمام لمدرستك.',
+                      fr: "Les parents apparaissent ici dès qu'ils "
+                          "s'inscrivent et demandent à rejoindre votre école.",
+                      es: 'Los padres aparecen aquí cuando se registran y '
+                          'solicitan unirse a su escuela.',
                     ).of(context),
                   )
                 : ListView.builder(
@@ -1587,7 +1666,7 @@ class _ParentsTab extends StatelessWidget {
                           ),
                           child: Center(
                             child: AppButton.secondary(
-                              label: const S('Load more', 'حمّل المزيد').of(
+                              label: const S('Load more', 'حمّل المزيد', fr: 'Charger plus', es: 'Cargar más').of(
                                 context,
                               ),
                               icon: Icons.expand_more,
@@ -1618,27 +1697,36 @@ class _ParentsTab extends StatelessWidget {
                             subtitle: const S(
                               'Awaiting approval to join as a parent',
                               'في انتظار الموافقة على الانضمام كولي أمر',
+                              fr: "En attente d'approbation pour rejoindre "
+                                  'en tant que parent',
+                              es: 'Pendiente de aprobación para unirse como '
+                                  'padre',
                             ).of(context),
                             actions: [
                               ApprovalAction(
-                                label: const S('Approve', 'موافقة').of(context),
+                                label: const S('Approve', 'موافقة', fr: 'Approuver', es: 'Aprobar').of(context),
                                 icon: Icons.check_circle_outline,
                                 onConfirmed: (_) async =>
                                     bloc.add(ParentApproved(schoolId, doc.id)),
                               ),
                               ApprovalAction(
-                                label: const S('Reject', 'رفض').of(context),
+                                label: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(context),
                                 icon: Icons.cancel_outlined,
                                 destructive: true,
                                 requiresReason: true,
                                 confirmTitle: const S(
                                   'Reject this parent?',
                                   'رفض ولي الأمر ده؟',
+                                  fr: 'Rejeter ce parent ?',
+                                  es: '¿Rechazar a este padre?',
                                 ).of(context),
                                 confirmMessage: const S(
                                   'They will not be able to sign in at your '
                                       'school.',
                                   'مش هيقدر يسجل دخول في مدرستك.',
+                                  fr: 'Il ou elle ne pourra pas se connecter '
+                                      'à votre école.',
+                                  es: 'No podrá iniciar sesión en su escuela.',
                                 ).of(context),
                                 onConfirmed: (reason) async => bloc.add(
                                   ParentRejected(schoolId, doc.id, reason: reason),
@@ -1675,6 +1763,8 @@ class _ParentsTab extends StatelessWidget {
                             tooltip: const S(
                               'More actions',
                               'إجراءات إضافية',
+                              fr: "Plus d'actions",
+                              es: 'Más acciones',
                             ).of(context),
                             onSelected: (value) => _handleMemberAction(
                               context,
@@ -1693,7 +1783,7 @@ class _ParentsTab extends StatelessWidget {
                                 child: _MemberActionMenuRow(
                                   icon: Icons.pause_circle_outline,
                                   color: menuContext.appColors.warning,
-                                  label: const S('Suspend', 'إيقاف').of(
+                                  label: const S('Suspend', 'إيقاف', fr: 'Suspendre', es: 'Suspender').of(
                                     menuContext,
                                   ),
                                 ),
@@ -1703,7 +1793,7 @@ class _ParentsTab extends StatelessWidget {
                                 child: _MemberActionMenuRow(
                                   icon: Icons.cancel_outlined,
                                   color: menuContext.appColors.error,
-                                  label: const S('Reject', 'رفض').of(
+                                  label: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(
                                     menuContext,
                                   ),
                                 ),
@@ -1795,22 +1885,38 @@ class _SchoolLocationRequiredGate extends StatelessWidget {
       title: const S(
         'Set your school location first',
         'حدد موقع مدرستك الأول',
+        fr: "Définissez d'abord l'emplacement de votre école",
+        es: 'Primero defina la ubicación de su escuela',
       ).of(context),
       message: const S(
         "Every trip ends at your school's own location, so routes and "
             "pickup points can't be created until it's set.",
         'كل رحلة بتنتهي عند موقع مدرستك، فمينفعش تضيف خطوط سير أو نقاط '
             'استلام قبل ما تحدده.',
+        fr: "Chaque trajet se termine à l'emplacement de votre école ; les "
+            "itinéraires et points de ramassage ne peuvent donc pas être "
+            "créés tant qu'il n'est pas défini.",
+        es: 'Cada viaje termina en la ubicación de su escuela, por lo que '
+            'las rutas y los puntos de recogida no se pueden crear hasta '
+            'que se defina.',
       ).of(context),
-      actionLabel: const S('Set school location', 'تحديد موقع المدرسة')
-          .of(context),
+      actionLabel: const S(
+        'Set school location',
+        'تحديد موقع المدرسة',
+        fr: "Définir l'emplacement de l'école",
+        es: 'Definir la ubicación de la escuela',
+      ).of(context),
       onAction: () async {
         final picked = await Navigator.push<LatLng>(
           context,
           MaterialPageRoute(
             builder: (_) => LocationPickerPage(
-              title: const S('Set school location', 'تحديد موقع المدرسة')
-                  .of(context),
+              title: const S(
+                'Set school location',
+                'تحديد موقع المدرسة',
+                fr: "Définir l'emplacement de l'école",
+                es: 'Definir la ubicación de la escuela',
+              ).of(context),
             ),
           ),
         );
@@ -1863,7 +1969,7 @@ class _RoutesTabContent extends StatelessWidget {
               heroTag: 'routes-add-fab',
               onPressed: () => _createRoute(context),
               icon: const Icon(Icons.add),
-              label: Text(const S('Route', 'خط سير').of(context)),
+              label: Text(const S('Route', 'خط سير', fr: 'Itinéraire', es: 'Ruta').of(context)),
             ),
             body: docs.isEmpty
                 ? EmptyStateView(
@@ -1871,15 +1977,23 @@ class _RoutesTabContent extends StatelessWidget {
                     title: const S(
                       'No routes yet.',
                       'مفيش خطوط سير لسه.',
+                      fr: "Pas encore d'itinéraires.",
+                      es: 'Aún no hay rutas.',
                     ).of(context),
                     message: const S(
                       'Add your first route so it can be picked when you '
                           'schedule a trip.',
                       'ضيف أول خط سير عشان تقدر تختاره لما تجدول رحلة.',
+                      fr: 'Ajoutez votre premier itinéraire pour pouvoir le '
+                          "choisir lors de la planification d'un trajet.",
+                      es: 'Agregue su primera ruta para poder elegirla al '
+                          'programar un viaje.',
                     ).of(context),
                     actionLabel: const S(
                       'Add route',
                       'إضافة خط سير',
+                      fr: 'Ajouter un itinéraire',
+                      es: 'Agregar ruta',
                     ).of(context),
                     onAction: () => _createRoute(context),
                   )
@@ -1936,6 +2050,8 @@ class _RoutesTabContent extends StatelessWidget {
                                         ? const S(
                                             'No description',
                                             'من غير وصف',
+                                            fr: 'Aucune description',
+                                            es: 'Sin descripción',
                                           ).of(context)
                                         : description,
                                     style: Theme.of(context)
@@ -1963,6 +2079,10 @@ class _RoutesTabContent extends StatelessWidget {
                                                 '${route.deviationToleranceMeters.round()} m',
                                             'حد الخروج عن المسار '
                                                 '${route.deviationToleranceMeters.round()} متر',
+                                            fr: "Tolérance d'écart "
+                                                '${route.deviationToleranceMeters.round()} m',
+                                            es: 'Tolerancia de desviación '
+                                                '${route.deviationToleranceMeters.round()} m',
                                           ).of(context),
                                           style: Theme.of(context)
                                               .textTheme
@@ -1984,10 +2104,12 @@ class _RoutesTabContent extends StatelessWidget {
                               children: [
                                 StatusBadge(
                                   label: route.isActive
-                                      ? const S('Active', 'نشطة').of(context)
+                                      ? const S('Active', 'نشطة', fr: 'Actif', es: 'Activo').of(context)
                                       : const S(
                                           'Inactive',
                                           'غير نشطة',
+                                          fr: 'Inactif',
+                                          es: 'Inactivo',
                                         ).of(context),
                                   tone: route.isActive
                                       ? StatusTone.success
@@ -2001,6 +2123,8 @@ class _RoutesTabContent extends StatelessWidget {
                                       tooltip: const S(
                                         'Edit route',
                                         'تعديل الخط',
+                                        fr: "Modifier l'itinéraire",
+                                        es: 'Editar ruta',
                                       ).of(context),
                                       icon: const Icon(Icons.edit_outlined),
                                       onPressed: () => _editRoute(
@@ -2156,8 +2280,8 @@ class _RouteDialogState extends State<_RouteDialog> {
     return AlertDialog(
       title: Text(
         widget.route == null
-            ? const S('Add route', 'إضافة خط سير').of(context)
-            : const S('Edit route', 'تعديل الخط').of(context),
+            ? const S('Add route', 'إضافة خط سير', fr: 'Ajouter un itinéraire', es: 'Agregar ruta').of(context)
+            : const S('Edit route', 'تعديل الخط', fr: "Modifier l'itinéraire", es: 'Editar ruta').of(context),
       ),
       content: SizedBox(
         width: 460,
@@ -2171,14 +2295,14 @@ class _RouteDialogState extends State<_RouteDialog> {
                 autofocus: true,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: const S('Name', 'الاسم').of(context),
+                  labelText: const S('Name', 'الاسم', fr: 'Nom', es: 'Nombre').of(context),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: _description,
                 decoration: InputDecoration(
-                  labelText: const S('Description', 'الوصف').of(context),
+                  labelText: const S('Description', 'الوصف', fr: 'Description', es: 'Descripción').of(context),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -2186,6 +2310,8 @@ class _RouteDialogState extends State<_RouteDialog> {
                 const S(
                   'Deviation tolerance',
                   'حد الخروج عن المسار',
+                  fr: "Tolérance d'écart",
+                  es: 'Tolerancia de desviación',
                 ).of(context).toUpperCase(),
                 style: Theme.of(
                   context,
@@ -2198,6 +2324,12 @@ class _RouteDialogState extends State<_RouteDialog> {
                       'stop-to-stop path before it is flagged as off route.',
                   'قد إيه الأتوبيس على الخط ده ينفع يبعد عن مساره المتوقع '
                       'قبل ما يتحسب خارج المسار.',
+                  fr: "À quelle distance un bus sur cet itinéraire peut "
+                      "s'écarter de son trajet prévu arrêt par arrêt avant "
+                      "d'être signalé comme hors itinéraire.",
+                  es: 'A qué distancia puede alejarse un autobús de esta '
+                      'ruta de su trayecto esperado parada a parada antes '
+                      'de marcarse como desviado.',
                 ).of(context),
                 style: Theme.of(
                   context,
@@ -2236,6 +2368,8 @@ class _RouteDialogState extends State<_RouteDialog> {
                 const S(
                   'Daily schedule',
                   'الجدول اليومي',
+                  fr: 'Horaire quotidien',
+                  es: 'Horario diario',
                 ).of(context).toUpperCase(),
                 style: Theme.of(
                   context,
@@ -2251,6 +2385,15 @@ class _RouteDialogState extends State<_RouteDialog> {
                   'الميعاد الثابت للخط في كل اتجاه — بيتحسب عليه رحلات '
                       'الذهاب/العودة اليومية وموعد قفل الغياب. سيب الاتجاه '
                       'فاضي لو الخط ده مش بيعمله.',
+                  fr: "L'heure fixe à laquelle cet itinéraire circule dans "
+                      "chaque sens — utilisée pour générer les trajets aller/"
+                      "retour du jour et pour l'heure limite d'absence. "
+                      "Laissez un sens vide si cet itinéraire ne l'effectue "
+                      "pas.",
+                  es: 'La hora fija en que esta ruta circula en cada '
+                      'dirección; se usa para generar los viajes de ida/'
+                      'vuelta del día y para el límite de ausencia. Deje una '
+                      'dirección en blanco si esta ruta no la realiza.',
                 ).of(context),
                 style: Theme.of(
                   context,
@@ -2258,14 +2401,18 @@ class _RouteDialogState extends State<_RouteDialog> {
               ),
               const SizedBox(height: AppSpacing.sm),
               _DirectionTimeRow(
-                label: const S('Outbound (to school)', 'الذهاب للمدرسة')
-                    .of(context),
+                label: const S(
+                  'Outbound (to school)',
+                  'الذهاب للمدرسة',
+                  fr: "Aller (vers l'école)",
+                  es: 'Ida (a la escuela)',
+                ).of(context),
                 time: _outbound,
                 onChanged: (time) => setState(() => _outbound = time),
               ),
               const SizedBox(height: AppSpacing.xs),
               _DirectionTimeRow(
-                label: const S('Return (home)', 'العودة للمنزل').of(context),
+                label: const S('Return (home)', 'العودة للمنزل', fr: 'Retour (à la maison)', es: 'Vuelta (a casa)').of(context),
                 time: _return,
                 onChanged: (time) => setState(() => _return = time),
               ),
@@ -2275,11 +2422,11 @@ class _RouteDialogState extends State<_RouteDialog> {
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Cancel', 'إلغاء').of(context),
+          label: const S('Cancel', 'إلغاء', fr: 'Annuler', es: 'Cancelar').of(context),
           onPressed: () => Navigator.pop(context),
         ),
         AppButton.primary(
-          label: const S('Save', 'حفظ').of(context),
+          label: const S('Save', 'حفظ', fr: 'Enregistrer', es: 'Guardar').of(context),
           onPressed: _name.text.trim().isEmpty
               ? null
               : () => Navigator.pop(
@@ -2337,7 +2484,7 @@ class _DirectionTimeRow extends StatelessWidget {
           title: Text(label),
           subtitle: time == null
               ? Text(
-                  const S("Not run", 'مش بيعمله').of(context),
+                  const S("Not run", 'مش بيعمله', fr: 'Non exécuté', es: 'No se ejecuta').of(context),
                   style: TextStyle(color: colors.textMuted),
                 )
               : Text(time!.format(context)),
@@ -2345,7 +2492,7 @@ class _DirectionTimeRow extends StatelessWidget {
               ? null
               : IconButton(
                   icon: const Icon(Icons.close, size: 18),
-                  tooltip: const S('Clear', 'مسح').of(context),
+                  tooltip: const S('Clear', 'مسح', fr: 'Effacer', es: 'Borrar').of(context),
                   onPressed: () => onChanged(null),
                 ),
         ),
@@ -2373,13 +2520,13 @@ StatusTone _tripStatusTone(TripStatus status) => switch (status) {
 
 String _tripStatusLabel(TripStatus status, BuildContext context) =>
     switch (status) {
-      TripStatus.scheduled => const S('Scheduled', 'مجدولة').of(context),
-      TripStatus.starting => const S('Starting', 'جاري البدء').of(context),
-      TripStatus.active => const S('En route', 'في الطريق').of(context),
-      TripStatus.paused => const S('Paused', 'متوقفة مؤقتاً').of(context),
-      TripStatus.completed => const S('Completed', 'مكتملة').of(context),
-      TripStatus.cancelled => const S('Cancelled', 'ملغاة').of(context),
-      TripStatus.emergency => const S('Emergency', 'حالة طوارئ').of(context),
+      TripStatus.scheduled => const S('Scheduled', 'مجدولة', fr: 'Planifié', es: 'Programado').of(context),
+      TripStatus.starting => const S('Starting', 'جاري البدء', fr: 'Démarrage', es: 'Iniciando').of(context),
+      TripStatus.active => const S('En route', 'في الطريق', fr: 'En route', es: 'En camino').of(context),
+      TripStatus.paused => const S('Paused', 'متوقفة مؤقتاً', fr: 'En pause', es: 'En pausa').of(context),
+      TripStatus.completed => const S('Completed', 'مكتملة', fr: 'Terminé', es: 'Completado').of(context),
+      TripStatus.cancelled => const S('Cancelled', 'ملغاة', fr: 'Annulé', es: 'Cancelado').of(context),
+      TripStatus.emergency => const S('Emergency', 'حالة طوارئ', fr: 'Urgence', es: 'Emergencia').of(context),
     };
 
 /// Maps a [StatusTone] onto its token color — used to tint a trip's leading
@@ -2421,10 +2568,14 @@ class _TripsTab extends StatelessWidget {
               TripConflictReason.busAlreadyActive => const S(
                 'Bus is already assigned to another trip.',
                 'الأتوبيس ده متخصص لرحلة تانية بالفعل.',
+                fr: 'Ce bus est déjà affecté à un autre trajet.',
+                es: 'Este autobús ya está asignado a otro viaje.',
               ).of(context),
               TripConflictReason.driverAlreadyActive => const S(
                 'Driver is already assigned to another trip.',
                 'السائق ده متخصص لرحلة تانية بالفعل.',
+                fr: 'Ce chauffeur est déjà affecté à un autre trajet.',
+                es: 'Este conductor ya está asignado a otro viaje.',
               ).of(context),
               null => null,
             };
@@ -2438,10 +2589,16 @@ class _TripsTab extends StatelessWidget {
                       'been notified.',
                   'تم تغيير تخصيص الرحلة. أولياء الأمور المعنيين والسائق '
                       'الجديد اتبلغوا.',
+                  fr: 'Trajet réattribué. Les parents concernés et le '
+                      'nouveau chauffeur ont été informés.',
+                  es: 'Viaje reasignado. Se notificó a los padres afectados '
+                      'y al nuevo conductor.',
                 ).of(context),
                 TripActionKind.cancelled => const S(
                   'Trip cancelled.',
                   'تم إلغاء الرحلة.',
+                  fr: 'Trajet annulé.',
+                  es: 'Viaje cancelado.',
                 ).of(context),
               },
             );
@@ -2478,7 +2635,7 @@ class _TripsTab extends StatelessWidget {
               heroTag: 'trips-add-fab',
               onPressed: () => _createTrip(context),
               icon: const Icon(Icons.add),
-              label: Text(const S('Trip', 'رحلة').of(context)),
+              label: Text(const S('Trip', 'رحلة', fr: 'Trajet', es: 'Viaje').of(context)),
             ),
             body: docs.isEmpty
                 ? EmptyStateView(
@@ -2486,13 +2643,19 @@ class _TripsTab extends StatelessWidget {
                     title: const S(
                       'No trips scheduled yet.',
                       'مفيش رحلات متجدولة لسه.',
+                      fr: 'Aucun trajet programmé pour le moment.',
+                      es: 'Aún no hay viajes programados.',
                     ).of(context),
                     message: const S(
                       'Schedule your first trip by picking a route, a bus '
                           'and a driver.',
                       'جدول أول رحلة باختيار خط وأتوبيس وسائق.',
+                      fr: 'Planifiez votre premier trajet en choisissant un '
+                          'itinéraire, un bus et un chauffeur.',
+                      es: 'Programe su primer viaje eligiendo una ruta, un '
+                          'autobús y un conductor.',
                     ).of(context),
-                    actionLabel: const S('Add trip', 'إضافة رحلة').of(context),
+                    actionLabel: const S('Add trip', 'إضافة رحلة', fr: 'Ajouter un trajet', es: 'Agregar viaje').of(context),
                     onAction: () => _createTrip(context),
                   )
                 : ListView.separated(
@@ -2511,6 +2674,8 @@ class _TripsTab extends StatelessWidget {
                               label: const S(
                                 'Load more',
                                 'حمّل المزيد',
+                                fr: 'Charger plus',
+                                es: 'Cargar más',
                               ).of(context),
                               icon: Icons.expand_more,
                               onPressed: () => context
@@ -2569,6 +2734,8 @@ class _TripsTab extends StatelessWidget {
                                               ? S(
                                                   'Route ${trip.routeId}',
                                                   'الخط ${trip.routeId}',
+                                                  fr: 'Itinéraire ${trip.routeId}',
+                                                  es: 'Ruta ${trip.routeId}',
                                                 ).of(context)
                                               : trip.routeName,
                                           style: Theme.of(context)
@@ -2654,6 +2821,8 @@ class _TripsTab extends StatelessWidget {
                                 tooltip: const S(
                                   'Reassign bus or driver',
                                   'تغيير الأتوبيس أو السائق',
+                                  fr: 'Réattribuer un bus ou un chauffeur',
+                                  es: 'Reasignar autobús o conductor',
                                 ).of(context),
                                 icon: Icon(
                                   Icons.swap_horiz,
@@ -2667,6 +2836,8 @@ class _TripsTab extends StatelessWidget {
                               tooltip: const S(
                                 'Change history',
                                 'سجل التغييرات',
+                                fr: 'Historique des modifications',
+                                es: 'Historial de cambios',
                               ).of(context),
                               icon: Icon(
                                 Icons.history,
@@ -2685,6 +2856,8 @@ class _TripsTab extends StatelessWidget {
                                 tooltip: const S(
                                   'Cancel trip',
                                   'إلغاء الرحلة',
+                                  fr: 'Annuler le trajet',
+                                  es: 'Cancelar viaje',
                                 ).of(context),
                                 icon: Icon(
                                   Icons.cancel_outlined,
@@ -2726,14 +2899,18 @@ class _TripsTab extends StatelessWidget {
     final bloc = context.read<TripsBloc>();
     final confirmed = await showAppConfirmDialog(
       context,
-      title: const S('Cancel this trip?', 'تلغي الرحلة دي؟').of(context),
+      title: const S('Cancel this trip?', 'تلغي الرحلة دي؟', fr: 'Annuler ce trajet ?', es: '¿Cancelar este viaje?').of(context),
       message: const S(
         'The driver and any linked parents will see this trip as '
             'cancelled. This cannot be undone.',
         'السائق وأولياء الأمور المرتبطين هيشوفوا الرحلة دي ملغاة. '
             'الإجراء ده مينفعش يتراجع فيه.',
+        fr: 'Le chauffeur et les parents liés verront ce trajet comme '
+            'annulé. Cette action est irréversible.',
+        es: 'El conductor y los padres vinculados verán este viaje como '
+            'cancelado. Esto no se puede deshacer.',
       ).of(context),
-      confirmLabel: const S('Cancel trip', 'إلغاء الرحلة').of(context),
+      confirmLabel: const S('Cancel trip', 'إلغاء الرحلة', fr: 'Annuler le trajet', es: 'Cancelar viaje').of(context),
       destructive: true,
     );
     if (confirmed != true) return;
@@ -2870,7 +3047,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(const S('Add trip', 'إضافة رحلة').of(context)),
+      title: Text(const S('Add trip', 'إضافة رحلة', fr: 'Ajouter un trajet', es: 'Agregar viaje').of(context)),
       content: SizedBox(
         width: 420,
         child: SingleChildScrollView(
@@ -2890,7 +3067,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   return DropdownButtonFormField<String>(
                     initialValue: _routeId,
                     decoration: InputDecoration(
-                      labelText: const S('Route', 'الخط').of(context),
+                      labelText: const S('Route', 'الخط', fr: 'Itinéraire', es: 'Ruta').of(context),
                     ),
                     items: routes
                         .map(
@@ -2932,7 +3109,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   return DropdownButtonFormField<String>(
                     initialValue: _busId,
                     decoration: InputDecoration(
-                      labelText: const S('Bus', 'الأتوبيس').of(context),
+                      labelText: const S('Bus', 'الأتوبيس', fr: 'Bus', es: 'Autobús').of(context),
                     ),
                     items: buses
                         .map(
@@ -2982,6 +3159,14 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                             'الأتوبيس ده سعته $_busCapacity راكب، لكن '
                                 '$_routeStudentCount طالب متحددين على الخط ده. '
                                 'اختار أتوبيس أكبر أو انقل بعض الطلاب الأول.',
+                            fr: 'Ce bus a $_busCapacity places, mais '
+                                '$_routeStudentCount élèves sont affectés à '
+                                'cet itinéraire. Choisissez un bus plus grand '
+                                "ou déplacez d'abord des élèves.",
+                            es: 'Este autobús tiene $_busCapacity asientos, '
+                                'pero $_routeStudentCount estudiantes están '
+                                'asignados a esta ruta. Elija un autobús más '
+                                'grande o mueva algunos estudiantes primero.',
                           ).of(context),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: context.appColors.error,
@@ -3004,7 +3189,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   return DropdownButtonFormField<String>(
                     initialValue: _driverId,
                     decoration: InputDecoration(
-                      labelText: const S('Driver', 'السائق').of(context),
+                      labelText: const S('Driver', 'السائق', fr: 'Chauffeur', es: 'Conductor').of(context),
                     ),
                     items: drivers
                         .map(
@@ -3035,12 +3220,12 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                 segments: [
                   ButtonSegment(
                     value: TripDirection.outbound,
-                    label: Text(const S('Outbound', 'ذهاب').of(context)),
+                    label: Text(const S('Outbound', 'ذهاب', fr: 'Aller', es: 'Ida').of(context)),
                     icon: const Icon(Icons.north_east),
                   ),
                   ButtonSegment(
                     value: TripDirection.returnTrip,
-                    label: Text(const S('Return', 'عودة').of(context)),
+                    label: Text(const S('Return', 'عودة', fr: 'Retour', es: 'Vuelta').of(context)),
                     icon: const Icon(Icons.south_west),
                   ),
                 ],
@@ -3067,6 +3252,8 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                       const S(
                         'Scheduled time',
                         'موعد الرحلة',
+                        fr: 'Heure prévue',
+                        es: 'Hora programada',
                       ).of(context),
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: context.appColors.textMuted,
@@ -3092,7 +3279,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   _repeatUntil ??= _scheduledAt.add(const Duration(days: 6));
                 }),
                 title: Text(
-                  const S('Repeat every day', 'تكرار كل يوم').of(context),
+                  const S('Repeat every day', 'تكرار كل يوم', fr: 'Répéter chaque jour', es: 'Repetir todos los días').of(context),
                 ),
                 subtitle: Text(
                   const S(
@@ -3100,6 +3287,10 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                         'end date below.',
                     'بينشئ رحلة كل يوم في نفس الميعاد، لحد تاريخ النهاية '
                         'تحت.',
+                    fr: "Crée un trajet par jour à la même heure, jusqu'à "
+                        'la date de fin ci-dessous.',
+                    es: 'Crea un viaje por día a la misma hora, hasta la '
+                        'fecha de finalización a continuación.',
                   ).of(context),
                 ),
               ),
@@ -3119,7 +3310,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.event_repeat_outlined),
                       title: Text(
-                        const S('Repeat until', 'يتكرر لحد').of(context),
+                        const S('Repeat until', 'يتكرر لحد', fr: "Répéter jusqu'au", es: 'Repetir hasta').of(context),
                         style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: context.appColors.textMuted,
                         ),
@@ -3136,6 +3327,8 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                         S(
                           '${_dayCount()} trips',
                           '${_dayCount()} رحلة',
+                          fr: '${_dayCount()} trajets',
+                          es: '${_dayCount()} viajes',
                         ).of(context),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: context.appColors.textMuted,
@@ -3151,7 +3344,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(const S('Cancel', 'إلغاء').of(context)),
+          child: Text(const S('Cancel', 'إلغاء', fr: 'Annuler', es: 'Cancelar').of(context)),
         ),
         FilledButton(
           onPressed:
@@ -3176,7 +3369,7 @@ class _CreateTripDialogState extends State<_CreateTripDialog> {
                   }
                   Navigator.pop(context);
                 },
-          child: Text(const S('Save', 'حفظ').of(context)),
+          child: Text(const S('Save', 'حفظ', fr: 'Enregistrer', es: 'Guardar').of(context)),
         ),
       ],
     );

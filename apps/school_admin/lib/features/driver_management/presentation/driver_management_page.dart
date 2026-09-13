@@ -85,12 +85,20 @@ class _DriverManagementView extends StatelessWidget {
                   title: const S(
                     'No drivers found',
                     'مفيش سائقين',
+                    fr: 'Aucun chauffeur trouvé',
+                    es: 'No se encontraron conductores',
                   ).of(context),
                   message: const S(
                     'Drivers appear here once they sign up and request to '
                         'join your school.',
                     'السواقين هيظهروا هنا لما يسجلوا ويطلبوا الانضمام '
                         'لمدرستك.',
+                    fr:
+                        "Les chauffeurs apparaissent ici une fois inscrits "
+                        "et après avoir demandé à rejoindre votre école.",
+                    es:
+                        'Los conductores aparecen aquí una vez que se '
+                        'registran y solicitan unirse a su escuela.',
                   ).of(context),
                 )
               : _DriverRoster(
@@ -104,7 +112,12 @@ class _DriverManagementView extends StatelessWidget {
           appBar: showAppBar
               ? AppBar(
                   title: Text(
-                    const S('Drivers', 'إدارة السائقين').of(context),
+                    const S(
+                      'Drivers',
+                      'إدارة السائقين',
+                      fr: 'Chauffeurs',
+                      es: 'Conductores',
+                    ).of(context),
                   ),
                 )
               : null,
@@ -159,7 +172,12 @@ class _DriverRoster extends StatelessWidget {
                 final cards = [
                   MetricStatCard(
                     icon: Icons.groups_outlined,
-                    label: const S('Drivers', 'السائقين').of(context),
+                    label: const S(
+                      'Drivers',
+                      'السائقين',
+                      fr: 'Chauffeurs',
+                      es: 'Conductores',
+                    ).of(context),
                     value: '${drivers.length}',
                   ),
                   MetricStatCard(
@@ -168,6 +186,8 @@ class _DriverRoster extends StatelessWidget {
                     label: const S(
                       'Expired licenses',
                       'رخص منتهية',
+                      fr: 'Permis expirés',
+                      es: 'Licencias vencidas',
                     ).of(context),
                     value: '$expired',
                   ),
@@ -177,6 +197,8 @@ class _DriverRoster extends StatelessWidget {
                     label: const S(
                       'Expiring in 14 days',
                       'هتنتهي خلال 14 يوم',
+                      fr: 'Expire dans 14 jours',
+                      es: 'Vence en 14 días',
                     ).of(context),
                     value: '$expiringSoon',
                   ),
@@ -186,6 +208,8 @@ class _DriverRoster extends StatelessWidget {
                     label: const S(
                       'No license recorded',
                       'من غير رخصة مسجلة',
+                      fr: 'Aucun permis enregistré',
+                      es: 'Sin licencia registrada',
                     ).of(context),
                     value: '$noLicenseRecorded',
                   ),
@@ -202,12 +226,25 @@ class _DriverRoster extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl2),
             SectionHeader(
-              title: const S('Roster', 'قائمة السائقين').of(context),
+              title: const S(
+                'Roster',
+                'قائمة السائقين',
+                fr: 'Liste des chauffeurs',
+                es: 'Lista de conductores',
+              ).of(context),
               subtitle: const S(
                 'Drivers needing licence attention are listed first. Open a '
                     'driver to edit their profile and see their trip record.',
                 'السواقين اللي رخصهم محتاجة انتباه بيظهروا الأول. افتح '
                     'السائق عشان تعدّل بياناته وتشوف سجل رحلاته.',
+                fr:
+                    "Les chauffeurs dont le permis nécessite une attention "
+                    "sont listés en premier. Ouvrez un chauffeur pour "
+                    "modifier son profil et voir son historique de trajets.",
+                es:
+                    'Los conductores que necesitan atención con su licencia '
+                    'aparecen primero. Abra un conductor para editar su '
+                    'perfil y ver su historial de viajes.',
               ).of(context),
             ),
             LayoutBuilder(
@@ -347,10 +384,15 @@ class _DriverCard extends StatelessWidget {
                         ? const S(
                             'Training not recorded',
                             'التدريب مش مسجل',
+                            fr: 'Formation non enregistrée',
+                            es: 'Capacitación no registrada',
                           ).of(context)
-                        : S('Trained $trainedOn', 'اتدرب $trainedOn').of(
-                            context,
-                          ),
+                        : S(
+                            'Trained $trainedOn',
+                            'اتدرب $trainedOn',
+                            fr: 'Formé le $trainedOn',
+                            es: 'Capacitado el $trainedOn',
+                          ).of(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.textSecondary,
                     ),
@@ -376,6 +418,15 @@ class _DriverCard extends StatelessWidget {
                           'assigned',
                       '${profile?.assignedBusIds.length ?? 0} أتوبيس · '
                           '${profile?.assignedRouteIds.length ?? 0} خط مخصص',
+                      fr:
+                          '${profile?.assignedBusIds.length ?? 0} bus · '
+                          '${profile?.assignedRouteIds.length ?? 0} '
+                          'itinéraire(s) assigné(s)',
+                      es:
+                          '${profile?.assignedBusIds.length ?? 0} '
+                          'autobús(es) · '
+                          '${profile?.assignedRouteIds.length ?? 0} '
+                          'ruta(s) asignada(s)',
                     ).of(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.textSecondary,
@@ -416,6 +467,8 @@ class _LicenseLine extends StatelessWidget {
               const S(
                 'No licence expiry recorded',
                 'تاريخ انتهاء الرخصة مش مسجل',
+                fr: "Aucune date d'expiration de permis enregistrée",
+                es: 'Sin fecha de vencimiento de licencia registrada',
               ).of(context),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.textMuted,
@@ -446,10 +499,14 @@ class _LicenseLine extends StatelessWidget {
                 ? S(
                     'Licence expired ${-days} day(s) ago',
                     'الرخصة انتهت من ${-days} يوم',
+                    fr: 'Permis expiré il y a ${-days} jour(s)',
+                    es: 'Licencia vencida hace ${-days} día(s)',
                   ).of(context)
                 : S(
                     'Licence expires in $days day(s)',
                     'الرخصة هتنتهي خلال $days يوم',
+                    fr: 'Permis expire dans $days jour(s)',
+                    es: 'Licencia vence en $days día(s)',
                   ).of(context),
             style: theme.textTheme.bodySmall?.copyWith(
               color: toneColor(colors, tone),

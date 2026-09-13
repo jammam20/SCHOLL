@@ -45,8 +45,12 @@ class _CommunityPageState extends State<CommunityPage> {
     if (posted == true && mounted) {
       AppSnackbar.success(
         context,
-        const S('Posted to your school community.', 'اتنشر في مجتمع المدرسة.')
-            .of(context),
+        const S(
+          'Posted to your school community.',
+          'اتنشر في مجتمع المدرسة.',
+          fr: 'Publié dans la communauté de votre école.',
+          es: 'Publicado en la comunidad de su escuela.',
+        ).of(context),
       );
     }
   }
@@ -57,10 +61,10 @@ class _CommunityPageState extends State<CommunityPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Community', 'مجتمع المدرسة').of(context)),
+        title: Text(const S('Community', 'مجتمع المدرسة', fr: 'Communauté', es: 'Comunidad').of(context)),
         actions: [
           IconButton(
-            tooltip: const S('Search', 'بحث').of(context),
+            tooltip: const S('Search', 'بحث', fr: 'Rechercher', es: 'Buscar').of(context),
             icon: Icon(_searching ? Icons.close : Icons.search),
             onPressed: () => setState(() {
               _searching = !_searching;
@@ -90,6 +94,8 @@ class _CommunityPageState extends State<CommunityPage> {
                       hintText: const S(
                         'Search posts…',
                         'دور في المنشورات…',
+                        fr: 'Rechercher des publications…',
+                        es: 'Buscar publicaciones…',
                       ).of(context),
                     ),
                   ),
@@ -104,7 +110,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     ),
                     children: [
                       _FilterChip(
-                        label: const S('All', 'الكل').of(context),
+                        label: const S('All', 'الكل', fr: 'Tout', es: 'Todo').of(context),
                         selected: _categoryFilter == null,
                         onTap: () => setState(() => _categoryFilter = null),
                       ),
@@ -131,7 +137,7 @@ class _CommunityPageState extends State<CommunityPage> {
         heroTag: 'community-new-post-fab',
         onPressed: _openComposer,
         icon: const Icon(Icons.add_comment_outlined),
-        label: Text(const S('New post', 'منشور جديد').of(context)),
+        label: Text(const S('New post', 'منشور جديد', fr: 'Nouvelle publication', es: 'Nueva publicación').of(context)),
       ),
       body: StreamBuilder<List<CommunityPost>>(
         stream: _repository.watchFeed(
@@ -157,6 +163,10 @@ class _CommunityPageState extends State<CommunityPage> {
                 "Couldn't load the community feed — check your connection "
                     'and try again.',
                 'معرفناش نحمّل مجتمع المدرسة — اتأكد من الاتصال وجرب تاني.',
+                fr: "Impossible de charger le fil de la communauté — vérifiez "
+                    "votre connexion et réessayez.",
+                es: 'No se pudo cargar el feed de la comunidad — revise su '
+                    'conexión e inténtelo de nuevo.',
               ).of(context),
               onRetry: () => setState(() {}),
             );
@@ -176,6 +186,8 @@ class _CommunityPageState extends State<CommunityPage> {
               title: const S(
                 'No posts in the school community yet',
                 'لسه مفيش منشورات في مجتمع المدرسة',
+                fr: "Aucune publication dans la communauté de l'école pour le moment",
+                es: 'Aún no hay publicaciones en la comunidad de la escuela',
               ).of(context),
               message: const S(
                 'Be the first to share a problem, a question, or a '
@@ -183,8 +195,19 @@ class _CommunityPageState extends State<CommunityPage> {
                     'parents.',
                 'كن أول واحد يشارك مشكلة أو سؤال أو اقتراح — هويتك هتفضل '
                     'مجهولة لباقي أولياء الأمور.',
+                fr: "Soyez le premier à partager un problème, une question ou "
+                    "une suggestion — votre identité reste anonyme pour les "
+                    "autres parents.",
+                es: 'Sea el primero en compartir un problema, una pregunta o '
+                    'una sugerencia — su identidad permanece anónima para los '
+                    'demás padres.',
               ).of(context),
-              actionLabel: const S('New post', 'منشور جديد').of(context),
+              actionLabel: const S(
+                'New post',
+                'منشور جديد',
+                fr: 'Nouvelle publication',
+                es: 'Nueva publicación',
+              ).of(context),
               onAction: _openComposer,
             );
           }

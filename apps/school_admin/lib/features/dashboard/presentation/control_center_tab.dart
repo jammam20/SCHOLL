@@ -53,13 +53,28 @@ class ControlCenterTab extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           readOnly
-              ? const S('Today', 'النهارده').of(context)
-              : const S('Control centre', 'مركز التحكم').of(context),
+              ? const S(
+                  'Today',
+                  'النهارده',
+                  fr: "Aujourd'hui",
+                  es: 'Hoy',
+                ).of(context)
+              : const S(
+                  'Control centre',
+                  'مركز التحكم',
+                  fr: 'Centre de contrôle',
+                  es: 'Centro de control',
+                ).of(context),
         ),
         actions: [
           if (!readOnly)
             IconButton(
-              tooltip: const S('Audit trail', 'سجل التدقيق').of(context),
+              tooltip: const S(
+                'Audit trail',
+                'سجل التدقيق',
+                fr: "Journal d'audit",
+                es: 'Registro de auditoría',
+              ).of(context),
               icon: const Icon(Icons.receipt_long_outlined),
               onPressed: () => Navigator.push(
                 context,
@@ -87,10 +102,14 @@ class ControlCenterTab extends StatelessWidget {
                     title: S(
                       'Welcome back, ${user.name}',
                       'أهلاً بيك تاني، ${user.name}',
+                      fr: 'Bon retour, ${user.name}',
+                      es: 'Bienvenido de nuevo, ${user.name}',
                     ).of(context),
                     subtitle: const S(
                       "Here's a snapshot of your school today.",
                       'لمحة سريعة عن مدرستك النهارده.',
+                      fr: "Voici un aperçu de votre école aujourd'hui.",
+                      es: 'Aquí tiene un resumen de su escuela hoy.',
                     ).of(context),
                   ),
                 ),
@@ -156,7 +175,12 @@ class _QuickActionsRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
-          title: const S('Quick actions', 'إجراءات سريعة').of(context),
+          title: const S(
+            'Quick actions',
+            'إجراءات سريعة',
+            fr: 'Actions rapides',
+            es: 'Acciones rápidas',
+          ).of(context),
         ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
@@ -165,7 +189,12 @@ class _QuickActionsRow extends StatelessWidget {
           children: [
             _QuickActionChip(
               icon: Icons.search,
-              label: const S('Search', 'بحث').of(context),
+              label: const S(
+                'Search',
+                'بحث',
+                fr: 'Rechercher',
+                es: 'Buscar',
+              ).of(context),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -175,19 +204,33 @@ class _QuickActionsRow extends StatelessWidget {
             ),
             _QuickActionChip(
               icon: Icons.map_outlined,
-              label: const S('Live map', 'الخريطة المباشرة').of(context),
+              label: const S(
+                'Live map',
+                'الخريطة المباشرة',
+                fr: 'Carte en direct',
+                es: 'Mapa en vivo',
+              ).of(context),
               onTap: () => onJump(DashboardJumpTarget.liveOps),
             ),
             _PendingRequestsChip(schoolId: schoolId, onJump: onJump),
             _QuickActionChip(
               icon: Icons.groups_outlined,
-              label: const S('Add student / driver / parent', 'إضافة طالب / سائق / ولي أمر')
-                  .of(context),
+              label: const S(
+                'Add student / driver / parent',
+                'إضافة طالب / سائق / ولي أمر',
+                fr: 'Ajouter élève / chauffeur / parent',
+                es: 'Agregar estudiante / conductor / padre',
+              ).of(context),
               onTap: () => onJump(DashboardJumpTarget.people),
             ),
             _QuickActionChip(
               icon: Icons.directions_bus_outlined,
-              label: const S('Add bus / route', 'إضافة أتوبيس / خط').of(context),
+              label: const S(
+                'Add bus / route',
+                'إضافة أتوبيس / خط',
+                fr: 'Ajouter bus / itinéraire',
+                es: 'Agregar autobús / ruta',
+              ).of(context),
               onTap: () => onJump(DashboardJumpTarget.operations),
             ),
           ],
@@ -237,7 +280,10 @@ class _QuickActionChip extends StatelessWidget {
               if (badge != null && badge! > 0) ...[
                 const SizedBox(width: AppSpacing.sm),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.warning,
                     borderRadius: BorderRadius.circular(999),
@@ -280,9 +326,10 @@ class _PendingRequestsChip extends StatelessWidget {
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: ParentsRepository().watchParents(schoolId, limit: 200),
               builder: (context, parentsSnapshot) {
-                final pendingStudents = (studentsSnapshot.data?.docs ?? const [])
-                    .where((doc) => doc.data()['approved'] == false)
-                    .length;
+                final pendingStudents =
+                    (studentsSnapshot.data?.docs ?? const [])
+                        .where((doc) => doc.data()['approved'] == false)
+                        .length;
                 final pendingDrivers = (driversSnapshot.data?.docs ?? const [])
                     .where((doc) => doc.data()['status'] == 'pending')
                     .length;
@@ -293,8 +340,12 @@ class _PendingRequestsChip extends StatelessWidget {
 
                 return _QuickActionChip(
                   icon: Icons.pending_actions_outlined,
-                  label: const S('Pending requests', 'الطلبات المعلّقة')
-                      .of(context),
+                  label: const S(
+                    'Pending requests',
+                    'الطلبات المعلّقة',
+                    fr: 'Demandes en attente',
+                    es: 'Solicitudes pendientes',
+                  ).of(context),
                   badge: total,
                   onTap: () => onJump(DashboardJumpTarget.people),
                 );
@@ -557,15 +608,23 @@ class _FleetCounts extends StatelessWidget {
       MetricStatCard(
         icon: Icons.directions_bus_filled,
         tone: colors.info,
-        label: const S('Buses on the road', 'أتوبيسات على الطريق').of(context),
+        label: const S(
+          'Buses on the road',
+          'أتوبيسات على الطريق',
+          fr: 'Bus en circulation',
+          es: 'Autobuses en la carretera',
+        ).of(context),
         value: '${snapshot.busesOnRoad}',
       ),
       MetricStatCard(
         icon: Icons.warning_amber_rounded,
-        tone: snapshot.busesInEmergency > 0
-            ? colors.emergency
-            : colors.success,
-        label: const S('In emergency', 'في حالة طوارئ').of(context),
+        tone: snapshot.busesInEmergency > 0 ? colors.emergency : colors.success,
+        label: const S(
+          'In emergency',
+          'في حالة طوارئ',
+          fr: 'En urgence',
+          es: 'En emergencia',
+        ).of(context),
         value: '${snapshot.busesInEmergency}',
       ),
       MetricStatCard(
@@ -574,18 +633,30 @@ class _FleetCounts extends StatelessWidget {
         label: const S(
           'Likely delayed (heuristic)',
           'غالباً متأخرة (تقديري)',
+          fr: 'Probablement en retard (estimation)',
+          es: 'Probablemente retrasado (estimado)',
         ).of(context),
         value: '${snapshot.likelyDelayed}',
       ),
       MetricStatCard(
         icon: Icons.schedule_outlined,
-        label: const S('Not started yet', 'لسه مبدأتش').of(context),
+        label: const S(
+          'Not started yet',
+          'لسه مبدأتش',
+          fr: 'Pas encore commencé',
+          es: 'Aún no iniciado',
+        ).of(context),
         value: '${snapshot.notStarted}',
       ),
       MetricStatCard(
         icon: Icons.task_alt,
         tone: colors.success,
-        label: const S('Completed today', 'اكتملت النهارده').of(context),
+        label: const S(
+          'Completed today',
+          'اكتملت النهارده',
+          fr: "Terminé aujourd'hui",
+          es: 'Completado hoy',
+        ).of(context),
         value: '${snapshot.completedToday}',
       ),
       MetricStatCard(
@@ -594,6 +665,8 @@ class _FleetCounts extends StatelessWidget {
         label: const S(
           'On-time rate today',
           'الالتزام بالمعاد النهارده',
+          fr: "Taux de ponctualité aujourd'hui",
+          es: 'Tasa de puntualidad de hoy',
         ).of(context),
         value: snapshot.onTimeRate == null
             ? '—'
@@ -607,12 +680,19 @@ class _FleetCounts extends StatelessWidget {
         label: const S(
           'Vehicles with expiring docs',
           'مركبات أوراقها قربت تنتهي',
+          fr: 'Véhicules aux documents expirant bientôt',
+          es: 'Vehículos con documentos por vencer',
         ).of(context),
         value: '${snapshot.busesWithExpiringDocs}',
       ),
       MetricStatCard(
         icon: Icons.garage_outlined,
-        label: const S('Active fleet', 'الأسطول النشط').of(context),
+        label: const S(
+          'Active fleet',
+          'الأسطول النشط',
+          fr: 'Flotte active',
+          es: 'Flota activa',
+        ).of(context),
         value: '${snapshot.activeBuses} / ${snapshot.totalBuses}',
       ),
     ];
@@ -621,7 +701,12 @@ class _FleetCounts extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(
-          title: const S('Fleet right now', 'الأسطول دلوقتي').of(context),
+          title: const S(
+            'Fleet right now',
+            'الأسطول دلوقتي',
+            fr: 'Flotte en ce moment',
+            es: 'Flota en este momento',
+          ).of(context),
         ),
         _StatGrid(cards: cards),
       ],
@@ -641,31 +726,56 @@ class _StudentCounts extends StatelessWidget {
     final cards = [
       MetricStatCard(
         icon: Icons.groups,
-        label: const S('Expected today', 'المتوقعين النهارده').of(context),
+        label: const S(
+          'Expected today',
+          'المتوقعين النهارده',
+          fr: "Attendus aujourd'hui",
+          es: 'Esperados hoy',
+        ).of(context),
         value: '${snapshot.expectedStudents}',
       ),
       MetricStatCard(
         icon: Icons.how_to_reg,
         tone: colors.success,
-        label: const S('Boarded', 'ركبوا').of(context),
+        label: const S(
+          'Boarded',
+          'ركبوا',
+          fr: 'Montés',
+          es: 'Abordaron',
+        ).of(context),
         value: '${snapshot.boardedStudents}',
       ),
       MetricStatCard(
         icon: Icons.logout,
         tone: colors.info,
-        label: const S('Dropped off', 'نزلوا').of(context),
+        label: const S(
+          'Dropped off',
+          'نزلوا',
+          fr: 'Déposés',
+          es: 'Bajados',
+        ).of(context),
         value: '${snapshot.droppedOffStudents}',
       ),
       MetricStatCard(
         icon: Icons.hourglass_bottom,
         tone: colors.warning,
-        label: const S('Still pending', 'لسه في الانتظار').of(context),
+        label: const S(
+          'Still pending',
+          'لسه في الانتظار',
+          fr: 'Toujours en attente',
+          es: 'Aún pendiente',
+        ).of(context),
         value: '${snapshot.pendingStudents}',
       ),
       MetricStatCard(
         icon: Icons.event_busy,
         tone: colors.textMuted,
-        label: const S('Absent today', 'غايبين النهارده').of(context),
+        label: const S(
+          'Absent today',
+          'غايبين النهارده',
+          fr: "Absent aujourd'hui",
+          es: 'Ausente hoy',
+        ).of(context),
         value: '${snapshot.absentStudents}',
       ),
     ];
@@ -674,10 +784,21 @@ class _StudentCounts extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader(
-          title: const S('Students today', 'الطلاب النهارده').of(context),
+          title: const S(
+            'Students today',
+            'الطلاب النهارده',
+            fr: "Élèves aujourd'hui",
+            es: 'Estudiantes hoy',
+          ).of(context),
           subtitle: const S(
             'Counted from today’s trips’ own boarding records.',
             'محسوبة من سجلات ركوب رحلات النهارده نفسها.',
+            fr:
+                "Comptabilisé à partir des registres d'embarquement des "
+                "trajets d'aujourd'hui.",
+            es:
+                'Contado a partir de los registros de abordaje de los '
+                'viajes de hoy.',
           ).of(context),
         ),
         _StatGrid(cards: cards),
@@ -752,8 +873,7 @@ class _AlertFeed extends StatelessWidget {
                 final recentDeviations =
                     (deviationsSnapshot.data?.docs ?? const [])
                         .map(
-                          (doc) =>
-                              DeviationRecord.fromMap(doc.id, doc.data()),
+                          (doc) => DeviationRecord.fromMap(doc.id, doc.data()),
                         )
                         .where(
                           (record) =>
@@ -771,11 +891,18 @@ class _AlertFeed extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SectionHeader(
-                      title: const S('Alerts', 'التنبيهات').of(context),
+                      title: const S(
+                        'Alerts',
+                        'التنبيهات',
+                        fr: 'Alertes',
+                        es: 'Alertas',
+                      ).of(context),
                       subtitle: hasAny
                           ? const S(
                               'Tap an alert to open it.',
                               'دوس على التنبيه عشان تفتحه.',
+                              fr: "Appuyez sur une alerte pour l'ouvrir.",
+                              es: 'Toque una alerta para abrirla.',
                             ).of(context)
                           : null,
                     ),
@@ -799,6 +926,8 @@ class _AlertFeed extends StatelessWidget {
                                 const S(
                                   'Nothing needs attention right now.',
                                   'مفيش حاجة محتاجة انتباه دلوقتي.',
+                                  fr: "Rien ne nécessite d'attention pour le moment.",
+                                  es: 'Nada requiere atención en este momento.',
                                 ).of(context),
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(color: colors.textSecondary),
@@ -832,6 +961,14 @@ class _AlertFeed extends StatelessWidget {
                                   'استغاثة الساعة '
                                       '${DateFormat.jm().format(emergency.createdAt)}'
                                       '${emergency.driverNote == null ? '' : ' · ${emergency.driverNote}'}',
+                                  fr:
+                                      'SOS déclenché à '
+                                      '${DateFormat.jm().format(emergency.createdAt)}'
+                                      '${emergency.driverNote == null ? '' : ' · ${emergency.driverNote}'}',
+                                  es:
+                                      'SOS activado a las '
+                                      '${DateFormat.jm().format(emergency.createdAt)}'
+                                      '${emergency.driverNote == null ? '' : ' · ${emergency.driverNote}'}',
                                 ).of(context),
                                 onTap: () =>
                                     onJump(DashboardJumpTarget.liveOps),
@@ -851,6 +988,14 @@ class _AlertFeed extends StatelessWidget {
                                   '${incidentStatusLabel(incident.status, context)}'
                                       ' · '
                                       '${DateFormat.MMMd().add_jm().format(incident.createdAt)}',
+                                  fr:
+                                      '${incidentStatusLabel(incident.status, context)}'
+                                      ' · '
+                                      '${DateFormat.MMMd().add_jm().format(incident.createdAt)}',
+                                  es:
+                                      '${incidentStatusLabel(incident.status, context)}'
+                                      ' · '
+                                      '${DateFormat.MMMd().add_jm().format(incident.createdAt)}',
                                 ).of(context),
                                 onTap: () =>
                                     onJump(DashboardJumpTarget.incidents),
@@ -862,6 +1007,8 @@ class _AlertFeed extends StatelessWidget {
                                 title: const S(
                                   'Route deviation',
                                   'خروج عن المسار',
+                                  fr: "Écart d'itinéraire",
+                                  es: 'Desviación de ruta',
                                 ).of(context),
                                 subtitle: S(
                                   'Up to ${deviation.maxDeviationMeters.round()} m '
@@ -869,6 +1016,14 @@ class _AlertFeed extends StatelessWidget {
                                       '${DateFormat.MMMd().add_jm().format(deviation.startedAt)}',
                                   'لحد ${deviation.maxDeviationMeters.round()} متر '
                                       'عن المسار · '
+                                      '${DateFormat.MMMd().add_jm().format(deviation.startedAt)}',
+                                  fr:
+                                      "Jusqu'à ${deviation.maxDeviationMeters.round()} m "
+                                      "hors trajet · "
+                                      '${DateFormat.MMMd().add_jm().format(deviation.startedAt)}',
+                                  es:
+                                      'Hasta ${deviation.maxDeviationMeters.round()} m '
+                                      'fuera de ruta · '
                                       '${DateFormat.MMMd().add_jm().format(deviation.startedAt)}',
                                 ).of(context),
                                 onTap: () =>
@@ -940,9 +1095,8 @@ class _AlertRow extends StatelessWidget {
                     subtitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.textSecondary,
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: colors.textSecondary),
                   ),
                 ],
               ),

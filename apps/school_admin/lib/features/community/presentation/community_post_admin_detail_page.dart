@@ -59,8 +59,12 @@ class _CommunityPostAdminDetailPageState
       if (mounted) {
         AppSnackbar.error(
           context,
-          const S("Couldn't post your reply — try again.", 'معرفناش ننشر ردك — جرب تاني.')
-              .of(context),
+          const S(
+            "Couldn't post your reply — try again.",
+            'معرفناش ننشر ردك — جرب تاني.',
+            fr: "Impossible de publier votre réponse — réessayez.",
+            es: "No se pudo publicar tu respuesta — inténtalo de nuevo.",
+          ).of(context),
         );
       }
     } finally {
@@ -94,13 +98,23 @@ class _CommunityPostAdminDetailPageState
       });
       AppSnackbar.success(
         context,
-        const S('Post updated.', 'اتحدّث المنشور.').of(context),
+        const S(
+          'Post updated.',
+          'اتحدّث المنشور.',
+          fr: "Publication mise à jour.",
+          es: "Publicación actualizada.",
+        ).of(context),
       );
     } catch (_) {
       if (mounted) {
         AppSnackbar.error(
           context,
-          const S("Couldn't update the post.", 'معرفناش نحدّث المنشور.').of(context),
+          const S(
+            "Couldn't update the post.",
+            'معرفناش نحدّث المنشور.',
+            fr: "Impossible de mettre à jour la publication.",
+            es: "No se pudo actualizar la publicación.",
+          ).of(context),
         );
       }
     }
@@ -109,35 +123,67 @@ class _CommunityPostAdminDetailPageState
   Future<bool?> _confirmStatusChange(CommunityPostStatus status) {
     final (title, message, destructive) = switch (status) {
       CommunityPostStatus.hidden => (
-        const S('Hide this post?', 'تخفي المنشور ده؟'),
+        const S(
+          'Hide this post?',
+          'تخفي المنشور ده؟',
+          fr: "Masquer cette publication ?",
+          es: "¿Ocultar esta publicación?",
+        ),
         const S(
           'Other parents will no longer see it in the community feed.',
           'باقي أولياء الأمور مش هيشوفوه في المجتمع بعد كده.',
+          fr: "Les autres parents ne la verront plus dans le fil de la communauté.",
+          es: "Los demás padres ya no la verán en el feed de la comunidad.",
         ),
         false,
       ),
       CommunityPostStatus.active => (
-        const S('Restore this post?', 'ترجع المنشور ده؟'),
+        const S(
+          'Restore this post?',
+          'ترجع المنشور ده؟',
+          fr: "Restaurer cette publication ?",
+          es: "¿Restaurar esta publicación?",
+        ),
         const S(
           'It will be visible in the community feed again.',
           'هيرجع يظهر في مجتمع المدرسة تاني.',
+          fr: "Elle sera de nouveau visible dans le fil de la communauté.",
+          es: "Volverá a ser visible en el feed de la comunidad.",
         ),
         false,
       ),
       CommunityPostStatus.archived => (
-        const S('Archive this post?', 'تؤرشف المنشور ده؟'),
+        const S(
+          'Archive this post?',
+          'تؤرشف المنشور ده؟',
+          fr: "Archiver cette publication ?",
+          es: "¿Archivar esta publicación?",
+        ),
         const S(
           'It will be removed from the feed but kept on record.',
           'هيتشال من الفيد بس هيفضل محفوظ.',
+          fr: "Elle sera retirée du fil mais conservée dans les archives.",
+          es: "Se eliminará del feed pero se conservará en el registro.",
         ),
         false,
       ),
       CommunityPostStatus.deleted => (
-        const S('Delete this post?', 'تحذف المنشور ده؟'),
+        const S(
+          'Delete this post?',
+          'تحذف المنشور ده؟',
+          fr: "Supprimer cette publication ?",
+          es: "¿Eliminar esta publicación?",
+        ),
         const S(
           'It will be removed from the feed. This can be reviewed later in '
               'the audit trail.',
           'هيتشال من الفيد. تقدر تراجعه بعدين في سجل التتبع.',
+          fr:
+              "Elle sera retirée du fil. Cela pourra être consulté plus "
+              "tard dans le journal d'audit.",
+          es:
+              "Se eliminará del feed. Esto podrá revisarse más tarde en el "
+              "registro de auditoría.",
         ),
         true,
       ),
@@ -146,7 +192,12 @@ class _CommunityPostAdminDetailPageState
       context,
       title: title.of(context),
       message: message.of(context),
-      confirmLabel: const S('Confirm', 'تأكيد').of(context),
+      confirmLabel: const S(
+        'Confirm',
+        'تأكيد',
+        fr: "Confirmer",
+        es: "Confirmar",
+      ).of(context),
       destructive: destructive,
     );
   }
@@ -178,7 +229,12 @@ class _CommunityPostAdminDetailPageState
       if (mounted) {
         AppSnackbar.error(
           context,
-          const S("Couldn't open the conversation.", 'معرفناش نفتح المحادثة.').of(context),
+          const S(
+            "Couldn't open the conversation.",
+            'معرفناش نفتح المحادثة.',
+            fr: "Impossible d'ouvrir la conversation.",
+            es: "No se pudo abrir la conversación.",
+          ).of(context),
         );
       }
       return;
@@ -204,7 +260,14 @@ class _CommunityPostAdminDetailPageState
       // disabled no matter what gets typed.
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(const S('Message parent', 'راسل ولي الأمر').of(context)),
+          title: Text(
+            const S(
+              'Message parent',
+              'راسل ولي الأمر',
+              fr: "Envoyer un message au parent",
+              es: "Enviar mensaje al padre/madre",
+            ).of(context),
+          ),
           content: TextField(
             controller: controller,
             minLines: 2,
@@ -215,19 +278,35 @@ class _CommunityPostAdminDetailPageState
               hintText: const S(
                 'About their community post…',
                 'بخصوص منشورهم في المجتمع…',
+                fr: "À propos de leur publication dans la communauté…",
+                es: "Sobre su publicación en la comunidad…",
               ).of(context),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(const S('Cancel', 'إلغاء').of(context)),
+              child: Text(
+                const S(
+                  'Cancel',
+                  'إلغاء',
+                  fr: "Annuler",
+                  es: "Cancelar",
+                ).of(context),
+              ),
             ),
             FilledButton(
               onPressed: controller.text.trim().isEmpty
                   ? null
                   : () => Navigator.pop(context, controller.text.trim()),
-              child: Text(const S('Send', 'إرسال').of(context)),
+              child: Text(
+                const S(
+                  'Send',
+                  'إرسال',
+                  fr: "Envoyer",
+                  es: "Enviar",
+                ).of(context),
+              ),
             ),
           ],
         ),
@@ -244,6 +323,8 @@ class _CommunityPostAdminDetailPageState
         subject: const S(
           'About your community post',
           'بخصوص منشورك في المجتمع',
+          fr: "À propos de votre publication dans la communauté",
+          es: "Sobre tu publicación en la comunidad",
         ).of(context),
         message: message,
       );
@@ -258,8 +339,12 @@ class _CommunityPostAdminDetailPageState
       if (mounted) {
         AppSnackbar.error(
           context,
-          const S("Couldn't start the conversation.", 'معرفناش نبدأ المحادثة.')
-              .of(context),
+          const S(
+            "Couldn't start the conversation.",
+            'معرفناش نبدأ المحادثة.',
+            fr: "Impossible de démarrer la conversation.",
+            es: "No se pudo iniciar la conversación.",
+          ).of(context),
         );
       }
     }
@@ -273,7 +358,11 @@ class _CommunityPostAdminDetailPageState
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Post', 'المنشور').of(context)),
+        title: Text(
+          const S('Post', 'المنشور', fr: "Publication", es: "Publicación").of(
+            context,
+          ),
+        ),
         actions: [
           PopupMenuButton<CommunityPostStatus>(
             onSelected: _setStatus,
@@ -281,23 +370,49 @@ class _CommunityPostAdminDetailPageState
               if (_post.status != CommunityPostStatus.active)
                 PopupMenuItem(
                   value: CommunityPostStatus.active,
-                  child: Text(const S('Restore', 'استرجاع').of(context)),
+                  child: Text(
+                    const S(
+                      'Restore',
+                      'استرجاع',
+                      fr: "Restaurer",
+                      es: "Restaurar",
+                    ).of(context),
+                  ),
                 ),
               if (_post.status != CommunityPostStatus.hidden)
                 PopupMenuItem(
                   value: CommunityPostStatus.hidden,
-                  child: Text(const S('Hide', 'إخفاء').of(context)),
+                  child: Text(
+                    const S(
+                      'Hide',
+                      'إخفاء',
+                      fr: "Masquer",
+                      es: "Ocultar",
+                    ).of(context),
+                  ),
                 ),
               if (_post.status != CommunityPostStatus.archived)
                 PopupMenuItem(
                   value: CommunityPostStatus.archived,
-                  child: Text(const S('Archive', 'أرشفة').of(context)),
+                  child: Text(
+                    const S(
+                      'Archive',
+                      'أرشفة',
+                      fr: "Archiver",
+                      es: "Archivar",
+                    ).of(context),
+                  ),
                 ),
               if (_post.status != CommunityPostStatus.deleted)
                 PopupMenuItem(
                   value: CommunityPostStatus.deleted,
                   child: Text(
-                    const S('Delete', 'حذف').of(context),
+                    const S(
+                      'Delete',
+                      'حذف',
+                      fr: "Supprimer",
+                      es: "Eliminar",
+                    ).of(context),
                     style: TextStyle(color: colors.error),
                   ),
                 ),
@@ -348,7 +463,12 @@ class _CommunityPostAdminDetailPageState
                             children: [
                               Text(name, style: theme.textTheme.titleSmall),
                               Text(
-                                const S('Parent', 'ولي أمر').of(context),
+                                const S(
+                                  'Parent',
+                                  'ولي أمر',
+                                  fr: "Parent",
+                                  es: "Padre/madre",
+                                ).of(context),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: colors.textMuted,
                                 ),
@@ -357,12 +477,22 @@ class _CommunityPostAdminDetailPageState
                           ),
                         ),
                         IconButton(
-                          tooltip: const S('View profile', 'عرض الملف').of(context),
+                          tooltip: const S(
+                            'View profile',
+                            'عرض الملف',
+                            fr: "Voir le profil",
+                            es: "Ver perfil",
+                          ).of(context),
                           icon: const Icon(Icons.badge_outlined),
                           onPressed: () => _openProfile(author.authorUid),
                         ),
                         IconButton(
-                          tooltip: const S('Message parent', 'راسل ولي الأمر').of(
+                          tooltip: const S(
+                            'Message parent',
+                            'راسل ولي الأمر',
+                            fr: "Envoyer un message au parent",
+                            es: "Enviar mensaje al padre/madre",
+                          ).of(
                             context,
                           ),
                           icon: const Icon(Icons.chat_bubble_outline),
@@ -398,7 +528,12 @@ class _CommunityPostAdminDetailPageState
           Text(_post.content, style: theme.textTheme.bodyLarge),
           const Divider(height: AppSpacing.xl2),
           Text(
-            const S('Comments', 'التعليقات').of(context),
+            const S(
+              'Comments',
+              'التعليقات',
+              fr: "Commentaires",
+              es: "Comentarios",
+            ).of(context),
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -411,7 +546,12 @@ class _CommunityPostAdminDetailPageState
               final comments = snapshot.data ?? const <CommunityComment>[];
               if (comments.isEmpty) {
                 return Text(
-                  const S('No comments yet.', 'لسه مفيش تعليقات.').of(context),
+                  const S(
+                    'No comments yet.',
+                    'لسه مفيش تعليقات.',
+                    fr: "Aucun commentaire pour le moment.",
+                    es: "Aún no hay comentarios.",
+                  ).of(context),
                   style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
                 );
               }
@@ -433,7 +573,12 @@ class _CommunityPostAdminDetailPageState
           ),
           const Divider(height: AppSpacing.xl2),
           Text(
-            const S('Reports', 'البلاغات').of(context),
+            const S(
+              'Reports',
+              'البلاغات',
+              fr: "Signalements",
+              es: "Reportes",
+            ).of(context),
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -443,8 +588,12 @@ class _CommunityPostAdminDetailPageState
               final reports = snapshot.data ?? const <CommunityReport>[];
               if (reports.isEmpty) {
                 return Text(
-                  const S('No reports on this post.', 'مفيش بلاغات على المنشور ده.')
-                      .of(context),
+                  const S(
+                    'No reports on this post.',
+                    'مفيش بلاغات على المنشور ده.',
+                    fr: "Aucun signalement sur cette publication.",
+                    es: "No hay reportes en esta publicación.",
+                  ).of(context),
                   style: theme.textTheme.bodySmall?.copyWith(color: colors.textMuted),
                 );
               }
@@ -486,6 +635,8 @@ class _CommunityPostAdminDetailPageState
                         hintText: const S(
                           'Reply as your school…',
                           'رد باسم المدرسة…',
+                          fr: "Répondre en tant qu'école…",
+                          es: "Responder como tu escuela…",
                         ).of(context),
                       ),
                     ),
@@ -521,14 +672,33 @@ String _reportReasonLabel(BuildContext context, CommunityReportReason reason) {
     CommunityReportReason.inappropriate => const S(
       'Inappropriate content',
       'محتوى غير مناسب',
+      fr: "Contenu inapproprié",
+      es: "Contenido inapropiado",
     ).of(context),
-    CommunityReportReason.abuse => const S('Abuse', 'إساءة').of(context),
+    CommunityReportReason.abuse => const S(
+      'Abuse',
+      'إساءة',
+      fr: "Abus",
+      es: "Abuso",
+    ).of(context),
     CommunityReportReason.misleading => const S(
       'Misleading information',
       'معلومات مضللة',
+      fr: "Informations trompeuses",
+      es: "Información engañosa",
     ).of(context),
-    CommunityReportReason.spam => const S('Spam', 'سبام').of(context),
-    CommunityReportReason.other => const S('Other', 'أخرى').of(context),
+    CommunityReportReason.spam => const S(
+      'Spam',
+      'سبام',
+      fr: "Spam",
+      es: "Spam",
+    ).of(context),
+    CommunityReportReason.other => const S(
+      'Other',
+      'أخرى',
+      fr: "Autre",
+      es: "Otro",
+    ).of(context),
   };
 }
 
@@ -576,7 +746,12 @@ class _AdminCommentTile extends StatelessWidget {
                 Icon(Icons.school_outlined, size: 16, color: colors.textSecondary),
                 const SizedBox(width: 6),
                 Text(
-                  const S('School Admin', 'إدارة المدرسة').of(context),
+                  const S(
+                    'School Admin',
+                    'إدارة المدرسة',
+                    fr: "Administration de l'école",
+                    es: "Administración escolar",
+                  ).of(context),
                   style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(width: 6),
@@ -628,12 +803,24 @@ class _AdminCommentTile extends StatelessWidget {
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     value: 'profile',
-                    child: Text(const S('View profile', 'عرض الملف').of(context)),
+                    child: Text(
+                      const S(
+                        'View profile',
+                        'عرض الملف',
+                        fr: "Voir le profil",
+                        es: "Ver perfil",
+                      ).of(context),
+                    ),
                   ),
                   PopupMenuItem(
                     value: 'message',
                     child: Text(
-                      const S('Message parent', 'راسل ولي الأمر').of(context),
+                      const S(
+                        'Message parent',
+                        'راسل ولي الأمر',
+                        fr: "Envoyer un message au parent",
+                        es: "Enviar mensaje al padre/madre",
+                      ).of(context),
                     ),
                   ),
                 ],
@@ -672,8 +859,12 @@ class _ReportTile extends StatelessWidget {
       if (context.mounted) {
         AppSnackbar.error(
           context,
-          const S("Couldn't mark this report resolved.", 'معرفناش نحل البلاغ ده.')
-              .of(context),
+          const S(
+            "Couldn't mark this report resolved.",
+            'معرفناش نحل البلاغ ده.',
+            fr: "Impossible de marquer ce signalement comme résolu.",
+            es: "No se pudo marcar este reporte como resuelto.",
+          ).of(context),
         );
       }
     }
@@ -712,12 +903,22 @@ class _ReportTile extends StatelessWidget {
           ),
           if (resolved)
             StatusBadge(
-              label: const S('Resolved', 'اتحل').of(context),
+              label: const S(
+                'Resolved',
+                'اتحل',
+                fr: "Résolu",
+                es: "Resuelto",
+              ).of(context),
               tone: StatusTone.success,
             )
           else
             AppButton.secondary(
-              label: const S('Mark resolved', 'اعتباره تم الحل').of(context),
+              label: const S(
+                'Mark resolved',
+                'اعتباره تم الحل',
+                fr: "Marquer comme résolu",
+                es: "Marcar como resuelto",
+              ).of(context),
               onPressed: () => _resolve(context),
             ),
         ],

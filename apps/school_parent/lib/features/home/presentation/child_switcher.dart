@@ -45,7 +45,12 @@ class ChildSwitcher extends StatelessWidget {
               count: students.length,
               selected: selectedStudentId == null,
             ),
-            label: const S('All children', 'كل الأبناء').of(context),
+            label: const S(
+              'All children',
+              'كل الأبناء',
+              fr: 'Tous les enfants',
+              es: 'Todos los niños',
+            ).of(context),
           ),
           for (final student in students)
             _SwitcherPill(

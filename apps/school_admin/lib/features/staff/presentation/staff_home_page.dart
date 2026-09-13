@@ -98,7 +98,14 @@ class _StaffHomePageState extends State<StaffHomePage> {
       ControlCenterTab(user: widget.user, onJump: _jump, readOnly: true),
       Scaffold(
         appBar: AppBar(
-          title: Text(const S('Live map', 'الخريطة المباشرة').of(context)),
+          title: Text(
+            const S(
+              'Live map',
+              'الخريطة المباشرة',
+              fr: 'Carte en direct',
+              es: 'Mapa en vivo',
+            ).of(context),
+          ),
         ),
         body: LiveOpsTab(schoolId: schoolId, readOnly: true),
       ),
@@ -120,27 +127,52 @@ class _StaffHomePageState extends State<StaffHomePage> {
             NavigationDestination(
               icon: const Icon(Icons.dashboard_outlined),
               selectedIcon: const Icon(Icons.dashboard),
-              label: const S('Today', 'النهارده').of(context),
+              label: const S(
+                'Today',
+                'النهارده',
+                fr: "Aujourd'hui",
+                es: 'Hoy',
+              ).of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.map_outlined),
               selectedIcon: const Icon(Icons.map),
-              label: const S('Live map', 'الخريطة').of(context),
+              label: const S(
+                'Live map',
+                'الخريطة',
+                fr: 'Carte',
+                es: 'Mapa',
+              ).of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.directions_bus_outlined),
               selectedIcon: const Icon(Icons.directions_bus),
-              label: const S('Fleet', 'الأسطول').of(context),
+              label: const S(
+                'Fleet',
+                'الأسطول',
+                fr: 'Flotte',
+                es: 'Flota',
+              ).of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.report_outlined),
               selectedIcon: const Icon(Icons.report),
-              label: const S('Incidents', 'البلاغات').of(context),
+              label: const S(
+                'Incidents',
+                'البلاغات',
+                fr: 'Incidents',
+                es: 'Incidentes',
+              ).of(context),
             ),
             NavigationDestination(
               icon: const Icon(Icons.person_outline),
               selectedIcon: const Icon(Icons.person),
-              label: const S('Profile', 'حسابي').of(context),
+              label: const S(
+                'Profile',
+                'حسابي',
+                fr: 'Profil',
+                es: 'Perfil',
+              ).of(context),
             ),
           ],
         ),
@@ -161,14 +193,49 @@ class _StaffFleetTab extends StatelessWidget {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(const S('Fleet', 'الأسطول').of(context)),
+          title: Text(
+            const S(
+              'Fleet',
+              'الأسطول',
+              fr: 'Flotte',
+              es: 'Flota',
+            ).of(context),
+          ),
           bottom: TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: const S('Buses', 'الأتوبيسات').of(context)),
-              Tab(text: const S('Routes', 'الخطوط').of(context)),
-              Tab(text: const S('Students', 'الطلاب').of(context)),
-              Tab(text: const S('Trips today', 'رحلات النهارده').of(context)),
+              Tab(
+                text: const S(
+                  'Buses',
+                  'الأتوبيسات',
+                  fr: 'Bus',
+                  es: 'Autobuses',
+                ).of(context),
+              ),
+              Tab(
+                text: const S(
+                  'Routes',
+                  'الخطوط',
+                  fr: 'Itinéraires',
+                  es: 'Rutas',
+                ).of(context),
+              ),
+              Tab(
+                text: const S(
+                  'Students',
+                  'الطلاب',
+                  fr: 'Élèves',
+                  es: 'Estudiantes',
+                ).of(context),
+              ),
+              Tab(
+                text: const S(
+                  'Trips today',
+                  'رحلات النهارده',
+                  fr: "Trajets du jour",
+                  es: 'Viajes de hoy',
+                ).of(context),
+              ),
             ],
           ),
         ),
@@ -213,7 +280,12 @@ class _StaffRoutesList extends StatelessWidget {
         if (routes.isEmpty) {
           return EmptyStateView(
             icon: Icons.route_outlined,
-            title: const S('No routes yet.', 'مفيش خطوط لسه.').of(context),
+            title: const S(
+              'No routes yet.',
+              'مفيش خطوط لسه.',
+              fr: "Pas encore d'itinéraires.",
+              es: 'Aún no hay rutas.',
+            ).of(context),
           );
         }
 
@@ -242,8 +314,18 @@ class _StaffRoutesList extends StatelessWidget {
                   ),
                   StatusBadge(
                     label: route.isActive
-                        ? const S('Active', 'نشط').of(context)
-                        : const S('Inactive', 'غير نشط').of(context),
+                        ? const S(
+                            'Active',
+                            'نشط',
+                            fr: 'Actif',
+                            es: 'Activo',
+                          ).of(context)
+                        : const S(
+                            'Inactive',
+                            'غير نشط',
+                            fr: 'Inactif',
+                            es: 'Inactivo',
+                          ).of(context),
                     tone: route.isActive
                         ? StatusTone.success
                         : StatusTone.neutral,
@@ -287,7 +369,12 @@ class _StaffStudentsList extends StatelessWidget {
         if (students.isEmpty) {
           return EmptyStateView(
             icon: Icons.groups_outlined,
-            title: const S('No students yet.', 'مفيش طلاب لسه.').of(context),
+            title: const S(
+              'No students yet.',
+              'مفيش طلاب لسه.',
+              fr: "Pas encore d'élèves.",
+              es: 'Aún no hay estudiantes.',
+            ).of(context),
           );
         }
 
@@ -325,10 +412,14 @@ class _StaffStudentsList extends StatelessWidget {
                               ? const S(
                                   'No route assigned',
                                   'من غير خط',
+                                  fr: 'Aucun itinéraire assigné',
+                                  es: 'Sin ruta asignada',
                                 ).of(context)
                               : const S(
                                   'Route assigned',
                                   'الخط متحدد',
+                                  fr: 'Itinéraire assigné',
+                                  es: 'Ruta asignada',
                                 ).of(context),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: colors.textMuted),
@@ -341,6 +432,8 @@ class _StaffStudentsList extends StatelessWidget {
                       label: const S(
                         'Absent today',
                         'غايب النهاردة',
+                        fr: "Absent aujourd'hui",
+                        es: 'Ausente hoy',
                       ).of(context),
                       tone: StatusTone.warning,
                     ),
@@ -392,6 +485,8 @@ class _StaffTripsList extends StatelessWidget {
             title: const S(
               'No trips scheduled today.',
               'مفيش رحلات النهارده.',
+              fr: "Aucun trajet prévu aujourd'hui.",
+              es: 'No hay viajes programados hoy.',
             ).of(context),
           );
         }
@@ -446,20 +541,48 @@ class _StaffTripsList extends StatelessWidget {
                   ),
                   StatusBadge(
                     label: switch (trip.status) {
-                      TripStatus.scheduled =>
-                        const S('Scheduled', 'مجدولة').of(context),
-                      TripStatus.starting =>
-                        const S('Starting', 'جاري البدء').of(context),
-                      TripStatus.active =>
-                        const S('En route', 'في الطريق').of(context),
-                      TripStatus.paused =>
-                        const S('Paused', 'متوقفة مؤقتاً').of(context),
-                      TripStatus.completed =>
-                        const S('Completed', 'مكتملة').of(context),
-                      TripStatus.cancelled =>
-                        const S('Cancelled', 'ملغاة').of(context),
-                      TripStatus.emergency =>
-                        const S('Emergency', 'حالة طوارئ').of(context),
+                      TripStatus.scheduled => const S(
+                        'Scheduled',
+                        'مجدولة',
+                        fr: 'Planifié',
+                        es: 'Programado',
+                      ).of(context),
+                      TripStatus.starting => const S(
+                        'Starting',
+                        'جاري البدء',
+                        fr: 'Démarrage',
+                        es: 'Iniciando',
+                      ).of(context),
+                      TripStatus.active => const S(
+                        'En route',
+                        'في الطريق',
+                        fr: 'En route',
+                        es: 'En camino',
+                      ).of(context),
+                      TripStatus.paused => const S(
+                        'Paused',
+                        'متوقفة مؤقتاً',
+                        fr: 'En pause',
+                        es: 'Pausado',
+                      ).of(context),
+                      TripStatus.completed => const S(
+                        'Completed',
+                        'مكتملة',
+                        fr: 'Terminé',
+                        es: 'Completado',
+                      ).of(context),
+                      TripStatus.cancelled => const S(
+                        'Cancelled',
+                        'ملغاة',
+                        fr: 'Annulé',
+                        es: 'Cancelado',
+                      ).of(context),
+                      TripStatus.emergency => const S(
+                        'Emergency',
+                        'حالة طوارئ',
+                        fr: 'Urgence',
+                        es: 'Emergencia',
+                      ).of(context),
                     },
                     tone: tone,
                   ),

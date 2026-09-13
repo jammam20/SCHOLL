@@ -105,15 +105,23 @@ class _LanguagePickerSheetState extends State<_LanguagePickerSheet> {
                     RadioListTile<AppLanguage>(
                       value: language,
                       contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        // Each language names itself, never translated.
-                        language.nativeName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: colors.textPrimary,
+                      // The label is positioned by the sheet's own
+                      // direction rather than left to the title slot, which
+                      // aligns a lone word by its script: in the LTR sheet
+                      // "العربية" drifted to the far right, and in the RTL
+                      // sheet the three Latin names drifted to the far left,
+                      // each detached from the radio it belongs to. Aligning
+                      // to the directional start keeps all four rows reading
+                      // as rows in every locale.
+                      title: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          // Each language names itself, never translated.
+                          language.nativeName,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: colors.textPrimary,
+                          ),
                         ),
-                        textDirection: language == AppLanguage.arabic
-                            ? TextDirection.rtl
-                            : TextDirection.ltr,
                       ),
                     ),
                 ],

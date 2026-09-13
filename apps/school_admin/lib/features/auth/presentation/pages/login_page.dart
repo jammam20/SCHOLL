@@ -98,10 +98,14 @@ class _LoginPageState extends State<LoginPage> {
                             statusLabel: const S(
                               'Pending approval',
                               'في انتظار الموافقة',
+                              fr: 'Approbation en attente',
+                              es: 'Aprobación pendiente',
                             ).of(context),
                             title: S(
                               'Waiting for approval',
                               'في انتظار الموافقة',
+                              fr: "En attente d'approbation",
+                              es: 'Esperando aprobación',
                             ).of(context),
                             message: const S(
                               'Your administrator account is registered but '
@@ -113,6 +117,20 @@ class _LoginPageState extends State<LoginPage> {
                                   'دي مدرسة جديدة، الـ Super Admin هو اللي '
                                   'هيوافق؛ غير كده أي أدمن موجود في '
                                   'مدرستك.',
+                              fr:
+                                  "Votre compte administrateur est enregistré "
+                                  "mais doit encore être approuvé. S'il "
+                                  "s'agit d'une nouvelle école, le "
+                                  "super-administrateur de la plateforme "
+                                  "l'approuvera ; sinon, un administrateur "
+                                  "existant de votre école le fera.",
+                              es:
+                                  'Su cuenta de administrador está registrada '
+                                  'pero aún debe ser aprobada. Si esta es una '
+                                  'escuela nueva, el superadministrador de la '
+                                  'plataforma la aprobará; de lo contrario, '
+                                  'lo hará un administrador existente de su '
+                                  'escuela.',
                             ).of(context),
                             onSignOut: context.read<AuthCubit>().signOut,
                           ),
@@ -122,23 +140,38 @@ class _LoginPageState extends State<LoginPage> {
                             statusLabel: const S(
                               'Rejected',
                               'مرفوض',
+                              fr: 'Rejeté',
+                              es: 'Rechazado',
                             ).of(context),
                             title: S(
                               'Registration rejected',
                               'تم رفض التسجيل',
+                              fr: "Inscription rejetée",
+                              es: 'Registro rechazado',
                             ).of(context),
-                            message:
-                                user.rejectionReason?.isNotEmpty == true
+                            message: user.rejectionReason?.isNotEmpty == true
                                 ? S(
                                     'This administrator account was not '
                                         'approved: ${user.rejectionReason}',
                                     'حساب المدير ده متمش الموافقة عليه: '
                                         '${user.rejectionReason}',
+                                    fr:
+                                        "Ce compte administrateur n'a pas été "
+                                        "approuvé : ${user.rejectionReason}",
+                                    es:
+                                        'Esta cuenta de administrador no fue '
+                                        'aprobada: ${user.rejectionReason}',
                                   ).of(context)
                                 : const S(
                                     'This administrator account was not '
                                         'approved.',
                                     'حساب المدير ده متمش الموافقة عليه.',
+                                    fr:
+                                        "Ce compte administrateur n'a pas été "
+                                        "approuvé.",
+                                    es:
+                                        'Esta cuenta de administrador no fue '
+                                        'aprobada.',
                                   ).of(context),
                             onSignOut: context.read<AuthCubit>().signOut,
                           ),
@@ -148,14 +181,20 @@ class _LoginPageState extends State<LoginPage> {
                             statusLabel: const S(
                               'Disabled',
                               'متوقف',
+                              fr: 'Désactivé',
+                              es: 'Deshabilitado',
                             ).of(context),
                             title: S(
                               'Account disabled',
                               'الحساب متوقف',
+                              fr: 'Compte désactivé',
+                              es: 'Cuenta deshabilitada',
                             ).of(context),
                             message: const S(
                               'Your account has been disabled.',
                               'تم إيقاف حسابك.',
+                              fr: 'Votre compte a été désactivé.',
+                              es: 'Su cuenta ha sido deshabilitada.',
                             ).of(context),
                             onSignOut: context.read<AuthCubit>().signOut,
                           ),
@@ -198,7 +237,12 @@ class _TopControls extends StatelessWidget {
     return Row(
       children: [
         IconButton.filledTonal(
-          tooltip: const S('Language', 'اللغة', fr: 'Langue', es: 'Idioma').of(context),
+          tooltip: const S(
+            'Language',
+            'اللغة',
+            fr: 'Langue',
+            es: 'Idioma',
+          ).of(context),
           onPressed: () => showLanguagePickerSheet(context),
           icon: const Icon(Icons.translate),
         ),
@@ -275,6 +319,8 @@ class _SignInForm extends StatelessWidget {
             const S(
               'Jammam School Operations',
               'إدارة المدرسة',
+              fr: 'Opérations scolaires Jammam',
+              es: 'Operaciones escolares Jammam',
             ).of(context),
             style: theme.textTheme.headlineSmall,
           ),
@@ -284,8 +330,15 @@ class _SignInForm extends StatelessWidget {
                 ? const S(
                     "Register your school's account",
                     'سجّل حساب مدرستك',
+                    fr: "Inscrivez le compte de votre école",
+                    es: 'Registre la cuenta de su escuela',
                   ).of(context)
-                : const S('Welcome back', 'أهلاً بيك تاني').of(context),
+                : const S(
+                    'Welcome back',
+                    'أهلاً بيك تاني',
+                    fr: 'Content de vous revoir',
+                    es: 'Bienvenido de nuevo',
+                  ).of(context),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: appColors.textSecondary,
             ),
@@ -295,12 +348,19 @@ class _SignInForm extends StatelessWidget {
             TextFormField(
               controller: name,
               decoration: InputDecoration(
-                labelText: const S('Full name', 'الاسم بالكامل').of(context),
+                labelText: const S(
+                  'Full name',
+                  'الاسم بالكامل',
+                  fr: 'Nom complet',
+                  es: 'Nombre completo',
+                ).of(context),
               ),
               validator: (v) => (v ?? '').trim().isEmpty
                   ? const S(
                       'Enter your name',
                       'اكتب اسمك',
+                      fr: 'Entrez votre nom',
+                      es: 'Ingrese su nombre',
                     ).of(context)
                   : null,
             ),
@@ -309,12 +369,19 @@ class _SignInForm extends StatelessWidget {
             TextFormField(
               controller: schoolCode,
               decoration: InputDecoration(
-                labelText: const S('School code', 'كود المدرسة').of(context),
+                labelText: const S(
+                  'School code',
+                  'كود المدرسة',
+                  fr: "Code de l'école",
+                  es: 'Código de la escuela',
+                ).of(context),
               ),
               validator: (v) => (v ?? '').trim().isEmpty
                   ? const S(
                       'Enter your school code',
                       'اكتب كود مدرستك',
+                      fr: "Entrez le code de votre école",
+                      es: 'Ingrese el código de su escuela',
                     ).of(context)
                   : null,
             ),
@@ -322,13 +389,20 @@ class _SignInForm extends StatelessWidget {
           TextFormField(
             controller: email,
             decoration: InputDecoration(
-              labelText: const S('Email', 'الإيميل').of(context),
+              labelText: const S(
+                'Email',
+                'الإيميل',
+                fr: 'E-mail',
+                es: 'Correo electrónico',
+              ).of(context),
             ),
             validator: (v) => (v ?? '').contains('@')
                 ? null
                 : const S(
                     'Enter a valid email',
                     'اكتب إيميل صحيح',
+                    fr: 'Entrez un e-mail valide',
+                    es: 'Ingrese un correo electrónico válido',
                   ).of(context),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -336,7 +410,12 @@ class _SignInForm extends StatelessWidget {
             controller: password,
             obscureText: true,
             decoration: InputDecoration(
-              labelText: const S('Password', 'كلمة السر').of(context),
+              labelText: const S(
+                'Password',
+                'كلمة السر',
+                fr: 'Mot de passe',
+                es: 'Contraseña',
+              ).of(context),
             ),
             validator: (v) => registering
                 ? ((v ?? '').length >= 8
@@ -344,19 +423,33 @@ class _SignInForm extends StatelessWidget {
                       : const S(
                           'Use at least 8 characters',
                           'لازم 8 حروف على الأقل',
+                          fr: 'Utilisez au moins 8 caractères',
+                          es: 'Use al menos 8 caracteres',
                         ).of(context))
                 : ((v ?? '').isEmpty
                       ? const S(
                           'Enter your password',
                           'اكتب كلمة السر',
+                          fr: 'Entrez votre mot de passe',
+                          es: 'Ingrese su contraseña',
                         ).of(context)
                       : null),
           ),
           const SizedBox(height: AppSpacing.xl2),
           AppButton.primary(
             label: registering
-                ? const S('Create account', 'إنشاء الحساب').of(context)
-                : const S('Sign in', 'تسجيل الدخول').of(context),
+                ? const S(
+                    'Create account',
+                    'إنشاء الحساب',
+                    fr: 'Créer un compte',
+                    es: 'Crear cuenta',
+                  ).of(context)
+                : const S(
+                    'Sign in',
+                    'تسجيل الدخول',
+                    fr: 'Se connecter',
+                    es: 'Iniciar sesión',
+                  ).of(context),
             onPressed: onSubmit,
             loading: state is AuthLoading,
           ),
@@ -368,7 +461,12 @@ class _SignInForm extends StatelessWidget {
                     ? null
                     : () => _showForgotPasswordDialog(context, email.text),
                 child: Text(
-                  const S('Forgot password?', 'نسيت كلمة السر؟').of(context),
+                  const S(
+                    'Forgot password?',
+                    'نسيت كلمة السر؟',
+                    fr: 'Mot de passe oublié ?',
+                    es: '¿Olvidó su contraseña?',
+                  ).of(context),
                 ),
               ),
             ),
@@ -380,14 +478,19 @@ class _SignInForm extends StatelessWidget {
                   ? const S(
                       'I already have an account',
                       'عندي حساب بالفعل',
+                      fr: "J'ai déjà un compte",
+                      es: 'Ya tengo una cuenta',
                     ).of(context)
                   : const S(
                       "Register my school's account",
                       'سجّل حساب مدرستي',
+                      fr: "Inscrire le compte de mon école",
+                      es: 'Registrar la cuenta de mi escuela',
                     ).of(context),
             ),
           ),
-          if (state is AuthSignedOut && (state as AuthSignedOut).message != null)
+          if (state is AuthSignedOut &&
+              (state as AuthSignedOut).message != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.sm),
               child: Container(
@@ -484,7 +587,12 @@ class _StatusCard extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xl),
         AppButton.secondary(
-          label: const S('Sign out', 'تسجيل الخروج').of(context),
+          label: const S(
+            'Sign out',
+            'تسجيل الخروج',
+            fr: 'Se déconnecter',
+            es: 'Cerrar sesión',
+          ).of(context),
           onPressed: onSignOut,
         ),
       ],
@@ -500,7 +608,14 @@ Future<void> _showForgotPasswordDialog(
   final email = await showDialog<String>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(const S('Reset password', 'استعادة كلمة السر').of(dialogContext)),
+      title: Text(
+        const S(
+          'Reset password',
+          'استعادة كلمة السر',
+          fr: 'Réinitialiser le mot de passe',
+          es: 'Restablecer contraseña',
+        ).of(dialogContext),
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,6 +624,12 @@ Future<void> _showForgotPasswordDialog(
             const S(
               "We'll email you a link to reset your password.",
               'هنبعتلك لينك على إيميلك عشان تغيّر كلمة السر.',
+              fr:
+                  "Nous vous enverrons un lien par e-mail pour réinitialiser "
+                  "votre mot de passe.",
+              es:
+                  'Le enviaremos un enlace por correo electrónico para '
+                  'restablecer su contraseña.',
             ).of(dialogContext),
           ),
           const SizedBox(height: 16),
@@ -517,7 +638,12 @@ Future<void> _showForgotPasswordDialog(
             autofocus: true,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
-              labelText: const S('Email', 'الإيميل').of(dialogContext),
+              labelText: const S(
+                'Email',
+                'الإيميل',
+                fr: 'E-mail',
+                es: 'Correo electrónico',
+              ).of(dialogContext),
             ),
           ),
         ],
@@ -525,11 +651,25 @@ Future<void> _showForgotPasswordDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+          child: Text(
+            const S(
+              'Cancel',
+              'إلغاء',
+              fr: 'Annuler',
+              es: 'Cancelar',
+            ).of(dialogContext),
+          ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, controller.text),
-          child: Text(const S('Send', 'إرسال').of(dialogContext)),
+          child: Text(
+            const S(
+              'Send',
+              'إرسال',
+              fr: 'Envoyer',
+              es: 'Enviar',
+            ).of(dialogContext),
+          ),
         ),
       ],
     ),
@@ -544,23 +684,31 @@ Future<void> _showForgotPasswordDialog(
   // collect once this closure returns.
   if (email == null || !email.contains('@') || !context.mounted) return;
 
-  final isArabic = Localizations.localeOf(context).languageCode == 'ar';
   try {
     await FirebaseAuthRepository().sendPasswordResetEmail(email);
     if (!context.mounted) return;
     AppSnackbar.success(
       context,
-      isArabic
-          ? 'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.'
-          : "If $email has an account, we've sent a reset link.",
+      S(
+        "If $email has an account, we've sent a reset link.",
+        'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.',
+        fr: "Si $email correspond à un compte, nous avons envoyé un lien de "
+            "réinitialisation.",
+        es: 'Si $email tiene una cuenta, le hemos enviado un enlace de '
+            'restablecimiento.',
+      ).of(context),
     );
   } catch (_) {
     if (!context.mounted) return;
     AppSnackbar.error(
       context,
-      isArabic
-          ? 'معرفناش نبعت إيميل الاستعادة — جرب تاني.'
-          : "Couldn't send the reset email — try again.",
+      const S(
+        "Couldn't send the reset email — try again.",
+        'معرفناش نبعت إيميل الاستعادة — جرب تاني.',
+        fr: "Impossible d'envoyer l'e-mail de réinitialisation — réessayez.",
+        es: 'No se pudo enviar el correo de restablecimiento: inténtelo de '
+            'nuevo.',
+      ).of(context),
     );
   }
 }

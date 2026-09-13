@@ -69,6 +69,8 @@ class _PostComposerPageState extends State<PostComposerPage> {
         _error = const S(
           "Couldn't post — check your connection and try again.",
           'معرفناش ننشر — اتأكد من الاتصال وجرب تاني.',
+          fr: "Impossible de publier — vérifiez votre connexion et réessayez.",
+          es: 'No se pudo publicar — revise su conexión e inténtelo de nuevo.',
         ).of(context);
       });
     } finally {
@@ -84,13 +86,13 @@ class _PostComposerPageState extends State<PostComposerPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('New post', 'منشور جديد').of(context)),
+        title: Text(const S('New post', 'منشور جديد', fr: 'Nouvelle publication', es: 'Nueva publicación').of(context)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.md),
             child: Center(
               child: AppButton.primary(
-                label: const S('Post', 'نشر').of(context),
+                label: const S('Post', 'نشر', fr: 'Publier', es: 'Publicar').of(context),
                 loading: _submitting,
                 onPressed: _contentValid ? _submit : null,
               ),
@@ -105,6 +107,8 @@ class _PostComposerPageState extends State<PostComposerPage> {
             const S(
               'Your identity is anonymous to other parents',
               'هويتك مجهولة بالنسبة لباقي أولياء الأمور',
+              fr: 'Votre identité est anonyme pour les autres parents',
+              es: 'Su identidad es anónima para los demás padres',
             ).of(context),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: colors.textSecondary,
@@ -112,7 +116,7 @@ class _PostComposerPageState extends State<PostComposerPage> {
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            const S('Category', 'التصنيف').of(context).toUpperCase(),
+            const S('Category', 'التصنيف', fr: 'Catégorie', es: 'Categoría').of(context).toUpperCase(),
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
@@ -135,7 +139,12 @@ class _PostComposerPageState extends State<PostComposerPage> {
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            const S('What happened?', 'حصل إيه؟').of(context).toUpperCase(),
+            const S(
+              'What happened?',
+              'حصل إيه؟',
+              fr: "Que s'est-il passé ?",
+              es: '¿Qué pasó?',
+            ).of(context).toUpperCase(),
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
@@ -151,11 +160,15 @@ class _PostComposerPageState extends State<PostComposerPage> {
               hintText: const S(
                 'Share a problem, a question, a suggestion…',
                 'شارك مشكلة أو سؤال أو اقتراح…',
+                fr: 'Partagez un problème, une question, une suggestion…',
+                es: 'Comparta un problema, una pregunta, una sugerencia…',
               ).of(context),
               errorText: overLimit
                   ? const S(
                       'Too long — please shorten it.',
                       'طويل أوي — اختصره من فضلك.',
+                      fr: 'Trop long — veuillez le raccourcir.',
+                      es: 'Demasiado largo — por favor acórtelo.',
                     ).of(context)
                   : null,
             ),

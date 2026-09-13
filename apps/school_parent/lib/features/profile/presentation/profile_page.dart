@@ -46,7 +46,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Profile', 'الملف الشخصي').of(context)),
+        title: Text(const S('Profile', 'الملف الشخصي', fr: 'Profil', es: 'Perfil').of(context)),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -64,7 +64,7 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: AppSpacing.xl3),
 
           SectionHeader(
-            title: const S('Your school', 'مدرستك').of(context),
+            title: const S('Your school', 'مدرستك', fr: 'Votre école', es: 'Su escuela').of(context),
           ),
           AppListCard(
             children: [
@@ -73,12 +73,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: const S(
                   'Messages to school',
                   'رسايل للمدرسة',
+                  fr: "Messages à l'école",
+                  es: 'Mensajes a la escuela',
                 ).of(context),
                 subtitle: const S(
                   'Ask about a trip or a pickup change — the school passes '
                       'anything the driver needs on to them.',
                   'اسأل عن رحلة أو تغيير في الاستلام — المدرسة بتبلغ السواق '
                       'باللي يهمه.',
+                  fr: "Posez une question sur un trajet ou un changement de "
+                      "récupération — l'école transmet au chauffeur ce qu'il "
+                      "doit savoir.",
+                  es: 'Pregunte sobre un viaje o un cambio de recogida — la '
+                      'escuela le comunica al conductor lo que necesite saber.',
                 ).of(context),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -96,7 +103,12 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: AppSpacing.xl3),
 
           SectionHeader(
-            title: const S('App settings', 'إعدادات التطبيق').of(context),
+            title: const S(
+              'App settings',
+              'إعدادات التطبيق',
+              fr: "Paramètres de l'application",
+              es: 'Ajustes de la aplicación',
+            ).of(context),
           ),
           AppListCard(
             children: [
@@ -130,10 +142,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         ? Icons.dark_mode_rounded
                         : Icons.light_mode_rounded,
                     tone: colors.warning,
-                    title: const S('Dark mode', 'الوضع الليلي').of(context),
+                    title: const S(
+                      'Dark mode',
+                      'الوضع الليلي',
+                      fr: 'Mode sombre',
+                      es: 'Modo oscuro',
+                    ).of(context),
                     subtitle: isDark
-                        ? const S('On', 'مفعّل').of(context)
-                        : const S('Off', 'متوقف').of(context),
+                        ? const S('On', 'مفعّل', fr: 'Activé', es: 'Activado').of(context)
+                        : const S('Off', 'متوقف', fr: 'Désactivé', es: 'Desactivado').of(context),
                     trailing: Switch(
                       value: isDark,
                       onChanged: (_) => AppSettings.toggleTheme(),
@@ -148,10 +165,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: const S(
                   'Notification settings',
                   'إعدادات الإشعارات',
+                  fr: 'Paramètres de notifications',
+                  es: 'Ajustes de notificaciones',
                 ).of(context),
                 subtitle: const S(
                   'Choose which trip alerts reach your phone.',
                   'اختار تنبيهات الرحلة اللي توصل موبايلك.',
+                  fr: 'Choisissez les alertes de trajet reçues sur votre téléphone.',
+                  es: 'Elija las alertas de viaje que llegan a su teléfono.',
                 ).of(context),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -170,10 +191,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: const S(
                   'Privacy & Terms',
                   'الخصوصية والشروط',
+                  fr: 'Confidentialité et conditions',
+                  es: 'Privacidad y términos',
                 ).of(context),
                 subtitle: const S(
                   'What this app stores, and who can see it.',
                   'التطبيق بيخزن إيه، ومين يقدر يشوفه.',
+                  fr: "Ce que l'application enregistre, et qui peut le voir.",
+                  es: 'Qué guarda esta aplicación y quién puede verlo.',
                 ).of(context),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -188,9 +213,14 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: AppSpacing.xl3),
 
-          SectionHeader(title: const S('Account', 'الحساب').of(context)),
+          SectionHeader(title: const S('Account', 'الحساب', fr: 'Compte', es: 'Cuenta').of(context)),
           AppButton.secondary(
-            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            label: const S(
+              'Sign out',
+              'تسجيل الخروج',
+              fr: 'Se déconnecter',
+              es: 'Cerrar sesión',
+            ).of(context),
             icon: Icons.logout,
             onPressed: onSignOut,
           ),
@@ -204,24 +234,24 @@ class _ProfilePageState extends State<ProfilePage> {
     final name = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Edit name', 'تعديل الاسم').of(dialogContext)),
+        title: Text(const S('Edit name', 'تعديل الاسم', fr: 'Modifier le nom', es: 'Editar nombre').of(dialogContext)),
         content: TextField(
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
           decoration: InputDecoration(
-            labelText: const S('Your name', 'اسمك').of(dialogContext),
+            labelText: const S('Your name', 'اسمك', fr: 'Votre nom', es: 'Su nombre').of(dialogContext),
           ),
           onSubmitted: (value) => Navigator.pop(dialogContext, value),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+            child: Text(const S('Cancel', 'إلغاء', fr: 'Annuler', es: 'Cancelar').of(dialogContext)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: Text(const S('Save', 'حفظ').of(dialogContext)),
+            child: Text(const S('Save', 'حفظ', fr: 'Enregistrer', es: 'Guardar').of(dialogContext)),
           ),
         ],
       ),
@@ -248,6 +278,8 @@ class _ProfilePageState extends State<ProfilePage> {
         const S(
           "Couldn't save your name — try again.",
           'معرفناش نحفظ اسمك — جرب تاني.',
+          fr: "Impossible d'enregistrer votre nom — réessayez.",
+          es: 'No se pudo guardar su nombre — inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -326,7 +358,7 @@ class _ProfileHeader extends StatelessWidget {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                tooltip: const S('Edit name', 'تعديل الاسم').of(context),
+                tooltip: const S('Edit name', 'تعديل الاسم', fr: 'Modifier le nom', es: 'Editar nombre').of(context),
                 onPressed: onEdit,
               ),
             ],
@@ -350,7 +382,7 @@ class _ProfileHeader extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
             child: Text(
-              const S('Parent', 'ولي أمر').of(context),
+              const S('Parent', 'ولي أمر', fr: 'Parent', es: 'Padre/Madre').of(context),
               style: TextStyle(
                 color: theme.colorScheme.onPrimaryContainer,
                 fontWeight: FontWeight.w700,

@@ -71,6 +71,8 @@ class _DriverDetailView extends StatelessWidget {
             const S(
               'Driver profile saved.',
               'تم حفظ بيانات السائق.',
+              fr: 'Profil du chauffeur enregistré.',
+              es: 'Perfil del conductor guardado.',
             ).of(context),
           );
         }
@@ -104,6 +106,8 @@ class _DriverDetailView extends StatelessWidget {
                   title: const S(
                     'This driver is no longer in your school.',
                     'السائق ده مبقاش في مدرستك.',
+                    fr: "Ce chauffeur ne fait plus partie de votre école.",
+                    es: 'Este conductor ya no pertenece a su escuela.',
                   ).of(context),
                 )
               : _DriverDetailBody(schoolId: schoolId, driver: driver);
@@ -211,7 +215,12 @@ class _DriverActivityCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            title: const S('Recent activity', 'النشاط الأخير').of(context),
+            title: const S(
+              'Recent activity',
+              'النشاط الأخير',
+              fr: 'Activité récente',
+              es: 'Actividad reciente',
+            ).of(context),
           ),
           const SizedBox(height: AppSpacing.md),
           ActivityTimeline(
@@ -286,7 +295,12 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            title: const S('Driver profile', 'بيانات السائق').of(context),
+            title: const S(
+              'Driver profile',
+              'بيانات السائق',
+              fr: 'Profil du chauffeur',
+              es: 'Perfil del conductor',
+            ).of(context),
             trailing: StatusBadge(
               label: memberStatusLabel(context, widget.driver.status),
               tone: memberStatusTone(widget.driver.status),
@@ -299,12 +313,22 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
           TextField(
             controller: _licenseNumber,
             decoration: InputDecoration(
-              labelText: const S('Licence number', 'رقم الرخصة').of(context),
+              labelText: const S(
+                'Licence number',
+                'رقم الرخصة',
+                fr: 'Numéro de permis',
+                es: 'Número de licencia',
+              ).of(context),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           _DateField(
-            label: const S('Licence expiry', 'انتهاء الرخصة').of(context),
+            label: const S(
+              'Licence expiry',
+              'انتهاء الرخصة',
+              fr: 'Expiration du permis',
+              es: 'Vencimiento de la licencia',
+            ).of(context),
             value: _licenseExpiry,
             onChanged: (value) => setState(() => _licenseExpiry = value),
           ),
@@ -313,15 +337,20 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
             label: const S(
               'Training completed',
               'تاريخ إتمام التدريب',
+              fr: 'Formation terminée',
+              es: 'Capacitación completada',
             ).of(context),
             value: _trainingCompletedAt,
             onChanged: (value) => setState(() => _trainingCompletedAt = value),
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            const S('Assigned buses', 'الأتوبيسات المخصصة')
-                .of(context)
-                .toUpperCase(),
+            const S(
+              'Assigned buses',
+              'الأتوبيسات المخصصة',
+              fr: 'Bus assignés',
+              es: 'Autobuses asignados',
+            ).of(context).toUpperCase(),
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
@@ -339,6 +368,8 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
                   const S(
                     'No buses to assign yet.',
                     'مفيش أتوبيسات تتخصص لسه.',
+                    fr: "Aucun bus à assigner pour l'instant.",
+                    es: 'Aún no hay autobuses para asignar.',
                   ).of(context),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colors.textMuted,
@@ -370,9 +401,12 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
-            const S('Assigned routes', 'الخطوط المخصصة')
-                .of(context)
-                .toUpperCase(),
+            const S(
+              'Assigned routes',
+              'الخطوط المخصصة',
+              fr: 'Itinéraires assignés',
+              es: 'Rutas asignadas',
+            ).of(context).toUpperCase(),
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: colors.textSecondary),
@@ -390,6 +424,8 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
                   const S(
                     'No routes to assign yet.',
                     'مفيش خطوط تتخصص لسه.',
+                    fr: "Aucun itinéraire à assigner pour l'instant.",
+                    es: 'Aún no hay rutas para asignar.',
                   ).of(context),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colors.textMuted,
@@ -419,7 +455,12 @@ class _DriverProfileCardState extends State<_DriverProfileCard> {
           const SizedBox(height: AppSpacing.xl),
           AppButton.primary(
             icon: Icons.save_outlined,
-            label: const S('Save profile', 'حفظ البيانات').of(context),
+            label: const S(
+              'Save profile',
+              'حفظ البيانات',
+              fr: 'Enregistrer le profil',
+              es: 'Guardar perfil',
+            ).of(context),
             onPressed: _save,
           ),
         ],
@@ -468,10 +509,20 @@ class _LicenseAlertBanner extends StatelessWidget {
                           'should not be assigned to trips until it is renewed.',
                       'الرخصة دي انتهت من ${-days} يوم. مينفعش السائق ده '
                           'يتخصص لرحلات لحد ما تتجدد.',
+                      fr:
+                          'Ce permis a expiré il y a ${-days} jour(s). Ce '
+                          "chauffeur ne doit pas être assigné à des trajets "
+                          "tant qu'il n'est pas renouvelé.",
+                      es:
+                          'Esta licencia venció hace ${-days} día(s). Este '
+                          'conductor no debe ser asignado a viajes hasta que '
+                          'se renueve.',
                     ).of(context)
                   : S(
                       'This licence expires in $days day(s).',
                       'الرخصة دي هتنتهي خلال $days يوم.',
+                      fr: 'Ce permis expire dans $days jour(s).',
+                      es: 'Esta licencia vence en $days día(s).',
                     ).of(context),
               style: Theme.of(
                 context,
@@ -510,11 +561,22 @@ class _DriverPerformanceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            title: const S('Performance', 'الأداء').of(context),
+            title: const S(
+              'Performance',
+              'الأداء',
+              fr: 'Performance',
+              es: 'Rendimiento',
+            ).of(context),
             subtitle: const S(
               'Counted from this driver’s own trip and route-deviation '
                   'records.',
               'محسوبة من سجل رحلات السائق ده وخروجه عن المسار.',
+              fr:
+                  "Calculé à partir des trajets et des écarts d'itinéraire "
+                  'propres à ce chauffeur.',
+              es:
+                  'Calculado a partir de los viajes y desvíos de ruta '
+                  'propios de este conductor.',
             ).of(context),
           ),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -562,6 +624,8 @@ class _DriverPerformanceCard extends StatelessWidget {
                       title: const S(
                         'No trips assigned to this driver yet.',
                         'مفيش رحلات متخصصة للسائق ده لسه.',
+                        fr: "Aucun trajet assigné à ce chauffeur pour l'instant.",
+                        es: 'Aún no hay viajes asignados a este conductor.',
                       ).of(context),
                     );
                   }
@@ -598,13 +662,23 @@ class _PerformanceGrid extends StatelessWidget {
       MetricStatCard(
         icon: Icons.task_alt,
         tone: colors.success,
-        label: const S('Completed trips', 'رحلات مكتملة').of(context),
+        label: const S(
+          'Completed trips',
+          'رحلات مكتملة',
+          fr: 'Trajets terminés',
+          es: 'Viajes completados',
+        ).of(context),
         value: '${performance.completedTrips}',
       ),
       MetricStatCard(
         icon: Icons.schedule,
         tone: colors.info,
-        label: const S('On-time rate', 'نسبة الالتزام بالمعاد').of(context),
+        label: const S(
+          'On-time rate',
+          'نسبة الالتزام بالمعاد',
+          fr: 'Taux de ponctualité',
+          es: 'Tasa de puntualidad',
+        ).of(context),
         value: performance.onTimeRate == null
             ? '—'
             : '${(performance.onTimeRate! * 100).round()}%',
@@ -614,24 +688,44 @@ class _PerformanceGrid extends StatelessWidget {
         tone: performance.emergencyTrips > 0
             ? colors.emergency
             : colors.success,
-        label: const S('Emergency trips', 'رحلات بها طوارئ').of(context),
+        label: const S(
+          'Emergency trips',
+          'رحلات بها طوارئ',
+          fr: 'Trajets d’urgence',
+          es: 'Viajes de emergencia',
+        ).of(context),
         value: '${performance.emergencyTrips}',
       ),
       MetricStatCard(
         icon: Icons.alt_route,
         tone: performance.deviationCount > 0 ? colors.warning : colors.success,
-        label: const S('Route deviations', 'خروج عن المسار').of(context),
+        label: const S(
+          'Route deviations',
+          'خروج عن المسار',
+          fr: "Écarts d'itinéraire",
+          es: 'Desvíos de ruta',
+        ).of(context),
         value: '${performance.deviationCount}',
       ),
       MetricStatCard(
         icon: Icons.timer_outlined,
-        label: const S('Avg. trip duration', 'متوسط مدة الرحلة').of(context),
+        label: const S(
+          'Avg. trip duration',
+          'متوسط مدة الرحلة',
+          fr: 'Durée moyenne du trajet',
+          es: 'Duración media del viaje',
+        ).of(context),
         value: duration(performance.averageTripDuration),
       ),
       MetricStatCard(
         icon: Icons.cancel_outlined,
         tone: colors.textMuted,
-        label: const S('Cancelled trips', 'رحلات ملغاة').of(context),
+        label: const S(
+          'Cancelled trips',
+          'رحلات ملغاة',
+          fr: 'Trajets annulés',
+          es: 'Viajes cancelados',
+        ).of(context),
         value: '${performance.cancelledTrips}',
       ),
     ];
@@ -689,14 +783,24 @@ class _DateField extends StatelessWidget {
           suffixIcon: value == null
               ? const Icon(Icons.event_outlined)
               : IconButton(
-                  tooltip: const S('Clear', 'مسح').of(context),
+                  tooltip: const S(
+                    'Clear',
+                    'مسح',
+                    fr: 'Effacer',
+                    es: 'Borrar',
+                  ).of(context),
                   icon: const Icon(Icons.close),
                   onPressed: () => onChanged(null),
                 ),
         ),
         child: Text(
           value == null
-              ? const S('Not set', 'مش متحدد').of(context)
+              ? const S(
+                  'Not set',
+                  'مش متحدد',
+                  fr: 'Non défini',
+                  es: 'No definido',
+                ).of(context)
               : DateFormat.yMMMd().format(value!),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: value == null ? colors.textMuted : colors.textPrimary,

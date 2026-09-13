@@ -49,6 +49,10 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
                 'Location permission is needed to use your current '
                     'location.',
                 'محتاجين إذن الموقع عشان نستخدم موقعك الحالي.',
+                fr: "L'autorisation de localisation est nécessaire pour "
+                    "utiliser votre position actuelle.",
+                es: 'Se necesita permiso de ubicación para usar su ubicación '
+                    'actual.',
               ).of(context),
             ),
           ),
@@ -63,6 +67,8 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
               const S(
                 'Turn on location services and try again.',
                 'شغّل خدمة الموقع وجرب تاني.',
+                fr: 'Activez les services de localisation et réessayez.',
+                es: 'Active los servicios de ubicación e inténtelo de nuevo.',
               ).of(context),
             ),
           ),
@@ -82,6 +88,8 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
             const S(
               "Couldn't get your current location.",
               'معرفناش نجيب موقعك الحالي.',
+              fr: "Impossible d'obtenir votre position actuelle.",
+              es: 'No se pudo obtener su ubicación actual.',
             ).of(context),
           ),
         ),
@@ -101,6 +109,8 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
           S(
             'New location for ${widget.studentName}',
             'موقع جديد لـ ${widget.studentName}',
+            fr: 'Nouvel emplacement pour ${widget.studentName}',
+            es: 'Nueva ubicación para ${widget.studentName}',
           ).of(context),
         ),
         actions: [
@@ -108,7 +118,7 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
             padding: const EdgeInsetsDirectional.only(end: AppSpacing.lg),
             child: Center(
               child: AppButton.primary(
-                label: const S('Submit', 'إرسال').of(context),
+                label: const S('Submit', 'إرسال', fr: 'Envoyer', es: 'Enviar').of(context),
                 onPressed: _picked == null
                     ? null
                     : () => Navigator.pop(context, _picked),
@@ -136,7 +146,7 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
             bottom: 96,
             child: FloatingActionButton.small(
               heroTag: 'child-location-picker-my-location',
-              tooltip: const S('My location', 'موقعي').of(context),
+              tooltip: const S('My location', 'موقعي', fr: 'Ma position', es: 'Mi ubicación').of(context),
               onPressed: _locating ? null : _useMyLocation,
               child: _locating
                   ? const SizedBox(
@@ -178,6 +188,11 @@ class _ChildLocationPickerPageState extends State<ChildLocationPickerPage> {
                             'official.',
                         'استخدم موقعك أو دوس على الخريطة، بعدين ابعت — '
                             'مدرستك بتراجعها قبل ما تبقى رسمية.',
+                        fr: "Utilisez votre position ou touchez la carte, puis "
+                            "envoyez — votre école l'examine avant qu'elle ne "
+                            "devienne officielle.",
+                        es: 'Use su ubicación o toque el mapa y luego envíe — '
+                            'su escuela la revisa antes de que sea oficial.',
                       ).of(context),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

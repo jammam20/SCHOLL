@@ -45,7 +45,7 @@ class CommunityPostCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          const S('Parent', 'ولي أمر').of(context),
+                          const S('Parent', 'ولي أمر', fr: 'Parent', es: 'Padre/Madre').of(context),
                           style: theme.textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),

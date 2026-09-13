@@ -41,6 +41,8 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
         const S(
           "Couldn't mark that as read — try again.",
           'معرفناش نعلّمه كمقروء — جرب تاني.',
+          fr: "Impossible de le marquer comme lu — réessayez.",
+          es: 'No se pudo marcar como leído — inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -56,6 +58,8 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
         const S(
           "Couldn't mark those as read — try again.",
           'معرفناش نعلّمهم كمقروءين — جرب تاني.',
+          fr: "Impossible de les marquer comme lus — réessayez.",
+          es: 'No se pudieron marcar como leídos — inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -71,7 +75,7 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(const S('Notifications', 'الإشعارات').of(context)),
+            title: Text(const S('Notifications', 'الإشعارات', fr: 'Notifications', es: 'Notificaciones').of(context)),
             actions: [
               if (unread.isNotEmpty)
                 Padding(
@@ -82,7 +86,12 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
                     onPressed: () => _markAllRead(unread),
                     icon: const Icon(Icons.done_all_rounded, size: 18),
                     label: Text(
-                      const S('Mark all read', 'علّم الكل كمقروء').of(context),
+                      const S(
+                        'Mark all read',
+                        'علّم الكل كمقروء',
+                        fr: 'Tout marquer comme lu',
+                        es: 'Marcar todo como leído',
+                      ).of(context),
                     ),
                   ),
                 ),
@@ -118,6 +127,10 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
           "Couldn't load your notifications — check your connection and "
               'try again.',
           'معرفناش نحمّل إشعاراتك — اتأكد من الاتصال وجرب تاني.',
+          fr: "Impossible de charger vos notifications — vérifiez votre "
+              "connexion et réessayez.",
+          es: 'No se pudieron cargar sus notificaciones — revise su conexión '
+              'e inténtelo de nuevo.',
         ).of(context),
       );
     }
@@ -125,11 +138,20 @@ class _NotificationsInboxPageState extends State<NotificationsInboxPage> {
     if (notifications.isEmpty) {
       return EmptyStateView(
         icon: Icons.notifications_none,
-        title: const S('No notifications yet', 'مفيش إشعارات لسه').of(context),
+        title: const S(
+          'No notifications yet',
+          'مفيش إشعارات لسه',
+          fr: 'Aucune notification pour le moment',
+          es: 'Aún no hay notificaciones',
+        ).of(context),
         message: const S(
           "Trip updates and school messages will show up here as they "
               'happen.',
           'تحديثات الرحلة ورسايل المدرسة هتظهر هنا أول ما تحصل.',
+          fr: "Les mises à jour de trajet et les messages de l'école "
+              "apparaîtront ici au fur et à mesure.",
+          es: 'Las actualizaciones de viaje y los mensajes de la escuela '
+              'aparecerán aquí a medida que ocurran.',
         ).of(context),
       );
     }
@@ -190,8 +212,18 @@ class _UnreadSummary extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Text(
             count == 1
-                ? const S('1 unread', 'واحد مش مقروء').of(context)
-                : S('$count unread', '$count مش مقروءين').of(context),
+                ? const S(
+                    '1 unread',
+                    'واحد مش مقروء',
+                    fr: 'Une non lue',
+                    es: 'Una sin leer',
+                  ).of(context)
+                : S(
+                    '$count unread',
+                    '$count مش مقروءين',
+                    fr: '$count non lues',
+                    es: '$count sin leer',
+                  ).of(context),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: colors.info,
               fontWeight: FontWeight.w700,

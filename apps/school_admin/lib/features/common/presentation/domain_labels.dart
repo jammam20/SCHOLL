@@ -11,18 +11,48 @@ import 'package:school_shared/school_shared.dart';
 
 String incidentTypeLabel(IncidentType type, BuildContext context) =>
     switch (type) {
-      IncidentType.accident => const S('Accident', 'حادث').of(context),
-      IncidentType.vehicleBreakdown =>
-        const S('Vehicle breakdown', 'عطل في الأتوبيس').of(context),
-      IncidentType.studentMedical =>
-        const S('Student medical', 'حالة طبية لطالب').of(context),
-      IncidentType.studentBehavior =>
-        const S('Student behavior', 'سلوك طالب').of(context),
-      IncidentType.routeBlocked =>
-        const S('Route blocked', 'الطريق مقفول').of(context),
-      IncidentType.policeEmergency =>
-        const S('Police emergency', 'طوارئ شرطة').of(context),
-      IncidentType.other => const S('Other', 'أخرى').of(context),
+      IncidentType.accident => const S(
+        'Accident',
+        'حادث',
+        fr: 'Accident',
+        es: 'Accidente',
+      ).of(context),
+      IncidentType.vehicleBreakdown => const S(
+        'Vehicle breakdown',
+        'عطل في الأتوبيس',
+        fr: 'Panne du véhicule',
+        es: 'Avería del vehículo',
+      ).of(context),
+      IncidentType.studentMedical => const S(
+        'Student medical',
+        'حالة طبية لطالب',
+        fr: 'Urgence médicale élève',
+        es: 'Emergencia médica de alumno',
+      ).of(context),
+      IncidentType.studentBehavior => const S(
+        'Student behavior',
+        'سلوك طالب',
+        fr: "Comportement d'un élève",
+        es: 'Comportamiento de alumno',
+      ).of(context),
+      IncidentType.routeBlocked => const S(
+        'Route blocked',
+        'الطريق مقفول',
+        fr: 'Itinéraire bloqué',
+        es: 'Ruta bloqueada',
+      ).of(context),
+      IncidentType.policeEmergency => const S(
+        'Police emergency',
+        'طوارئ شرطة',
+        fr: 'Urgence police',
+        es: 'Emergencia policial',
+      ).of(context),
+      IncidentType.other => const S(
+        'Other',
+        'أخرى',
+        fr: 'Autre',
+        es: 'Otro',
+      ).of(context),
     };
 
 IconData incidentTypeIcon(IncidentType type) => switch (type) {
@@ -37,10 +67,24 @@ IconData incidentTypeIcon(IncidentType type) => switch (type) {
 
 String incidentStatusLabel(IncidentStatus status, BuildContext context) =>
     switch (status) {
-      IncidentStatus.reported => const S('Reported', 'مُبلّغ عنه').of(context),
-      IncidentStatus.acknowledged =>
-        const S('Acknowledged', 'تم الاطلاع').of(context),
-      IncidentStatus.resolved => const S('Resolved', 'تم الحل').of(context),
+      IncidentStatus.reported => const S(
+        'Reported',
+        'مُبلّغ عنه',
+        fr: 'Signalé',
+        es: 'Reportado',
+      ).of(context),
+      IncidentStatus.acknowledged => const S(
+        'Acknowledged',
+        'تم الاطلاع',
+        fr: 'Pris en compte',
+        es: 'Reconocido',
+      ).of(context),
+      IncidentStatus.resolved => const S(
+        'Resolved',
+        'تم الحل',
+        fr: 'Résolu',
+        es: 'Resuelto',
+      ).of(context),
     };
 
 /// `reported` is warning rather than error: an unreviewed incident needs
@@ -54,16 +98,48 @@ StatusTone incidentStatusTone(IncidentStatus status) => switch (status) {
 
 String maintenanceItemLabel(MaintenanceItemType type, BuildContext context) =>
     switch (type) {
-      MaintenanceItemType.oilChange =>
-        const S('Oil change', 'تغيير الزيت').of(context),
-      MaintenanceItemType.tires => const S('Tires', 'الكاوتش').of(context),
-      MaintenanceItemType.brakes => const S('Brakes', 'الفرامل').of(context),
-      MaintenanceItemType.inspection =>
-        const S('Inspection', 'الفحص الفني').of(context),
-      MaintenanceItemType.insurance => const S('Insurance', 'التأمين').of(context),
-      MaintenanceItemType.registration =>
-        const S('Registration', 'رخصة التسيير').of(context),
-      MaintenanceItemType.other => const S('Other', 'أخرى').of(context),
+      MaintenanceItemType.oilChange => const S(
+        'Oil change',
+        'تغيير الزيت',
+        fr: "Vidange d'huile",
+        es: 'Cambio de aceite',
+      ).of(context),
+      MaintenanceItemType.tires => const S(
+        'Tires',
+        'الكاوتش',
+        fr: 'Pneus',
+        es: 'Neumáticos',
+      ).of(context),
+      MaintenanceItemType.brakes => const S(
+        'Brakes',
+        'الفرامل',
+        fr: 'Freins',
+        es: 'Frenos',
+      ).of(context),
+      MaintenanceItemType.inspection => const S(
+        'Inspection',
+        'الفحص الفني',
+        fr: 'Inspection',
+        es: 'Inspección',
+      ).of(context),
+      MaintenanceItemType.insurance => const S(
+        'Insurance',
+        'التأمين',
+        fr: 'Assurance',
+        es: 'Seguro',
+      ).of(context),
+      MaintenanceItemType.registration => const S(
+        'Registration',
+        'رخصة التسيير',
+        fr: 'Immatriculation',
+        es: 'Matriculación',
+      ).of(context),
+      MaintenanceItemType.other => const S(
+        'Other',
+        'أخرى',
+        fr: 'Autre',
+        es: 'Otro',
+      ).of(context),
     };
 
 IconData maintenanceItemIcon(MaintenanceItemType type) => switch (type) {
@@ -78,13 +154,30 @@ IconData maintenanceItemIcon(MaintenanceItemType type) => switch (type) {
 
 String deviationStatusLabel(DeviationStatus status, BuildContext context) =>
     switch (status) {
-      DeviationStatus.normal => const S('On route', 'على المسار').of(context),
-      DeviationStatus.deviationStarted =>
-        const S('Deviation started', 'بدأ الخروج عن المسار').of(context),
-      DeviationStatus.deviating =>
-        const S('Off route', 'خارج المسار').of(context),
-      DeviationStatus.deviationEnded =>
-        const S('Back on route', 'رجع للمسار').of(context),
+      DeviationStatus.normal => const S(
+        'On route',
+        'على المسار',
+        fr: "Sur l'itinéraire",
+        es: 'En ruta',
+      ).of(context),
+      DeviationStatus.deviationStarted => const S(
+        'Deviation started',
+        'بدأ الخروج عن المسار',
+        fr: 'Début de déviation',
+        es: 'Inicio de desvío',
+      ).of(context),
+      DeviationStatus.deviating => const S(
+        'Off route',
+        'خارج المسار',
+        fr: 'Hors itinéraire',
+        es: 'Fuera de ruta',
+      ).of(context),
+      DeviationStatus.deviationEnded => const S(
+        'Back on route',
+        'رجع للمسار',
+        fr: "De retour sur l'itinéraire",
+        es: 'De vuelta en ruta',
+      ).of(context),
     };
 
 StatusTone deviationStatusTone(DeviationStatus status) => switch (status) {
@@ -96,12 +189,36 @@ StatusTone deviationStatusTone(DeviationStatus status) => switch (status) {
 
 String emergencyTypeLabel(EmergencyType type, BuildContext context) =>
     switch (type) {
-      EmergencyType.accident => const S('Accident', 'حادث').of(context),
-      EmergencyType.vehicleBreakdown =>
-        const S('Vehicle breakdown', 'عطل في الباص').of(context),
-      EmergencyType.medical => const S('Medical', 'حالة طبية').of(context),
-      EmergencyType.security => const S('Security', 'أمنية').of(context),
-      EmergencyType.other => const S('Other', 'أخرى').of(context),
+      EmergencyType.accident => const S(
+        'Accident',
+        'حادث',
+        fr: 'Accident',
+        es: 'Accidente',
+      ).of(context),
+      EmergencyType.vehicleBreakdown => const S(
+        'Vehicle breakdown',
+        'عطل في الباص',
+        fr: 'Panne du véhicule',
+        es: 'Avería del vehículo',
+      ).of(context),
+      EmergencyType.medical => const S(
+        'Medical',
+        'حالة طبية',
+        fr: 'Médicale',
+        es: 'Médica',
+      ).of(context),
+      EmergencyType.security => const S(
+        'Security',
+        'أمنية',
+        fr: 'Sécurité',
+        es: 'Seguridad',
+      ).of(context),
+      EmergencyType.other => const S(
+        'Other',
+        'أخرى',
+        fr: 'Autre',
+        es: 'Otro',
+      ).of(context),
     };
 
 /// The audit trail's `action` strings are free-form well-known constants
@@ -109,88 +226,330 @@ String emergencyTypeLabel(EmergencyType type, BuildContext context) =>
 /// value with underscores turned into spaces rather than dropped.
 String auditActionLabel(String action, BuildContext context) =>
     switch (action) {
-      AuditActions.tripStarted => const S('Trip started', 'بدأت الرحلة').of(context),
-      AuditActions.tripCompleted =>
-        const S('Trip completed', 'اكتملت الرحلة').of(context),
-      AuditActions.tripCancelled =>
-        const S('Trip cancelled', 'أُلغيت الرحلة').of(context),
-      AuditActions.stopReached =>
-        const S('Stop reached', 'الوصول لمحطة').of(context),
-      AuditActions.studentBoarded =>
-        const S('Student boarded', 'طالب ركب').of(context),
-      AuditActions.studentDroppedOff =>
-        const S('Student dropped off', 'طالب نزل').of(context),
-      AuditActions.deviationStarted =>
-        const S('Deviation started', 'بدأ الخروج عن المسار').of(context),
-      AuditActions.deviationEnded =>
-        const S('Deviation ended', 'انتهى الخروج عن المسار').of(context),
-      AuditActions.incidentReported =>
-        const S('Incident reported', 'تم الإبلاغ عن حادثة').of(context),
-      AuditActions.incidentAcknowledged =>
-        const S('Incident acknowledged', 'تم الاطلاع على الحادثة').of(context),
-      AuditActions.incidentResolved =>
-        const S('Incident resolved', 'تم حل الحادثة').of(context),
-      AuditActions.emergencyRaised =>
-        const S('Emergency raised', 'تم رفع حالة طوارئ').of(context),
-      AuditActions.emergencyResolved =>
-        const S('Emergency resolved', 'تم حل حالة الطوارئ').of(context),
-      AuditActions.busReassigned =>
-        const S('Bus reassigned', 'تم تغيير الأتوبيس').of(context),
-      AuditActions.driverReassigned =>
-        const S('Driver reassigned', 'تم تغيير السائق').of(context),
-      AuditActions.pickupVerified =>
-        const S('Pickup verified', 'تم تأكيد الاستلام').of(context),
-      AuditActions.pickupVerificationFailed =>
-        const S('Pickup verification failed', 'فشل تأكيد الاستلام').of(context),
-      AuditActions.inspectionCompleted =>
-        const S('Inspection completed', 'اكتمل الفحص').of(context),
-      AuditActions.inspectionFailed =>
-        const S('Inspection failed', 'فشل الفحص').of(context),
-      AuditActions.studentLocationRequestSubmitted =>
-        const S('Location request submitted', 'تم إرسال طلب الموقع').of(context),
-      AuditActions.studentLocationRequestAccepted =>
-        const S('Location request accepted', 'تم قبول طلب الموقع').of(context),
-      AuditActions.studentLocationRequestRejected =>
-        const S('Location request rejected', 'تم رفض طلب الموقع').of(context),
-      AuditActions.studentRequestRejected =>
-        const S('Student request rejected', 'تم رفض طلب الطالب').of(context),
-      AuditActions.tripPaused => const S('Trip paused', 'توقفت الرحلة مؤقتًا').of(context),
-      AuditActions.tripResumed => const S('Trip resumed', 'استؤنفت الرحلة').of(context),
-      AuditActions.boardingRejectedCapacity =>
-        const S('Boarding rejected — bus full', 'رُفض الركوب — الأتوبيس ممتلئ').of(context),
-      AuditActions.driverApproved => const S('Driver approved', 'تمت الموافقة على السائق').of(context),
-      AuditActions.driverSuspended => const S('Driver suspended', 'تم إيقاف السائق').of(context),
-      AuditActions.driverRejected => const S('Driver rejected', 'تم رفض السائق').of(context),
-      AuditActions.parentApproved => const S('Parent approved', 'تمت الموافقة على ولي الأمر').of(context),
-      AuditActions.parentSuspended => const S('Parent suspended', 'تم إيقاف ولي الأمر').of(context),
-      AuditActions.parentRejected => const S('Parent rejected', 'تم رفض ولي الأمر').of(context),
-      AuditActions.studentApproved => const S('Student approved', 'تمت الموافقة على الطالب').of(context),
-      AuditActions.studentCreated => const S('Student created', 'تم إنشاء طالب').of(context),
-      AuditActions.studentUpdated => const S('Student updated', 'تم تعديل بيانات الطالب').of(context),
-      AuditActions.studentArchived => const S('Student archived', 'تمت أرشفة الطالب').of(context),
-      AuditActions.studentRestored => const S('Student restored', 'تمت استعادة الطالب').of(context),
-      AuditActions.busCreated => const S('Bus created', 'تم إنشاء أتوبيس').of(context),
-      AuditActions.busUpdated => const S('Bus updated', 'تم تعديل بيانات الأتوبيس').of(context),
-      AuditActions.busArchived => const S('Bus archived', 'تمت أرشفة الأتوبيس').of(context),
-      AuditActions.busRestored => const S('Bus restored', 'تمت استعادة الأتوبيس').of(context),
-      AuditActions.routeCreated => const S('Route created', 'تم إنشاء خط').of(context),
-      AuditActions.routeUpdated => const S('Route updated', 'تم تعديل الخط').of(context),
-      AuditActions.routeArchived => const S('Route archived', 'تمت أرشفة الخط').of(context),
-      AuditActions.routeRestored => const S('Route restored', 'تمت استعادة الخط').of(context),
-      AuditActions.tripCreated => const S('Trip created', 'تم إنشاء رحلة').of(context),
-      AuditActions.tripCancelledByAdmin =>
-        const S('Trip cancelled by admin', 'ألغى الأدمن الرحلة').of(context),
-      AuditActions.schoolSettingsUpdated =>
-        const S('School settings updated', 'تم تعديل إعدادات المدرسة').of(context),
-      AuditActions.schoolLocationUpdated =>
-        const S('School location updated', 'تم تعديل موقع المدرسة').of(context),
-      AuditActions.schoolCreated => const S('School created', 'تم إنشاء مدرسة').of(context),
-      AuditActions.schoolActivated => const S('School activated', 'تم تفعيل المدرسة').of(context),
-      AuditActions.schoolDeactivated => const S('School deactivated', 'تم إيقاف المدرسة').of(context),
-      AuditActions.schoolAdminApproved =>
-        const S('School admin approved', 'تمت الموافقة على أدمن المدرسة').of(context),
-      AuditActions.schoolAdminRejected =>
-        const S('School admin rejected', 'تم رفض أدمن المدرسة').of(context),
+      AuditActions.tripStarted => const S(
+        'Trip started',
+        'بدأت الرحلة',
+        fr: 'Trajet démarré',
+        es: 'Viaje iniciado',
+      ).of(context),
+      AuditActions.tripCompleted => const S(
+        'Trip completed',
+        'اكتملت الرحلة',
+        fr: 'Trajet terminé',
+        es: 'Viaje completado',
+      ).of(context),
+      AuditActions.tripCancelled => const S(
+        'Trip cancelled',
+        'أُلغيت الرحلة',
+        fr: 'Trajet annulé',
+        es: 'Viaje cancelado',
+      ).of(context),
+      AuditActions.stopReached => const S(
+        'Stop reached',
+        'الوصول لمحطة',
+        fr: 'Arrêt atteint',
+        es: 'Parada alcanzada',
+      ).of(context),
+      AuditActions.studentBoarded => const S(
+        'Student boarded',
+        'طالب ركب',
+        fr: 'Élève monté',
+        es: 'Alumno abordó',
+      ).of(context),
+      AuditActions.studentDroppedOff => const S(
+        'Student dropped off',
+        'طالب نزل',
+        fr: 'Élève déposé',
+        es: 'Alumno bajó',
+      ).of(context),
+      AuditActions.deviationStarted => const S(
+        'Deviation started',
+        'بدأ الخروج عن المسار',
+        fr: 'Début de déviation',
+        es: 'Inicio de desvío',
+      ).of(context),
+      AuditActions.deviationEnded => const S(
+        'Deviation ended',
+        'انتهى الخروج عن المسار',
+        fr: 'Fin de déviation',
+        es: 'Fin de desvío',
+      ).of(context),
+      AuditActions.incidentReported => const S(
+        'Incident reported',
+        'تم الإبلاغ عن حادثة',
+        fr: 'Incident signalé',
+        es: 'Incidente reportado',
+      ).of(context),
+      AuditActions.incidentAcknowledged => const S(
+        'Incident acknowledged',
+        'تم الاطلاع على الحادثة',
+        fr: 'Incident pris en compte',
+        es: 'Incidente reconocido',
+      ).of(context),
+      AuditActions.incidentResolved => const S(
+        'Incident resolved',
+        'تم حل الحادثة',
+        fr: 'Incident résolu',
+        es: 'Incidente resuelto',
+      ).of(context),
+      AuditActions.emergencyRaised => const S(
+        'Emergency raised',
+        'تم رفع حالة طوارئ',
+        fr: 'Urgence déclenchée',
+        es: 'Emergencia activada',
+      ).of(context),
+      AuditActions.emergencyResolved => const S(
+        'Emergency resolved',
+        'تم حل حالة الطوارئ',
+        fr: 'Urgence résolue',
+        es: 'Emergencia resuelta',
+      ).of(context),
+      AuditActions.busReassigned => const S(
+        'Bus reassigned',
+        'تم تغيير الأتوبيس',
+        fr: 'Bus réaffecté',
+        es: 'Autobús reasignado',
+      ).of(context),
+      AuditActions.driverReassigned => const S(
+        'Driver reassigned',
+        'تم تغيير السائق',
+        fr: 'Chauffeur réaffecté',
+        es: 'Conductor reasignado',
+      ).of(context),
+      AuditActions.pickupVerified => const S(
+        'Pickup verified',
+        'تم تأكيد الاستلام',
+        fr: 'Prise en charge vérifiée',
+        es: 'Recogida verificada',
+      ).of(context),
+      AuditActions.pickupVerificationFailed => const S(
+        'Pickup verification failed',
+        'فشل تأكيد الاستلام',
+        fr: 'Échec de vérification de prise en charge',
+        es: 'Fallo al verificar la recogida',
+      ).of(context),
+      AuditActions.inspectionCompleted => const S(
+        'Inspection completed',
+        'اكتمل الفحص',
+        fr: 'Inspection terminée',
+        es: 'Inspección completada',
+      ).of(context),
+      AuditActions.inspectionFailed => const S(
+        'Inspection failed',
+        'فشل الفحص',
+        fr: "Échec de l'inspection",
+        es: 'Inspección fallida',
+      ).of(context),
+      AuditActions.studentLocationRequestSubmitted => const S(
+        'Location request submitted',
+        'تم إرسال طلب الموقع',
+        fr: 'Demande de localisation envoyée',
+        es: 'Solicitud de ubicación enviada',
+      ).of(context),
+      AuditActions.studentLocationRequestAccepted => const S(
+        'Location request accepted',
+        'تم قبول طلب الموقع',
+        fr: 'Demande de localisation acceptée',
+        es: 'Solicitud de ubicación aceptada',
+      ).of(context),
+      AuditActions.studentLocationRequestRejected => const S(
+        'Location request rejected',
+        'تم رفض طلب الموقع',
+        fr: 'Demande de localisation refusée',
+        es: 'Solicitud de ubicación rechazada',
+      ).of(context),
+      AuditActions.studentRequestRejected => const S(
+        'Student request rejected',
+        'تم رفض طلب الطالب',
+        fr: "Demande de l'élève refusée",
+        es: 'Solicitud del alumno rechazada',
+      ).of(context),
+      AuditActions.tripPaused => const S(
+        'Trip paused',
+        'توقفت الرحلة مؤقتًا',
+        fr: 'Trajet en pause',
+        es: 'Viaje en pausa',
+      ).of(context),
+      AuditActions.tripResumed => const S(
+        'Trip resumed',
+        'استؤنفت الرحلة',
+        fr: 'Trajet repris',
+        es: 'Viaje reanudado',
+      ).of(context),
+      AuditActions.boardingRejectedCapacity => const S(
+        'Boarding rejected — bus full',
+        'رُفض الركوب — الأتوبيس ممتلئ',
+        fr: 'Montée refusée — bus complet',
+        es: 'Embarque rechazado — autobús lleno',
+      ).of(context),
+      AuditActions.driverApproved => const S(
+        'Driver approved',
+        'تمت الموافقة على السائق',
+        fr: 'Chauffeur approuvé',
+        es: 'Conductor aprobado',
+      ).of(context),
+      AuditActions.driverSuspended => const S(
+        'Driver suspended',
+        'تم إيقاف السائق',
+        fr: 'Chauffeur suspendu',
+        es: 'Conductor suspendido',
+      ).of(context),
+      AuditActions.driverRejected => const S(
+        'Driver rejected',
+        'تم رفض السائق',
+        fr: 'Chauffeur refusé',
+        es: 'Conductor rechazado',
+      ).of(context),
+      AuditActions.parentApproved => const S(
+        'Parent approved',
+        'تمت الموافقة على ولي الأمر',
+        fr: 'Parent approuvé',
+        es: 'Padre/madre aprobado',
+      ).of(context),
+      AuditActions.parentSuspended => const S(
+        'Parent suspended',
+        'تم إيقاف ولي الأمر',
+        fr: 'Parent suspendu',
+        es: 'Padre/madre suspendido',
+      ).of(context),
+      AuditActions.parentRejected => const S(
+        'Parent rejected',
+        'تم رفض ولي الأمر',
+        fr: 'Parent refusé',
+        es: 'Padre/madre rechazado',
+      ).of(context),
+      AuditActions.studentApproved => const S(
+        'Student approved',
+        'تمت الموافقة على الطالب',
+        fr: 'Élève approuvé',
+        es: 'Alumno aprobado',
+      ).of(context),
+      AuditActions.studentCreated => const S(
+        'Student created',
+        'تم إنشاء طالب',
+        fr: 'Élève créé',
+        es: 'Alumno creado',
+      ).of(context),
+      AuditActions.studentUpdated => const S(
+        'Student updated',
+        'تم تعديل بيانات الطالب',
+        fr: 'Élève modifié',
+        es: 'Alumno actualizado',
+      ).of(context),
+      AuditActions.studentArchived => const S(
+        'Student archived',
+        'تمت أرشفة الطالب',
+        fr: 'Élève archivé',
+        es: 'Alumno archivado',
+      ).of(context),
+      AuditActions.studentRestored => const S(
+        'Student restored',
+        'تمت استعادة الطالب',
+        fr: 'Élève restauré',
+        es: 'Alumno restaurado',
+      ).of(context),
+      AuditActions.busCreated => const S(
+        'Bus created',
+        'تم إنشاء أتوبيس',
+        fr: 'Bus créé',
+        es: 'Autobús creado',
+      ).of(context),
+      AuditActions.busUpdated => const S(
+        'Bus updated',
+        'تم تعديل بيانات الأتوبيس',
+        fr: 'Bus modifié',
+        es: 'Autobús actualizado',
+      ).of(context),
+      AuditActions.busArchived => const S(
+        'Bus archived',
+        'تمت أرشفة الأتوبيس',
+        fr: 'Bus archivé',
+        es: 'Autobús archivado',
+      ).of(context),
+      AuditActions.busRestored => const S(
+        'Bus restored',
+        'تمت استعادة الأتوبيس',
+        fr: 'Bus restauré',
+        es: 'Autobús restaurado',
+      ).of(context),
+      AuditActions.routeCreated => const S(
+        'Route created',
+        'تم إنشاء خط',
+        fr: 'Itinéraire créé',
+        es: 'Ruta creada',
+      ).of(context),
+      AuditActions.routeUpdated => const S(
+        'Route updated',
+        'تم تعديل الخط',
+        fr: 'Itinéraire modifié',
+        es: 'Ruta actualizada',
+      ).of(context),
+      AuditActions.routeArchived => const S(
+        'Route archived',
+        'تمت أرشفة الخط',
+        fr: 'Itinéraire archivé',
+        es: 'Ruta archivada',
+      ).of(context),
+      AuditActions.routeRestored => const S(
+        'Route restored',
+        'تمت استعادة الخط',
+        fr: 'Itinéraire restauré',
+        es: 'Ruta restaurada',
+      ).of(context),
+      AuditActions.tripCreated => const S(
+        'Trip created',
+        'تم إنشاء رحلة',
+        fr: 'Trajet créé',
+        es: 'Viaje creado',
+      ).of(context),
+      AuditActions.tripCancelledByAdmin => const S(
+        'Trip cancelled by admin',
+        'ألغى الأدمن الرحلة',
+        fr: "Trajet annulé par l'administrateur",
+        es: 'Viaje cancelado por el administrador',
+      ).of(context),
+      AuditActions.schoolSettingsUpdated => const S(
+        'School settings updated',
+        'تم تعديل إعدادات المدرسة',
+        fr: "Paramètres de l'école mis à jour",
+        es: 'Configuración de la escuela actualizada',
+      ).of(context),
+      AuditActions.schoolLocationUpdated => const S(
+        'School location updated',
+        'تم تعديل موقع المدرسة',
+        fr: "Emplacement de l'école mis à jour",
+        es: 'Ubicación de la escuela actualizada',
+      ).of(context),
+      AuditActions.schoolCreated => const S(
+        'School created',
+        'تم إنشاء مدرسة',
+        fr: 'École créée',
+        es: 'Escuela creada',
+      ).of(context),
+      AuditActions.schoolActivated => const S(
+        'School activated',
+        'تم تفعيل المدرسة',
+        fr: 'École activée',
+        es: 'Escuela activada',
+      ).of(context),
+      AuditActions.schoolDeactivated => const S(
+        'School deactivated',
+        'تم إيقاف المدرسة',
+        fr: 'École désactivée',
+        es: 'Escuela desactivada',
+      ).of(context),
+      AuditActions.schoolAdminApproved => const S(
+        'School admin approved',
+        'تمت الموافقة على أدمن المدرسة',
+        fr: "Administrateur d'école approuvé",
+        es: 'Administrador escolar aprobado',
+      ).of(context),
+      AuditActions.schoolAdminRejected => const S(
+        'School admin rejected',
+        'تم رفض أدمن المدرسة',
+        fr: "Administrateur d'école refusé",
+        es: 'Administrador escolar rechazado',
+      ).of(context),
       _ => action.replaceAll('_', ' '),
     };
 
@@ -231,14 +590,30 @@ StatusTone auditActionTone(String action) => switch (action) {
 
 String reassignmentTypeLabel(ReassignmentType type, BuildContext context) =>
     switch (type) {
-      ReassignmentType.busReassigned =>
-        const S('Bus reassigned', 'تم تغيير الأتوبيس').of(context),
-      ReassignmentType.driverReassigned =>
-        const S('Driver reassigned', 'تم تغيير السائق').of(context),
-      ReassignmentType.routeChanged =>
-        const S('Route changed', 'تم تغيير الخط').of(context),
-      ReassignmentType.stopSkipped =>
-        const S('Stop skipped', 'تم تخطي محطة').of(context),
+      ReassignmentType.busReassigned => const S(
+        'Bus reassigned',
+        'تم تغيير الأتوبيس',
+        fr: 'Bus réaffecté',
+        es: 'Autobús reasignado',
+      ).of(context),
+      ReassignmentType.driverReassigned => const S(
+        'Driver reassigned',
+        'تم تغيير السائق',
+        fr: 'Chauffeur réaffecté',
+        es: 'Conductor reasignado',
+      ).of(context),
+      ReassignmentType.routeChanged => const S(
+        'Route changed',
+        'تم تغيير الخط',
+        fr: "Itinéraire modifié",
+        es: 'Ruta cambiada',
+      ).of(context),
+      ReassignmentType.stopSkipped => const S(
+        'Stop skipped',
+        'تم تخطي محطة',
+        fr: 'Arrêt sauté',
+        es: 'Parada omitida',
+      ).of(context),
     };
 
 /// Maps a member's stored `status` string (drivers/parents — `pending` /
@@ -263,14 +638,34 @@ StatusTone memberStatusTone(String status) {
 String memberStatusLabel(BuildContext context, String status) {
   switch (status) {
     case 'approved':
-      return const S('Approved', 'مقبول').of(context);
+      return const S(
+        'Approved',
+        'مقبول',
+        fr: 'Approuvé',
+        es: 'Aprobado',
+      ).of(context);
     case 'suspended':
-      return const S('Suspended', 'موقوف').of(context);
+      return const S(
+        'Suspended',
+        'موقوف',
+        fr: 'Suspendu',
+        es: 'Suspendido',
+      ).of(context);
     case 'rejected':
-      return const S('Rejected', 'مرفوض').of(context);
+      return const S(
+        'Rejected',
+        'مرفوض',
+        fr: 'Refusé',
+        es: 'Rechazado',
+      ).of(context);
     case 'pending':
     default:
-      return const S('Pending', 'قيد الانتظار').of(context);
+      return const S(
+        'Pending',
+        'قيد الانتظار',
+        fr: 'En attente',
+        es: 'Pendiente',
+      ).of(context);
   }
 }
 
@@ -291,14 +686,45 @@ String relativeDueLabel(DateTime due, DateTime now, BuildContext context) {
     due.day,
   ).difference(DateTime(now.year, now.month, now.day)).inDays;
 
-  if (days == 0) return const S('Due today', 'مستحق النهاردة').of(context);
-  if (days == 1) return const S('Due tomorrow', 'مستحق بكرة').of(context);
-  if (days > 1) return S('In $days days', 'خلال $days يوم').of(context);
+  if (days == 0) {
+    return const S(
+      'Due today',
+      'مستحق النهاردة',
+      fr: "Échéance aujourd'hui",
+      es: 'Vence hoy',
+    ).of(context);
+  }
+  if (days == 1) {
+    return const S(
+      'Due tomorrow',
+      'مستحق بكرة',
+      fr: 'Échéance demain',
+      es: 'Vence mañana',
+    ).of(context);
+  }
+  if (days > 1) {
+    return S(
+      'In $days days',
+      'خلال $days يوم',
+      fr: 'Dans $days jours',
+      es: 'En $days días',
+    ).of(context);
+  }
   final overdue = -days;
   if (overdue == 1) {
-    return const S('1 day overdue', 'متأخر يوم').of(context);
+    return const S(
+      '1 day overdue',
+      'متأخر يوم',
+      fr: '1 jour de retard',
+      es: '1 día de retraso',
+    ).of(context);
   }
-  return S('$overdue days overdue', 'متأخر $overdue يوم').of(context);
+  return S(
+    '$overdue days overdue',
+    'متأخر $overdue يوم',
+    fr: '$overdue jours de retard',
+    es: '$overdue días de retraso',
+  ).of(context);
 }
 
 /// The shared amber/red/neutral rule behind every expiry badge in the
