@@ -17,6 +17,8 @@ class AppNotification {
     this.tripId,
     this.busId,
     this.studentId,
+    this.postId,
+    this.params = const <String, Object?>{},
   });
 
   final String id;
@@ -29,8 +31,21 @@ class AppNotification {
   final String? tripId;
   final String? busId;
   final String? studentId;
+  final String? postId;
+
+  /// The values the server would have interpolated into [body] — bus name,
+  /// student name, minutes, and so on.
+  ///
+  /// Present so the app can re-render the notification itself instead of
+  /// displaying [body], which the server froze in whatever language the
+  /// recipient was using at the moment it was sent. Rendering from these
+  /// means a history read in Spanish reads in Spanish, even for entries
+  /// written while the app was in Arabic. Empty for records written before
+  /// the server started sending them — [body] is the fallback for those.
+  final Map<String, Object?> params;
 
   factory AppNotification.fromMap(String id, Map<String, dynamic> data) {
+    final rawParams = data['params'];
     return AppNotification(
       id: id,
       schoolId: data['schoolId'] as String? ?? '',
@@ -42,6 +57,10 @@ class AppNotification {
       tripId: data['tripId'] as String?,
       busId: data['busId'] as String?,
       studentId: data['studentId'] as String?,
+      postId: data['postId'] as String?,
+      params: rawParams is Map
+          ? Map<String, Object?>.from(rawParams)
+          : const <String, Object?>{},
     );
   }
 

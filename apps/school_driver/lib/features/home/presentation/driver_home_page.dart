@@ -139,8 +139,17 @@ class _TripsTab extends StatelessWidget {
           listener: (context, state) {
             if (state is! TripsLoaded) return;
             if (state.actionError != null) {
-              final localized = tripOperationErrorMessage(state.actionErrorCode, context);
-              AppSnackbar.error(context, localized ?? state.actionError!);
+              final code = state.actionErrorCode;
+              // A null code means the failure wasn't a
+              // TripOperationException (a raw Firestore or network error,
+              // say) — those carry no typed identity to translate, so the
+              // original text is all there is.
+              AppSnackbar.error(
+                context,
+                code != null
+                    ? tripOperationErrorMessage(code, context)
+                    : state.actionError!,
+              );
               return;
             }
             final presentation = driverTrackingStatusPresentation(state.trackingStatus, context);

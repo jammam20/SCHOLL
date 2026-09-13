@@ -8,6 +8,16 @@ import {
 } from "firebase-functions/v2/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onValueWritten } from "firebase-functions/v2/database";
+import {
+  fallbackBusName,
+  fallbackChildName,
+  fallbackOtherBusName,
+  Language,
+  languageOf,
+  MessageParams,
+  notificationBody,
+  notificationTitle,
+} from "./notification_messages";
 
 initializeApp();
 const db = getFirestore();
@@ -329,7 +339,7 @@ function prefsFromUserData(
 
 async function tokensAndPrefsForUser(
   uid: string,
-): Promise<{ tokens: string[]; prefs: NotificationPrefs }> {
+): Promise<{ tokens: string[]; prefs: NotificationPrefs; language: Language }> {
   const snapshot = await db.collection("users").doc(uid).get();
   const data = snapshot.data();
   const rawTokens = data?.fcmTokens;
@@ -339,47 +349,121 @@ async function tokensAndPrefsForUser(
           typeof token === "string" && token.length > 0,
       )
     : [];
-  return { tokens, prefs: prefsFromUserData(data) };
+  // The language comes free with the document we already had to read.
+  return { tokens, prefs: prefsFromUserData(data), language: languageOf(data) };
 }
 
-/// Tokens (and the matching uids, for the in-app inbox — see
-/// writeNotificationRecords) for every one of `uids` who has `prefKey`
-/// enabled (or hasn't customized it, since prefs default to "on").
-async function tokensForUidsWithPref(
-  uids: string[],
-  prefKey: keyof Omit<NotificationPrefs, "minutesBefore">,
-): Promise<{ tokens: string[]; uids: string[] }> {
-  const uniqueUids = [...new Set(uids)].filter((uid) => uid.length > 0);
-  const tokens = new Set<string>();
-  const matchedUids: string[] = [];
-  for (const uid of uniqueUids) {
-    const { tokens: userTokens, prefs } = await tokensAndPrefsForUser(uid);
-    if (prefs[prefKey]) {
-      userTokens.forEach((token) => tokens.add(token));
-      matchedUids.push(uid);
-    }
-  }
-  return { tokens: [...tokens], uids: matchedUids };
+/// One person to notify, and everything needed to say it in their language.
+///
+/// Notifications used to be assembled as a flat `string[]` of device tokens
+/// with no idea which token belonged to whom, which made per-recipient
+/// language impossible — everyone in a fan-out got one shared English
+/// sentence. Carrying the uid and language alongside the tokens is what
+/// lets a single trip update reach an Arabic-reading parent and a
+/// French-reading parent each in their own language.
+interface NotificationRecipient {
+  uid: string;
+  tokens: string[];
+  language: Language;
 }
+
+/// Recipients for `uids`, optionally filtered to those who still have
+/// [prefKey] switched on (prefs default to on, so an untouched account
+/// still gets alerts).
+async function recipientsForUids(
+  uids: string[],
+  prefKey?: keyof Omit<NotificationPrefs, "minutesBefore">,
+): Promise<NotificationRecipient[]> {
+  const uniqueUids = [...new Set(uids)].filter((uid) => uid.length > 0);
+  const recipients: NotificationRecipient[] = [];
+  for (const uid of uniqueUids) {
+    const { tokens, prefs, language } = await tokensAndPrefsForUser(uid);
+    if (prefKey && !prefs[prefKey]) continue;
+    recipients.push({ uid, tokens, language });
+  }
+  return recipients;
+}
+
 
 /// Writes one in-app inbox entry (`users/{uid}/notifications/{id}`) per
 /// recipient, alongside the FCM push — this is what gives the "Smart
 /// Notifications" feature a durable, readable history instead of only a
 /// transient push a user could miss. Best-effort: a failed inbox write
 /// never blocks or fails the push it accompanies.
-async function writeNotificationRecords(
-  uids: string[],
-  schoolId: string,
-  type: string,
-  title: string,
-  body: string,
-  extra?: { tripId?: string; busId?: string; studentId?: string; postId?: string },
+/// Sends one event to everyone in [recipients], in each person's language,
+/// and records it in their in-app inbox.
+///
+/// Replaces the old pattern of calling `sendPushNotification` and
+/// `writeNotificationRecords` back-to-back with a pre-rendered English
+/// sentence. Two things changed:
+///
+///  - **Push** is grouped by language, so one multicast goes out per
+///    language present among the recipients rather than one shared English
+///    payload for everybody.
+///  - **The inbox record stores `type` + `params`**, not just a finished
+///    sentence. The Flutter side re-renders it at read time, so a history
+///    written while the app was in Arabic reads in Spanish the moment the
+///    user switches — previously the English text was frozen into the
+///    document forever. A rendered `title`/`body` is still written in the
+///    recipient's language so older app builds (and anything that reads the
+///    document without knowing the types) keep working.
+async function notify(
+  recipients: NotificationRecipient[],
+  options: {
+    schoolId: string;
+    type: string;
+    params?: MessageParams;
+    data?: Record<string, string>;
+    /// Text a human wrote (an admin's broadcast to the school), used
+    /// verbatim instead of the translation table. There is nothing to
+    /// translate here and machine-translating someone's own words to their
+    /// own community would be worse than leaving them as written.
+    raw?: { title: string; body: string };
+    extra?: {
+      tripId?: string;
+      busId?: string;
+      studentId?: string;
+      postId?: string;
+    };
+  },
 ): Promise<void> {
-  const uniqueUids = [...new Set(uids)].filter((uid) => uid.length > 0);
-  if (uniqueUids.length === 0) return;
+  const { schoolId, type, params = {}, data, raw, extra } = options;
+  if (recipients.length === 0) return;
+
+  const byLanguage = new Map<Language, Set<string>>();
+  for (const recipient of recipients) {
+    if (recipient.tokens.length === 0) continue;
+    const bucket = byLanguage.get(recipient.language) ?? new Set<string>();
+    recipient.tokens.forEach((token) => bucket.add(token));
+    byLanguage.set(recipient.language, bucket);
+  }
 
   await Promise.all(
-    uniqueUids.map((uid) =>
+    [...byLanguage.entries()].map(([language, tokens]) =>
+      sendPushNotification(
+        [...tokens],
+        raw ? raw.title : notificationTitle(type, language),
+        raw ? raw.body : notificationBody(type, language, params),
+        data,
+      ),
+    ),
+  );
+
+  await writeNotificationRecords(recipients, schoolId, type, params, extra, raw);
+}
+
+async function writeNotificationRecords(
+  recipients: NotificationRecipient[],
+  schoolId: string,
+  type: string,
+  params: MessageParams,
+  extra?: { tripId?: string; busId?: string; studentId?: string; postId?: string },
+  raw?: { title: string; body: string },
+): Promise<void> {
+  if (recipients.length === 0) return;
+
+  await Promise.all(
+    recipients.map(({ uid, language }) =>
       db
         .collection("users")
         .doc(uid)
@@ -387,8 +471,14 @@ async function writeNotificationRecords(
         .add({
           schoolId,
           type,
-          title,
-          body,
+          // What the app renders from: re-localizes on every read, so this
+          // entry follows the user if they change language later.
+          params,
+          // Rendered in the recipient's language at send time. Kept so an
+          // app build that predates structured params still shows
+          // something readable rather than an empty row.
+          title: raw ? raw.title : notificationTitle(type, language),
+          body: raw ? raw.body : notificationBody(type, language, params),
           read: false,
           createdAt: FieldValue.serverTimestamp(),
           ...(extra?.tripId ? { tripId: extra.tripId } : {}),
@@ -428,22 +518,6 @@ async function parentIdsForRoute(
   return [...new Set(parentIds)];
 }
 
-async function fcmTokensForSchoolAdmins(schoolId: string): Promise<string[]> {
-  const membersSnap = await db
-    .collection("schools")
-    .doc(schoolId)
-    .collection("members")
-    .where("role", "==", "admin")
-    .where("status", "==", "approved")
-    .get();
-
-  const tokens = new Set<string>();
-  for (const doc of membersSnap.docs) {
-    const { tokens: userTokens } = await tokensAndPrefsForUser(doc.id);
-    userTokens.forEach((token) => tokens.add(token));
-  }
-  return [...tokens];
-}
 
 /// FCM error codes that mean "this token will never work again" (app
 /// uninstalled, token rotated out from under us, etc.) as opposed to a
@@ -510,14 +584,19 @@ async function sendPushNotification(
   }
 }
 
+/// Which preference gates each trip status, and which message type it
+/// renders as. The English sentence fragments that used to live here moved
+/// into notification_messages.ts so every language sits together — and so
+/// `cancelled` could stop producing the ungrammatical "Route A trip was
+/// cancelled." that came from sharing one sentence shape with the others.
 const TRIP_STATUS_NOTIFICATIONS: Record<
   string,
-  { prefKey: keyof Omit<NotificationPrefs, "minutesBefore">; body: string }
+  { prefKey: keyof Omit<NotificationPrefs, "minutesBefore">; type: string }
 > = {
-  starting: { prefKey: "tripStart", body: "is starting its route" },
-  paused: { prefKey: "tripPause", body: "has paused" },
-  completed: { prefKey: "tripEnd", body: "has completed its trip" },
-  cancelled: { prefKey: "tripEnd", body: "trip was cancelled" },
+  starting: { prefKey: "tripStart", type: "trip_starting" },
+  paused: { prefKey: "tripPause", type: "trip_paused" },
+  completed: { prefKey: "tripEnd", type: "trip_completed" },
+  cancelled: { prefKey: "tripEnd", type: "trip_cancelled" },
 };
 
 /// Notifies parents (filtered by their own start/pause/end preference) and,
@@ -545,24 +624,15 @@ export const onTripStatusChanged = onDocumentUpdated(
     if (status === "emergency") {
       const parentIds = await parentIdsForRoute(schoolId, routeId);
       const adminUids = await schoolAdminUids(schoolId);
-      const tokens = new Set(await fcmTokensForSchoolAdmins(schoolId));
-      for (const uid of parentIds) {
-        const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
-        userTokens.forEach((token) => tokens.add(token));
-      }
-      const body = `⚠️ ${routeName} reported an emergency.`;
-      await sendPushNotification([...tokens], "School Bus", body, {
-        type: "emergency",
-        schoolId,
-        tripId,
-      });
-      await writeNotificationRecords(
-        [...adminUids, ...parentIds],
-        schoolId,
-        "emergency",
-        "School Bus",
-        body,
-        { tripId },
+      await notify(
+        await recipientsForUids([...adminUids, ...parentIds]),
+        {
+          schoolId,
+          type: "emergency",
+          params: { routeName },
+          data: { type: "emergency", schoolId, tripId },
+          extra: { tripId },
+        },
       );
       return;
     }
@@ -571,19 +641,16 @@ export const onTripStatusChanged = onDocumentUpdated(
     if (!notification) return;
 
     const parentIds = await parentIdsForRoute(schoolId, routeId);
-    const { tokens, uids } = await tokensForUidsWithPref(
-      parentIds,
-      notification.prefKey,
+    await notify(
+      await recipientsForUids(parentIds, notification.prefKey),
+      {
+        schoolId,
+        type: notification.type,
+        params: { routeName },
+        data: { type: "trip", schoolId, tripId },
+        extra: { tripId },
+      },
     );
-    const body = `🚌 ${routeName} ${notification.body}.`;
-    await sendPushNotification(tokens, "School Bus", body, {
-      type: "trip",
-      schoolId,
-      tripId,
-    });
-    await writeNotificationRecords(uids, schoolId, "trip", "School Bus", body, {
-      tripId,
-    });
   },
 );
 
@@ -647,30 +714,17 @@ export const onTripBoardingChanged = onDocumentUpdated(
         : [];
       if (parentIds.length === 0) continue;
 
-      const studentName = String(student.name ?? "Your child");
+      const studentName = String(student.name ?? "");
       const isBoarded = newlyBoarded.includes(snap.id);
-      const body = isBoarded
-        ? `✅ ${studentName} boarded the ${routeName} bus.`
-        : `🏫 ${studentName} was dropped off from the ${routeName} bus.`;
+      const type = isBoarded ? "student_boarded" : "student_dropped_off";
 
-      const tokens = new Set<string>();
-      for (const uid of parentIds) {
-        const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
-        userTokens.forEach((token) => tokens.add(token));
-      }
-      await sendPushNotification([...tokens], "School Bus", body, {
-        type: isBoarded ? "student_boarded" : "student_dropped_off",
+      await notify(await recipientsForUids(parentIds), {
         schoolId,
-        tripId,
+        type,
+        params: { studentName, routeName },
+        data: { type, schoolId, tripId },
+        extra: { tripId, studentId: snap.id },
       });
-      await writeNotificationRecords(
-        parentIds,
-        schoolId,
-        isBoarded ? "student_boarded" : "student_dropped_off",
-        "School Bus",
-        body,
-        { tripId, studentId: snap.id },
-      );
     }
   },
 );
@@ -698,31 +752,27 @@ export const onTripAssignmentChanged = onDocumentUpdated(
     const busChanged = before.busId !== after.busId;
     const driverChanged = before.driverId !== after.driverId;
 
-    const parts: string[] = [];
-    if (busChanged) parts.push(`bus changed to ${String(after.busName ?? "a different bus")}`);
-    if (driverChanged) parts.push("driver changed");
-    const body = `🚍 ${routeName}: ${parts.join(", ")}.`;
+    // Which of the three shapes this change takes is now the message type
+    // rather than a joined list of English fragments — a comma-spliced
+    // sentence assembled from parts can't be translated as a unit.
+    const type = busChanged && driverChanged
+      ? "trip_bus_and_driver_changed"
+      : busChanged
+        ? "trip_bus_changed"
+        : "trip_driver_changed";
 
     const parentIds = await parentIdsForRoute(schoolId, routeId);
-    const tokens = new Set<string>();
-    for (const uid of parentIds) {
-      const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
-      userTokens.forEach((token) => tokens.add(token));
-    }
     const notifyUids = [...parentIds];
     if (driverChanged && typeof after.driverId === "string" && after.driverId) {
-      const { tokens: driverTokens } = await tokensAndPrefsForUser(after.driverId);
-      driverTokens.forEach((token) => tokens.add(token));
       notifyUids.push(after.driverId);
     }
 
-    await sendPushNotification([...tokens], "School Bus", body, {
-      type: "bus_changed",
+    await notify(await recipientsForUids(notifyUids), {
       schoolId,
-      tripId,
-    });
-    await writeNotificationRecords(notifyUids, schoolId, "bus_changed", "School Bus", body, {
-      tripId,
+      type,
+      params: { routeName, busName: String(after.busName ?? "") },
+      data: { type: "bus_changed", schoolId, tripId },
+      extra: { tripId },
     });
   },
 );
@@ -926,16 +976,13 @@ export const onSchoolMessageCreated = onDocumentWritten(
         : await membersQuery.where("role", "==", audience === "parents" ? "parent" : "driver").get();
 
     const uids = membersSnap.docs.map((doc) => doc.id);
-    const tokens = new Set<string>();
-    for (const uid of uids) {
-      const { tokens: userTokens } = await tokensAndPrefsForUser(uid);
-      userTokens.forEach((token) => tokens.add(token));
-    }
-    await sendPushNotification([...tokens], title, body, {
-      type: "school_message",
+    await notify(await recipientsForUids(uids), {
       schoolId,
+      type: "school_message",
+      // The admin wrote these words themselves — sent as-is.
+      raw: { title, body },
+      data: { type: "school_message", schoolId },
     });
-    await writeNotificationRecords(uids, schoolId, "school_message", title, body);
   },
 );
 
@@ -1017,19 +1064,15 @@ export const onDriverLocationWritten = onValueWritten(
 
       const distance = haversineMeters(latitude, longitude, lat, lng);
       const etaMinutes = distance / effectiveSpeedMetersPerSecond / 60;
-      const studentName = String(student.name ?? "your child");
+      const studentName = String(student.name ?? "");
 
       if (!arrivedIds.has(doc.id) && distance <= PROXIMITY_METERS) {
-        const { tokens, uids } = await tokensForUidsWithPref(parentIds, "arrival");
-        const body = `🚌 ${routeName} bus is arriving at ${studentName}'s pickup point.`;
-        await sendPushNotification(tokens, "Bus arriving", body, {
-          type: "trip",
+        await notify(await recipientsForUids(parentIds, "arrival"), {
           schoolId,
-          tripId,
-        });
-        await writeNotificationRecords(uids, schoolId, "trip", "Bus arriving", body, {
-          tripId,
-          studentId: doc.id,
+          type: "bus_arriving",
+          params: { routeName, studentName },
+          data: { type: "trip", schoolId, tripId },
+          extra: { tripId, studentId: doc.id },
         });
         updates[`arrived/${doc.id}`] = true;
         arrivedIds.add(doc.id);
@@ -1038,19 +1081,18 @@ export const onDriverLocationWritten = onValueWritten(
       for (const parentUid of parentIds) {
         if (preArrivalNotified[doc.id]?.[parentUid]) continue;
 
-        const { tokens, prefs } = await tokensAndPrefsForUser(parentUid);
+        const { tokens, prefs, language } = await tokensAndPrefsForUser(parentUid);
         if (prefs.minutesBefore > 0 && etaMinutes <= prefs.minutesBefore) {
-          const body =
-            `🚌 ${routeName} bus is about ` +
-            `${Math.max(1, Math.round(etaMinutes))} min from ${studentName}.`;
-          await sendPushNotification(tokens, "Bus on the way", body, {
-            type: "trip",
+          await notify([{ uid: parentUid, tokens, language }], {
             schoolId,
-            tripId,
-          });
-          await writeNotificationRecords([parentUid], schoolId, "trip", "Bus on the way", body, {
-            tripId,
-            studentId: doc.id,
+            type: "bus_minutes_away",
+            params: {
+              routeName,
+              studentName,
+              minutes: Math.max(1, Math.round(etaMinutes)),
+            },
+            data: { type: "trip", schoolId, tripId },
+            extra: { tripId, studentId: doc.id },
           });
           updates[`preArrival/${doc.id}/${parentUid}`] = true;
         }
@@ -1072,15 +1114,12 @@ export const onDriverLocationWritten = onValueWritten(
         );
         if (distance <= PROXIMITY_METERS) {
           const parentIds = await parentIdsForRoute(schoolId, routeId);
-          const { tokens, uids } = await tokensForUidsWithPref(parentIds, "arrival");
-          const body = `🚌 ${routeName} bus has arrived at school.`;
-          await sendPushNotification(tokens, "Bus arrived", body, {
-            type: "trip",
+          await notify(await recipientsForUids(parentIds, "arrival"), {
             schoolId,
-            tripId,
-          });
-          await writeNotificationRecords(uids, schoolId, "trip", "Bus arrived", body, {
-            tripId,
+            type: "bus_arrived_school",
+            params: { routeName },
+            data: { type: "trip", schoolId, tripId },
+            extra: { tripId },
           });
           updates["arrived/__school__"] = true;
         }
@@ -1313,17 +1352,14 @@ async function evaluateRouteDeviation(args: {
   }
 
   if (shouldAlert) {
-    const routeName = String(trip.routeName ?? "A bus");
-    const body = `🛑 ${routeName} has deviated from its expected route.`;
+    const routeName = String(trip.routeName ?? "");
     const adminUids = await schoolAdminUids(schoolId);
-    const tokens = await fcmTokensForSchoolAdmins(schoolId);
-    await sendPushNotification(tokens, "Route deviation", body, {
-      type: "route_deviation",
+    await notify(await recipientsForUids(adminUids), {
       schoolId,
-      tripId,
-    });
-    await writeNotificationRecords(adminUids, schoolId, "route_deviation", "Route deviation", body, {
-      tripId,
+      type: "route_deviation",
+      params: { routeName },
+      data: { type: "route_deviation", schoolId, tripId },
+      extra: { tripId },
     });
   }
 }
@@ -1398,28 +1434,24 @@ export const onParentMessageCreated = onDocumentWritten(
       unreadByParent: !isFromParent,
     });
 
-    const subject = String(thread.subject ?? "your message");
+    const subject = String(thread.subject ?? "");
     if (isFromParent) {
       const adminUids = await schoolAdminUids(schoolId);
-      const tokens = await fcmTokensForSchoolAdmins(schoolId);
-      const body = `💬 New message about ${subject}: ${preview}`;
-      await sendPushNotification(tokens, "School Bus", body, {
-        type: "parent_message",
+      await notify(await recipientsForUids(adminUids), {
         schoolId,
-        tripId: requestId,
+        type: "parent_message",
+        params: { subject, preview },
+        data: { type: "parent_message", schoolId, tripId: requestId },
       });
-      await writeNotificationRecords(adminUids, schoolId, "parent_message", "School Bus", body);
     } else {
       const parentUid = String(thread.parentUid ?? "");
       if (!parentUid) return;
-      const { tokens } = await tokensAndPrefsForUser(parentUid);
-      const body = `💬 Your school replied: ${preview}`;
-      await sendPushNotification(tokens, "School Bus", body, {
-        type: "parent_message",
+      await notify(await recipientsForUids([parentUid]), {
         schoolId,
-        tripId: requestId,
+        type: "school_message_reply",
+        params: { preview },
+        data: { type: "parent_message", schoolId, tripId: requestId },
       });
-      await writeNotificationRecords([parentUid], schoolId, "parent_message", "School Bus", body);
     }
   },
 );
@@ -1453,21 +1485,12 @@ export const onCommunityPostStatusChanged = onDocumentUpdated(
     const authorUid = String(authorSnap.data()?.authorUid ?? "");
     if (!authorUid) return;
 
-    const { tokens } = await tokensAndPrefsForUser(authorUid);
-    const body = "Your community post was hidden by your school's admin.";
-    await sendPushNotification(tokens, "School Bus", body, {
+    await notify(await recipientsForUids([authorUid]), {
+      schoolId,
       type: "community_post_hidden",
-      schoolId,
-      postId,
+      data: { type: "community_post_hidden", schoolId, postId },
+      extra: { postId },
     });
-    await writeNotificationRecords(
-      [authorUid],
-      schoolId,
-      "community_post_hidden",
-      "School Bus",
-      body,
-      { postId },
-    );
   },
 );
 
@@ -1499,21 +1522,13 @@ export const onCommunityCommentCreated = onDocumentWritten(
 
     const text = String(comment.content ?? "");
     const preview = text.length > 120 ? `${text.slice(0, 120)}…` : text;
-    const { tokens } = await tokensAndPrefsForUser(authorUid);
-    const body = `🏫 Your school replied to your community post: ${preview}`;
-    await sendPushNotification(tokens, "School Bus", body, {
+    await notify(await recipientsForUids([authorUid]), {
+      schoolId,
       type: "community_admin_replied",
-      schoolId,
-      postId,
+      params: { preview },
+      data: { type: "community_admin_replied", schoolId, postId },
+      extra: { postId },
     });
-    await writeNotificationRecords(
-      [authorUid],
-      schoolId,
-      "community_admin_replied",
-      "School Bus",
-      body,
-      { postId },
-    );
   },
 );
 
@@ -1534,21 +1549,12 @@ export const onCommunityReportResolved = onDocumentUpdated(
     const reporterUid = String(after.reporterUid ?? "");
     if (!reporterUid) return;
 
-    const { tokens } = await tokensAndPrefsForUser(reporterUid);
-    const body = "Your school reviewed the post you reported.";
-    await sendPushNotification(tokens, "School Bus", body, {
+    await notify(await recipientsForUids([reporterUid]), {
+      schoolId,
       type: "community_report_resolved",
-      schoolId,
-      postId,
+      data: { type: "community_report_resolved", schoolId, postId },
+      extra: { postId },
     });
-    await writeNotificationRecords(
-      [reporterUid],
-      schoolId,
-      "community_report_resolved",
-      "School Bus",
-      body,
-      { postId },
-    );
   },
 );
 

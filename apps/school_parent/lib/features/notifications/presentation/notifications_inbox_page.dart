@@ -4,6 +4,7 @@ import 'package:school_shared/school_shared.dart';
 
 import '../../../widgets/parent_ui.dart';
 import '../data/notifications_repository.dart';
+import 'notification_text.dart';
 import 'notification_type_visuals.dart';
 
 /// The durable history behind the pushes this app already sends: every
@@ -256,7 +257,7 @@ class _NotificationCard extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            notification.title,
+            notificationTitleText(notification, context),
             style: theme.textTheme.bodyLarge?.copyWith(
               color: colors.textPrimary,
               fontWeight: isUnread ? FontWeight.w800 : FontWeight.w600,
@@ -298,7 +299,7 @@ class _NotificationCard extends StatelessWidget {
           titleRow,
           const SizedBox(height: 3),
           Text(
-            notification.body,
+            notificationBodyText(notification, context),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.textSecondary,
               height: 1.45,

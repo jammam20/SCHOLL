@@ -4,6 +4,7 @@ import 'package:school_shared/school_shared.dart';
 
 import '../../../home/presentation/driver_home_page.dart';
 import '../../data/firebase_auth_repository.dart';
+import '../auth_failure_message.dart';
 import '../cubit/auth_cubit.dart';
 
 class LoginPage extends StatefulWidget {
@@ -190,8 +191,8 @@ class _TopControls extends StatelessWidget {
     return Row(
       children: [
         IconButton.filledTonal(
-          tooltip: 'العربية / English',
-          onPressed: AppSettings.toggleLocale,
+          tooltip: const S('Language', 'اللغة', fr: 'Langue', es: 'Idioma').of(context),
+          onPressed: () => showLanguagePickerSheet(context),
           icon: const Icon(Icons.translate),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -377,7 +378,7 @@ class _SignInForm extends StatelessWidget {
                     ).of(context),
             ),
           ),
-          if (state is AuthSignedOut && (state as AuthSignedOut).message != null)
+          if (state is AuthSignedOut && (state as AuthSignedOut).code != null)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.sm),
               child: Row(
@@ -388,7 +389,12 @@ class _SignInForm extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   Flexible(
                     child: Text(
-                      (state as AuthSignedOut).message!,
+                      authFailureMessage(
+                        (state as AuthSignedOut).code!,
+                        context,
+                        fromRegistration:
+                            (state as AuthSignedOut).fromRegistration,
+                      ),
                       textAlign: TextAlign.center,
                       style: TextStyle(color: colors.error),
                     ),

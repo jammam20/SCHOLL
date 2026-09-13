@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../app/language_sync.dart';
+
 import '../../common/presentation/location_picker_page.dart';
 import '../../legal/presentation/legal_page.dart';
 import '../../schools/data/schools_repository.dart';
@@ -148,15 +150,15 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 ListTile(
                   leading: const Icon(Icons.translate),
-                  title: Text(const S('Language', 'اللغة').of(context)),
+                  title: Text(const S('Language', 'اللغة', fr: 'Langue', es: 'Idioma').of(context)),
                   subtitle: ValueListenableBuilder<Locale>(
                     valueListenable: AppSettings.locale,
-                    builder: (context, locale, _) => Text(
-                      locale.languageCode == 'ar' ? 'العربية' : 'English',
-                    ),
+                    builder: (context, locale, _) =>
+                        Text(AppLanguage.fromCode(locale.languageCode).nativeName),
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: AppSettings.toggleLocale,
+                  onTap: () =>
+                      showLanguagePickerSheet(context, onChanged: LanguageSync.save),
                 ),
                 const Divider(height: 1),
                 ListTile(

@@ -128,8 +128,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton.filledTonal(
-                      tooltip: 'العربية / English',
-                      onPressed: AppSettings.toggleLocale,
+                      tooltip: const S('Language', 'اللغة', fr: 'Langue', es: 'Idioma').of(context),
+                      onPressed: () => showLanguagePickerSheet(context),
                       icon: const Icon(Icons.translate),
                     ),
                     const SizedBox(width: AppSpacing.sm),

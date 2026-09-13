@@ -87,7 +87,7 @@ class ParentApp extends StatelessWidget {
           scaffoldMessengerKey: _scaffoldMessengerKey,
           debugShowCheckedModeBanner: false,
           title: 'Jammam School Bus',
-          supportedLocales: const [Locale('en'), Locale('ar')],
+          supportedLocales: supportedLocales,
           locale: locale,
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

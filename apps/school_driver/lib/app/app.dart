@@ -86,7 +86,7 @@ class DriverApp extends StatelessWidget {
           scaffoldMessengerKey: _scaffoldMessengerKey,
           debugShowCheckedModeBanner: false,
           title: 'Jammam Driver',
-          supportedLocales: const [Locale('en'), Locale('ar')],
+          supportedLocales: supportedLocales,
           locale: locale,
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

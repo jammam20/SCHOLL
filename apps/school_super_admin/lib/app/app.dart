@@ -27,7 +27,7 @@ class SuperAdminApp extends StatelessWidget {
         builder: (context, locale, _) => MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Jammam Super Admin',
-          supportedLocales: const [Locale('en'), Locale('ar')],
+          supportedLocales: supportedLocales,
           locale: locale,
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,

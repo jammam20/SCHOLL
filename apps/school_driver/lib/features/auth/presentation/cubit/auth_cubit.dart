@@ -16,9 +16,30 @@ final class AuthLoading extends AuthState {
 }
 
 final class AuthSignedOut extends AuthState {
-  const AuthSignedOut({this.message});
+  const AuthSignedOut({this.code, this.fromRegistration = false});
 
-  final String? message;
+  /// Why the driver isn't signed in, or null for the ordinary signed-out
+  /// state (a cold start, an explicit sign-out) that needs no explanation.
+  ///
+  /// This used to be a `String? message` holding an English sentence built
+  /// right here — which login_page.dart then rendered verbatim, so a driver
+  /// running the app in Arabic, French or Spanish read English at the one
+  /// screen they cannot get past. A cubit has no BuildContext and therefore
+  /// no language; carrying the failure's *identity* instead lets the
+  /// presentation layer say it in the driver's own (see
+  /// `authFailureMessage`).
+  final AuthFailureCode? code;
+
+  /// Whether [code] came from a registration attempt rather than a sign-in.
+  ///
+  /// [AuthFailureCode] has no value for "that school code is wrong", so
+  /// registration reports it as [AuthFailureCode.invalidCredentials] — the
+  /// same code a bad email/password produces when signing in. This flag is
+  /// what keeps the two apart at render time. It lives on the state rather
+  /// than being read from the form's own registering/signing-in toggle
+  /// because that toggle can flip while an error is still on screen, which
+  /// would silently rewrite the message under a failure it doesn't describe.
+  final bool fromRegistration;
 }
 
 final class AuthSignedIn extends AuthState {
@@ -52,7 +73,7 @@ final class AuthRejected extends AuthState {
 // role(s) independently.
 AuthState resolveAuthState(AppUser user) {
   if (user.role != UserRole.driver) {
-    return const AuthSignedOut(message: 'This account is not a driver account.');
+    return const AuthSignedOut(code: AuthFailureCode.unauthorized);
   }
 
   // See the admin app's resolveAuthState for why order matters here: every
@@ -64,7 +85,7 @@ AuthState resolveAuthState(AppUser user) {
   if (user.isDisabled) return AuthDisabled(user);
 
   if (!user.canAccessApp) {
-    return const AuthSignedOut(message: 'Your driver account is not active.');
+    return const AuthSignedOut(code: AuthFailureCode.disabled);
   }
 
   return AuthSignedIn(user);
@@ -82,11 +103,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
     _subscription ??= _repository.watchUser().listen(
       _handleUser,
       onError: (error, stackTrace) {
-        emit(
-          const AuthSignedOut(
-            message: 'Unable to load your account.',
-          ),
-        );
+        emit(AuthSignedOut(code: authFailureCodeFor(error)));
       },
     );
     WidgetsBinding.instance.addObserver(this);
@@ -167,12 +184,8 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
       // background session-restore path in _handleUser/start() — Analytics
       // already has its own automatic session_start event for that.
       if (state is AuthSignedIn) AppAnalytics.logLoginSuccess();
-    } catch (_) {
-      emit(
-        const AuthSignedOut(
-          message: 'Email or password is incorrect.',
-        ),
-      );
+    } catch (error) {
+      emit(AuthSignedOut(code: authFailureCodeFor(error)));
     }
   }
 
@@ -197,10 +210,11 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
       );
       _setPendingApprovalPolling(true);
       emit(AuthPendingApproval(user));
-    } catch (_) {
+    } catch (error) {
       emit(
-        const AuthSignedOut(
-          message: 'We could not create your account.',
+        AuthSignedOut(
+          code: authFailureCodeFor(error),
+          fromRegistration: true,
         ),
       );
     }

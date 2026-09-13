@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../../app/language_sync.dart';
+
 import '../../legal/presentation/legal_page.dart';
 import '../../messages/presentation/parent_requests_page.dart';
 import '../../settings/presentation/notification_settings_page.dart';
@@ -103,33 +105,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 builder: (context, locale, _) => SettingsTile(
                   icon: Icons.translate_rounded,
                   tone: colors.info,
-                  title: const S('Language', 'اللغة').of(context),
-                  subtitle: locale.languageCode == 'ar'
-                      ? 'العربية'
-                      : 'English',
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceElevated,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(color: colors.border),
-                    ),
-                    child: Text(
-                      // Names the language a tap would switch *to*, so the
-                      // control says what it does rather than what is
-                      // already true.
-                      locale.languageCode == 'ar' ? 'English' : 'العربية',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  onTap: AppSettings.toggleLocale,
+                  title: const S(
+                    'Language',
+                    'اللغة',
+                    fr: 'Langue',
+                    es: 'Idioma',
+                  ).of(context),
+                  // Shows the language currently in use. This used to name
+                  // the language a tap would switch *to* — meaningful when
+                  // there were exactly two, meaningless now that a tap
+                  // opens a list of four.
+                  subtitle: AppLanguage.fromCode(locale.languageCode).nativeName,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () =>
+                      showLanguagePickerSheet(context, onChanged: LanguageSync.save),
                 ),
               ),
               ValueListenableBuilder<ThemeMode>(

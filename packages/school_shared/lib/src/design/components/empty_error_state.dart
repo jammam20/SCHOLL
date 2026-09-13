@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_settings.dart';
 import '../app_theme.dart';
 
 /// A clear explanation and, only when a real action exists, one button to
@@ -93,9 +94,12 @@ class ErrorStateView extends StatelessWidget {
     final colors = context.appColors;
     final text =
         message ??
-        (Localizations.localeOf(context).languageCode == 'ar'
-            ? 'معرفناش نحمّل البيانات دي — اتأكد من الاتصال وجرب تاني.'
-            : "Couldn't load this — check your connection and try again.");
+        const S(
+          "Couldn't load this — check your connection and try again.",
+          'معرفناش نحمّل البيانات دي — اتأكد من الاتصال وجرب تاني.',
+          fr: 'Chargement impossible — vérifiez votre connexion et réessayez.',
+          es: 'No se pudo cargar — comprueba tu conexión e inténtalo de nuevo.',
+        ).of(context);
 
     if (compact) {
       return Row(
@@ -120,7 +124,17 @@ class ErrorStateView extends StatelessWidget {
             Text(text, textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+              OutlinedButton(
+                onPressed: onRetry,
+                child: Text(
+                  const S(
+                    'Retry',
+                    'إعادة المحاولة',
+                    fr: 'Réessayer',
+                    es: 'Reintentar',
+                  ).of(context),
+                ),
+              ),
             ],
           ],
         ),

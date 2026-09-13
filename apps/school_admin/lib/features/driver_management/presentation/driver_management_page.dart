@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
+import '../../common/presentation/domain_labels.dart';
 import '../../drivers/data/drivers_repository.dart';
 import '../data/driver_profiles_repository.dart';
 import 'bloc/driver_management_bloc.dart';
@@ -318,9 +319,12 @@ class _DriverCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       StatusBadge(
-                        label: driver.isApproved
-                            ? const S('Approved', 'مقبول').of(context)
-                            : driver.status,
+                        // Always via memberStatusLabel: the un-approved
+                        // branch used to render `driver.status` — the raw
+                        // Firestore string ('pending'/'rejected'/
+                        // 'suspended') — so the driver roster showed
+                        // English words in every other language.
+                        label: memberStatusLabel(context, driver.status),
                         tone: driver.isApproved
                             ? StatusTone.success
                             : StatusTone.warning,

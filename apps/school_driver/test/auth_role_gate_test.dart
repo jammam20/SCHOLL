@@ -29,10 +29,10 @@ void main() {
     test('an approved, active parent account is rejected', () {
       final state = resolveAuthState(_user(role: UserRole.parent));
       expect(state, isA<AuthSignedOut>());
-      expect(
-        (state as AuthSignedOut).message,
-        'This account is not a driver account.',
-      );
+      // Asserts the failure's identity rather than its English wording —
+      // the sentence now lives in the presentation layer, in four
+      // languages, so a copy tweak shouldn't fail this test.
+      expect((state as AuthSignedOut).code, AuthFailureCode.unauthorized);
     });
 
     test('an approved, active admin account is rejected', () {
