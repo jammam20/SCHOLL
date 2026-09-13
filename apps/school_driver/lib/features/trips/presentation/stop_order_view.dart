@@ -119,7 +119,12 @@ class _StopOrderViewState extends State<StopOrderView> {
   Future<void> _reportAbsence(Student student) async {
     final confirmed = await showAppConfirmDialog(
       context,
-      title: const S('Mark absent today', 'تسجيل غياب اليوم').of(context),
+      title: const S(
+        'Mark absent today',
+        'تسجيل غياب اليوم',
+        fr: "Signaler l'absence aujourd'hui",
+        es: 'Reportar ausencia hoy',
+      ).of(context),
       message: S(
         'Report to the school that ${student.name} was not at their stop '
             'today? This is sent as an absence report — it does not change '
@@ -128,8 +133,21 @@ class _StopOrderViewState extends State<StopOrderView> {
         'تبلغ المدرسة إن ${student.name} مكانش في محطته النهاردة؟ ده بيتبعت '
             'كبلاغ غياب — مش بيغيّر سجل الطالب نفسه، ده ولي الأمر أو '
             'المدرسة بس اللي بيقدروا يعملوه.',
+        fr: "Signaler à l'école que ${student.name} n'était pas à son "
+            "arrêt aujourd'hui ? Ceci est envoyé comme signalement "
+            "d'absence — cela ne modifie pas le dossier de l'élève "
+            "lui-même, que seuls un parent ou l'école peuvent définir.",
+        es: '¿Reportar a la escuela que ${student.name} no estuvo en su '
+            'parada hoy? Esto se envía como un reporte de ausencia — no '
+            'cambia el registro del propio alumno, que solo un padre o '
+            'la escuela pueden establecer.',
       ).of(context),
-      confirmLabel: const S('Report absence', 'إبلاغ بالغياب').of(context),
+      confirmLabel: const S(
+        'Report absence',
+        'إبلاغ بالغياب',
+        fr: "Signaler l'absence",
+        es: 'Reportar ausencia',
+      ).of(context),
     );
     if (confirmed != true || !mounted) return;
 
@@ -152,6 +170,8 @@ class _StopOrderViewState extends State<StopOrderView> {
       const S(
         'Absence reported to your school.',
         'تم إبلاغ مدرستك بالغياب.',
+        fr: 'Absence signalée à votre école.',
+        es: 'Ausencia reportada a tu escuela.',
       ).of(context),
     );
   }
@@ -193,16 +213,34 @@ class _StopOrderViewState extends State<StopOrderView> {
                   title: const S(
                     "Computing today's pickup order…",
                     'جارٍ حساب ترتيب الالتقاط لهذا اليوم…',
+                    fr: "Calcul de l'ordre de ramassage du jour…",
+                    es: 'Calculando el orden de recogida de hoy…',
                   ).of(context),
                   message: const S(
                     "Taking longer than expected? This can happen if your "
                         "GPS fix was slow to arrive — tap below to try again.",
                     'مستني أكتر من المتوقع؟ ده ممكن يحصل لو تحديد '
                         'موقعك اتأخر — دوس تحت عشان تجرب تاني.',
+                    fr: 'Cela prend plus de temps que prévu ? Cela peut '
+                        'arriver si votre signal GPS a mis du temps à '
+                        'arriver — appuyez ci-dessous pour réessayer.',
+                    es: '¿Está tardando más de lo esperado? Esto puede '
+                        'pasar si tu señal GPS tardó en llegar — toca '
+                        'abajo para volver a intentarlo.',
                   ).of(context),
                   actionLabel: _recomputing
-                      ? const S('Retrying…', 'جارٍ إعادة المحاولة…').of(context)
-                      : const S('Retry', 'إعادة المحاولة').of(context),
+                      ? const S(
+                          'Retrying…',
+                          'جارٍ إعادة المحاولة…',
+                          fr: 'Nouvelle tentative…',
+                          es: 'Reintentando…',
+                        ).of(context)
+                      : const S(
+                          'Retry',
+                          'إعادة المحاولة',
+                          fr: 'Réessayer',
+                          es: 'Reintentar',
+                        ).of(context),
                   onAction: _recomputing ? null : _retryComputeOrder,
                 ),
               );
@@ -313,7 +351,12 @@ class _StopOrderViewState extends State<StopOrderView> {
             anchor: const Offset(0.5, 0.5),
             zIndexInt: isCurrent ? 2 : 1,
             infoWindow: InfoWindow(
-              title: const S('School', 'المدرسة').of(context),
+              title: const S(
+                'School',
+                'المدرسة',
+                fr: 'École',
+                es: 'Escuela',
+              ).of(context),
             ),
           ),
         );
@@ -454,7 +497,12 @@ class _StopOrderViewState extends State<StopOrderView> {
       children: [
         const SizedBox(height: AppSpacing.sm),
         SectionHeader(
-          title: const S("Today's route", 'مسار اليوم').of(context),
+          title: const S(
+            "Today's route",
+            'مسار اليوم',
+            fr: 'Itinéraire du jour',
+            es: 'Ruta de hoy',
+          ).of(context),
           trailing: Text(
             droppedOffCount > 0
                 ? S(
@@ -462,10 +510,16 @@ class _StopOrderViewState extends State<StopOrderView> {
                         '$droppedOffCount dropped off',
                     '$boardedCount من ${studentStops.length} تم اصطحابهم · '
                         '$droppedOffCount تم إنزالهم',
+                    fr: '$boardedCount / ${studentStops.length} récupérés '
+                        '· $droppedOffCount déposés',
+                    es: '$boardedCount / ${studentStops.length} recogidos '
+                        '· $droppedOffCount entregados',
                   ).of(context)
                 : S(
                     '$boardedCount / ${studentStops.length} picked up',
                     '$boardedCount من ${studentStops.length} تم اصطحابهم',
+                    fr: '$boardedCount / ${studentStops.length} récupérés',
+                    es: '$boardedCount / ${studentStops.length} recogidos',
                   ).of(context),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -528,7 +582,12 @@ class _StopOrderViewState extends State<StopOrderView> {
                                         BitmapDescriptor.hueAzure,
                                       ),
                                   infoWindow: InfoWindow(
-                                    title: const S('Your bus', 'أتوبيسك').of(context),
+                                    title: const S(
+                                      'Your bus',
+                                      'أتوبيسك',
+                                      fr: 'Votre bus',
+                                      es: 'Tu autobús',
+                                    ).of(context),
                                   ),
                                 ),
                               },
@@ -628,13 +687,22 @@ class _StopOrderViewState extends State<StopOrderView> {
                         ? const S(
                             'School (starting point)',
                             'المدرسة (نقطة البداية)',
+                            fr: 'École (point de départ)',
+                            es: 'Escuela (punto de partida)',
                           ).of(context)
                         : const S(
                             'School (final stop)',
                             'المدرسة (آخر محطة)',
+                            fr: 'École (dernier arrêt)',
+                            es: 'Escuela (última parada)',
                           ).of(context))
                   : students[order[i]]?.name ??
-                        const S('Unknown student', 'طالب غير معروف').of(context),
+                        const S(
+                          'Unknown student',
+                          'طالب غير معروف',
+                          fr: 'Élève inconnu',
+                          es: 'Alumno desconocido',
+                        ).of(context),
               isSchool: isSchool,
               isBoarded: isBoarded,
               isDroppedOff: droppedOff.contains(order[i]),
@@ -804,10 +872,20 @@ class _NextStopEtaCardState extends State<NextStopEtaCard> {
   String? _labelFor(String? stopId, BuildContext context) {
     if (stopId == null) return null;
     if (stopId == schoolStopId) {
-      return const S('School', 'المدرسة').of(context);
+      return const S(
+        'School',
+        'المدرسة',
+        fr: 'École',
+        es: 'Escuela',
+      ).of(context);
     }
     return widget.students[stopId]?.name ??
-        const S('Unknown student', 'طالب غير معروف').of(context);
+        const S(
+          'Unknown student',
+          'طالب غير معروف',
+          fr: 'Élève inconnu',
+          es: 'Alumno desconocido',
+        ).of(context);
   }
 }
 
@@ -852,10 +930,17 @@ class _EtaPanel extends StatelessWidget {
               children: [
                 Text(
                   nextStopLabel == null
-                      ? const S('No next stop', 'مفيش محطة تالية').of(context)
+                      ? const S(
+                          'No next stop',
+                          'مفيش محطة تالية',
+                          fr: 'Aucun prochain arrêt',
+                          es: 'Sin próxima parada',
+                        ).of(context)
                       : S(
                           'Next stop · $nextStopLabel',
                           'المحطة التالية · $nextStopLabel',
+                          fr: 'Prochain arrêt · $nextStopLabel',
+                          es: 'Próxima parada · $nextStopLabel',
                         ).of(context),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -870,6 +955,10 @@ class _EtaPanel extends StatelessWidget {
                           'away · ${formatEtaDuration(eta.etaToNextStop!, context)}',
                       '${formatEtaDistance(eta.distanceToNextStopMeters!, context)} '
                           'من هنا · ${formatEtaDuration(eta.etaToNextStop!, context)}',
+                      fr: '${formatEtaDistance(eta.distanceToNextStopMeters!, context)} '
+                          "d'ici · ${formatEtaDuration(eta.etaToNextStop!, context)}",
+                      es: '${formatEtaDistance(eta.distanceToNextStopMeters!, context)} '
+                          'de aquí · ${formatEtaDuration(eta.etaToNextStop!, context)}',
                     ).of(context),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colors.textSecondary,
@@ -881,6 +970,10 @@ class _EtaPanel extends StatelessWidget {
                       'ETA unavailable — '
                           '${etaUnavailableLabel(eta.unavailableReason, context)}',
                       'الوقت المتوقع غير متاح — '
+                          '${etaUnavailableLabel(eta.unavailableReason, context)}',
+                      fr: "Heure d'arrivée indisponible — "
+                          '${etaUnavailableLabel(eta.unavailableReason, context)}',
+                      es: 'Hora de llegada no disponible — '
                           '${etaUnavailableLabel(eta.unavailableReason, context)}',
                     ).of(context),
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -896,6 +989,12 @@ class _EtaPanel extends StatelessWidget {
                       'المدرسة خلال '
                           '${formatEtaDuration(eta.etaToFinalStop!, context)} '
                           '· فاضل ${eta.stopsRemaining} محطة',
+                      fr: 'École dans '
+                          '${formatEtaDuration(eta.etaToFinalStop!, context)} '
+                          '· ${eta.stopsRemaining} arrêts restants',
+                      es: 'Escuela en '
+                          '${formatEtaDuration(eta.etaToFinalStop!, context)} '
+                          '· ${eta.stopsRemaining} paradas restantes',
                     ).of(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.textMuted,
@@ -915,48 +1014,96 @@ class _EtaPanel extends StatelessWidget {
 /// "unavailable" — see [EtaUnavailableReason].
 String etaUnavailableLabel(EtaUnavailableReason? reason, BuildContext context) {
   return switch (reason) {
-    EtaUnavailableReason.tripNotActive =>
-      const S('the trip is not running', 'الرحلة مش شغالة').of(context),
-    EtaUnavailableReason.noGpsSignal =>
-      const S('no GPS signal yet', 'لسه مفيش إشارة GPS').of(context),
+    EtaUnavailableReason.tripNotActive => const S(
+      'the trip is not running',
+      'الرحلة مش شغالة',
+      fr: "le trajet n'est pas en cours",
+      es: 'el viaje no está en curso',
+    ).of(context),
+    EtaUnavailableReason.noGpsSignal => const S(
+      'no GPS signal yet',
+      'لسه مفيش إشارة GPS',
+      fr: 'pas encore de signal GPS',
+      es: 'aún sin señal GPS',
+    ).of(context),
     EtaUnavailableReason.staleGps => const S(
       'the last GPS fix is out of date',
       'آخر تحديث للموقع قديم',
+      fr: 'le dernier signal GPS est obsolète',
+      es: 'la última señal GPS está desactualizada',
     ).of(context),
-    EtaUnavailableReason.allStopsCompleted =>
-      const S('every stop is done', 'كل المحطات خلصت').of(context),
+    EtaUnavailableReason.allStopsCompleted => const S(
+      'every stop is done',
+      'كل المحطات خلصت',
+      fr: 'tous les arrêts sont terminés',
+      es: 'todas las paradas están completas',
+    ).of(context),
     EtaUnavailableReason.noRemainingStops => const S(
       'no stop on this trip has a location set',
       'مفيش محطة في الرحلة دي متسجّل ليها موقع',
+      fr: "aucun arrêt de ce trajet n'a de position définie",
+      es: 'ninguna parada de este viaje tiene ubicación definida',
     ).of(context),
-    null => const S('reason unknown', 'السبب غير معروف').of(context),
+    null => const S(
+      'reason unknown',
+      'السبب غير معروف',
+      fr: 'raison inconnue',
+      es: 'razón desconocida',
+    ).of(context),
   };
 }
 
 String formatEtaDistance(double meters, BuildContext context) {
   if (meters < 1000) {
-    return S('${meters.round()} m', '${meters.round()} م').of(context);
+    return S(
+      '${meters.round()} m',
+      '${meters.round()} م',
+      fr: '${meters.round()} m',
+      es: '${meters.round()} m',
+    ).of(context);
   }
   return S(
     '${(meters / 1000).toStringAsFixed(1)} km',
     '${(meters / 1000).toStringAsFixed(1)} كم',
+    fr: '${(meters / 1000).toStringAsFixed(1)} km',
+    es: '${(meters / 1000).toStringAsFixed(1)} km',
   ).of(context);
 }
 
 String formatEtaDuration(Duration duration, BuildContext context) {
   final minutes = duration.inMinutes;
   if (minutes < 1) {
-    return const S('under a minute', 'أقل من دقيقة').of(context);
+    return const S(
+      'under a minute',
+      'أقل من دقيقة',
+      fr: "moins d'une minute",
+      es: 'menos de un minuto',
+    ).of(context);
   }
   if (minutes < 60) {
-    return S('$minutes min', '$minutes دقيقة').of(context);
+    return S(
+      '$minutes min',
+      '$minutes دقيقة',
+      fr: '$minutes min',
+      es: '$minutes min',
+    ).of(context);
   }
   final hours = duration.inHours;
   final remainder = minutes - hours * 60;
   if (remainder == 0) {
-    return S('$hours h', '$hours ساعة').of(context);
+    return S(
+      '$hours h',
+      '$hours ساعة',
+      fr: '$hours h',
+      es: '$hours h',
+    ).of(context);
   }
-  return S('$hours h $remainder min', '$hours ساعة $remainder دقيقة').of(context);
+  return S(
+    '$hours h $remainder min',
+    '$hours ساعة $remainder دقيقة',
+    fr: '$hours h $remainder min',
+    es: '$hours h $remainder min',
+  ).of(context);
 }
 
 /// One stop rendered as a segment of a vertical timeline: a dot on a
@@ -1103,7 +1250,7 @@ class _TimelineRow extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.xs),
                         Text(
-                          const S('Heading here now', 'متجه هنا دلوقتي')
+                          const S('Heading here now', 'متجه هنا دلوقتي', fr: 'En route vers ce point', es: 'En camino aquí')
                               .of(context),
                           style: TextStyle(
                             fontSize: 11,
@@ -1132,12 +1279,12 @@ class _TimelineRow extends StatelessWidget {
                       ),
                       if (!isSchool && isDroppedOff)
                         StatusBadge(
-                          label: const S('Dropped off', 'تم الإنزال').of(context),
+                          label: const S('Dropped off', 'تم الإنزال', fr: 'Déposé', es: 'Bajó').of(context),
                           tone: StatusTone.info,
                         )
                       else if (!isSchool && isBoarded)
                         StatusBadge(
-                          label: const S('Boarded', 'تم الصعود').of(context),
+                          label: const S('Boarded', 'تم الصعود', fr: 'Monté', es: 'Subió').of(context),
                           tone: StatusTone.success,
                         ),
                     ],
@@ -1150,7 +1297,7 @@ class _TimelineRow extends StatelessWidget {
                         _RowMenu(onVerifyPickup: onVerifyPickup),
                         const SizedBox(width: AppSpacing.sm),
                         _CompactButton(
-                          label: const S('Drop off', 'إنزال').of(context),
+                          label: const S('Drop off', 'إنزال', fr: 'Déposer', es: 'Bajar').of(context),
                           onPressed: onDropOff,
                         ),
                       ],
@@ -1167,13 +1314,15 @@ class _TimelineRow extends StatelessWidget {
                           // does not change that record — see
                           // StudentsRepository.reportAbsence.
                           label: isAbsentToday
-                              ? const S('Absent', 'غائب').of(context)
+                              ? const S('Absent', 'غائب', fr: 'Absent', es: 'Ausente').of(context)
                               : absenceReported
                               ? const S(
                                   'Absence reported',
                                   'تم الإبلاغ بالغياب',
+                                  fr: 'Absence signalée',
+                                  es: 'Ausencia reportada',
                                 ).of(context)
-                              : const S('Pending', 'قيد الانتظار').of(context),
+                              : const S('Pending', 'قيد الانتظار', fr: 'En attente', es: 'Pendiente').of(context),
                           tone: isAbsentToday || absenceReported
                               ? StatusTone.neutral
                               : StatusTone.warning,
@@ -1189,7 +1338,7 @@ class _TimelineRow extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         _CompactButton(
-                          label: const S('Board', 'ركوب').of(context),
+                          label: const S('Board', 'ركوب', fr: 'Monter', es: 'Subir').of(context),
                           onPressed: onBoard,
                         ),
                       ],
@@ -1242,7 +1391,12 @@ class _RowMenu extends StatelessWidget {
     }
 
     return PopupMenuButton<VoidCallback>(
-      tooltip: const S('More actions', 'إجراءات إضافية').of(context),
+      tooltip: const S(
+        'More actions',
+        'إجراءات إضافية',
+        fr: "Plus d'actions",
+        es: 'Más acciones',
+      ).of(context),
       padding: EdgeInsets.zero,
       icon: const Icon(Icons.more_vert, size: 20),
       onSelected: (action) => action(),
@@ -1255,7 +1409,7 @@ class _RowMenu extends StatelessWidget {
                 const Icon(Icons.verified_user_outlined, size: 18),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  const S('Verify pickup', 'التحقق من الاستلام').of(context),
+                  const S('Verify pickup', 'التحقق من الاستلام', fr: 'Vérifier la prise en charge', es: 'Verificar recogida').of(context),
                 ),
               ],
             ),
@@ -1268,7 +1422,7 @@ class _RowMenu extends StatelessWidget {
                 const Icon(Icons.person_off_outlined, size: 18),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  const S('Mark absent today', 'تسجيل غياب اليوم').of(context),
+                  const S('Mark absent today', 'تسجيل غياب اليوم', fr: "Signaler absent aujourd'hui", es: 'Marcar ausente hoy').of(context),
                 ),
               ],
             ),
@@ -1346,7 +1500,7 @@ class _FullScreenMapPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S("Today's route", 'مسار اليوم').of(context)),
+        title: Text(const S("Today's route", 'مسار اليوم', fr: 'Itinéraire du jour', es: 'Ruta de hoy').of(context)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),

@@ -77,7 +77,14 @@ class _TripReassignmentDialogState extends State<TripReassignmentDialog> {
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: Text(const S('Reassign trip', 'إعادة تخصيص الرحلة').of(context)),
+      title: Text(
+        const S(
+          'Reassign trip',
+          'إعادة تخصيص الرحلة',
+          fr: 'Réaffecter le trajet',
+          es: 'Reasignar viaje',
+        ).of(context),
+      ),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -131,12 +138,21 @@ class _TripReassignmentDialogState extends State<TripReassignmentDialog> {
                   return DropdownButtonFormField<String>(
                     initialValue: hasCurrent ? _busId : null,
                     decoration: InputDecoration(
-                      labelText: const S('Bus', 'الأتوبيس').of(context),
+                      labelText: const S(
+                        'Bus',
+                        'الأتوبيس',
+                        fr: 'Bus',
+                        es: 'Autobús',
+                      ).of(context),
                       helperText: _busChanged
                           ? const S(
                               'Changed — parents on this route will be '
                                   'notified.',
                               'اتغيّر — أولياء الأمور على الخط ده هيتبلغوا.',
+                              fr: 'Modifié — les parents sur cet itinéraire '
+                                  'seront informés.',
+                              es: 'Modificado — se avisará a las familias '
+                                  'de esta ruta.',
                             ).of(context)
                           : null,
                     ),
@@ -180,11 +196,20 @@ class _TripReassignmentDialogState extends State<TripReassignmentDialog> {
                   return DropdownButtonFormField<String>(
                     initialValue: hasCurrent ? _driverId : null,
                     decoration: InputDecoration(
-                      labelText: const S('Driver', 'السائق').of(context),
+                      labelText: const S(
+                        'Driver',
+                        'السائق',
+                        fr: 'Chauffeur',
+                        es: 'Conductor',
+                      ).of(context),
                       helperText: _driverChanged
                           ? const S(
                               'Changed — the new driver will be notified.',
                               'اتغيّر — السائق الجديد هيتبلغ.',
+                              fr: 'Modifié — le nouveau chauffeur sera '
+                                  'informé.',
+                              es: 'Modificado — se avisará al nuevo '
+                                  'conductor.',
                             ).of(context)
                           : null,
                     ),
@@ -218,6 +243,8 @@ class _TripReassignmentDialogState extends State<TripReassignmentDialog> {
                   labelText: const S(
                     'Reason (recorded in the audit trail)',
                     'السبب (بيتسجل في سجل التدقيق)',
+                    fr: "Motif (enregistré dans le journal d'audit)",
+                    es: 'Motivo (registrado en el registro de auditoría)',
                   ).of(context),
                 ),
               ),
@@ -227,11 +254,21 @@ class _TripReassignmentDialogState extends State<TripReassignmentDialog> {
       ),
       actions: [
         AppButton.secondary(
-          label: const S('Cancel', 'إلغاء').of(context),
+          label: const S(
+            'Cancel',
+            'إلغاء',
+            fr: 'Annuler',
+            es: 'Cancelar',
+          ).of(context),
           onPressed: () => Navigator.pop(context),
         ),
         AppButton.primary(
-          label: const S('Reassign', 'إعادة التخصيص').of(context),
+          label: const S(
+            'Reassign',
+            'إعادة التخصيص',
+            fr: 'Réaffecter',
+            es: 'Reasignar',
+          ).of(context),
           onPressed: _hasChanges
               ? () => Navigator.pop(
                   context,
@@ -289,6 +326,8 @@ class TripReassignmentHistorySheet extends StatelessWidget {
                 title: const S(
                   'Change history',
                   'سجل التغييرات',
+                  fr: 'Historique des modifications',
+                  es: 'Historial de cambios',
                 ).of(context),
                 subtitle: trip.routeName.isEmpty ? null : trip.routeName,
               ),
@@ -299,6 +338,8 @@ class TripReassignmentHistorySheet extends StatelessWidget {
                   title: const S(
                     'This trip has not been reassigned.',
                     'الرحلة دي متغيرتش.',
+                    fr: "Ce trajet n'a pas été réaffecté.",
+                    es: 'Este viaje no ha sido reasignado.',
                   ).of(context),
                 )
               else

@@ -5,10 +5,24 @@ import '../data/pickup_verification_repository.dart';
 
 String pickupMethodLabel(PickupVerificationMethod method, BuildContext context) {
   return switch (method) {
-    PickupVerificationMethod.driverManual =>
-      const S('Visual check', 'تأكيد بالنظر').of(context),
-    PickupVerificationMethod.qrCode => const S('QR code', 'رمز QR').of(context),
-    PickupVerificationMethod.otp => const S('One-time code', 'رمز لمرة واحدة').of(context),
+    PickupVerificationMethod.driverManual => const S(
+      'Visual check',
+      'تأكيد بالنظر',
+      fr: 'Vérification visuelle',
+      es: 'Verificación visual',
+    ).of(context),
+    PickupVerificationMethod.qrCode => const S(
+      'QR code',
+      'رمز QR',
+      fr: 'Code QR',
+      es: 'Código QR',
+    ).of(context),
+    PickupVerificationMethod.otp => const S(
+      'One-time code',
+      'رمز لمرة واحدة',
+      fr: 'Code à usage unique',
+      es: 'Código de un solo uso',
+    ).of(context),
   };
 }
 
@@ -115,7 +129,12 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
       case PickupVerificationStatus.verified:
         AppSnackbar.success(
           context,
-          const S('Pickup verified.', 'تم التحقق من الاستلام.').of(context),
+          const S(
+            'Pickup verified.',
+            'تم التحقق من الاستلام.',
+            fr: 'Prise en charge vérifiée.',
+            es: 'Recogida verificada.',
+          ).of(context),
         );
       case PickupVerificationStatus.failed:
         AppSnackbar.error(
@@ -123,6 +142,10 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
           const S(
             'Recorded as not verified. Tell your school administrator.',
             'تم التسجيل كغير مُتحقق منه. أبلغ أدمن مدرستك.',
+            fr: "Enregistré comme non vérifié. Prévenez l'administrateur "
+                'de votre école.',
+            es: 'Registrado como no verificado. Avisa al administrador '
+                'de tu escuela.',
           ).of(context),
         );
       case PickupVerificationStatus.pending:
@@ -132,6 +155,10 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
             'Attempt recorded as pending — the code was saved for the school '
                 'to check.',
             'تم تسجيل المحاولة كقيد المراجعة — تم حفظ الرمز لتراجعه المدرسة.',
+            fr: 'Tentative enregistrée comme en attente — le code a été '
+                "sauvegardé pour vérification par l'école.",
+            es: 'Intento registrado como pendiente — el código se '
+                'guardó para que la escuela lo revise.',
           ).of(context),
         );
     }
@@ -155,7 +182,12 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            const S('Verify pickup', 'التحقق من الاستلام').of(context),
+            const S(
+              'Verify pickup',
+              'التحقق من الاستلام',
+              fr: 'Vérifier la prise en charge',
+              es: 'Verificar recogida',
+            ).of(context),
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -190,13 +222,20 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
                 labelText: const S(
                   'Authorized person',
                   'الشخص المصرح له',
+                  fr: 'Personne autorisée',
+                  es: 'Persona autorizada',
                 ).of(context),
               ),
               items: [
                 DropdownMenuItem(
                   value: null,
                   child: Text(
-                    const S('Someone else', 'شخص آخر').of(context),
+                    const S(
+                      'Someone else',
+                      'شخص آخر',
+                      fr: "Quelqu'un d'autre",
+                      es: 'Otra persona',
+                    ).of(context),
                   ),
                 ),
                 ...people.map(
@@ -230,10 +269,14 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
                     ? const S(
                         'Who is collecting? (optional)',
                         'مين اللي بيستلم؟ (اختياري)',
+                        fr: 'Qui vient chercher ? (facultatif)',
+                        es: '¿Quién recoge? (opcional)',
                       ).of(context)
                     : const S(
                         "Their name (optional)",
                         'اسمه (اختياري)',
+                        fr: 'Son nom (facultatif)',
+                        es: 'Su nombre (opcional)',
                       ).of(context),
               ),
             ),
@@ -247,6 +290,8 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
                 labelText: const S(
                   'Code they presented',
                   'الرمز اللي قدّمه',
+                  fr: 'Code présenté',
+                  es: 'Código presentado',
                 ).of(context),
               ),
             ),
@@ -272,6 +317,14 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
                         'التطبيق لسه مفيهوش رمز من ولي الأمر يتم المطابقة '
                             'عليه، فهيتسجل كقيد المراجعة عشان المدرسة تأكده — '
                             'مش كمُتحقق منه.',
+                        fr: "Cette application n'a pas encore de code "
+                            'généré par le parent à vérifier, donc ceci '
+                            'est enregistré comme en attente pour '
+                            "confirmation par l'école — pas comme vérifié.",
+                        es: 'Esta aplicación aún no tiene un código '
+                            'generado por el padre para verificar, así '
+                            'que esto se guarda como pendiente para que '
+                            'la escuela lo confirme — no como verificado.',
                       ).of(context),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.textSecondary,
@@ -291,6 +344,8 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
               labelText: const S(
                 'Notes (optional)',
                 'ملاحظات (اختياري)',
+                fr: 'Notes (facultatif)',
+                es: 'Notas (opcional)',
               ).of(context),
             ),
           ),
@@ -299,7 +354,12 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
             SizedBox(
               width: double.infinity,
               child: AppButton.primary(
-                label: const S('Record attempt', 'تسجيل المحاولة').of(context),
+                label: const S(
+                  'Record attempt',
+                  'تسجيل المحاولة',
+                  fr: 'Enregistrer la tentative',
+                  es: 'Registrar intento',
+                ).of(context),
                 icon: Icons.pending_actions_outlined,
                 loading: _submitting,
                 onPressed: () => _submit(driverConfirmed: false),
@@ -312,6 +372,8 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
                 label: const S(
                   'Confirm handover',
                   'تأكيد التسليم',
+                  fr: 'Confirmer la remise',
+                  es: 'Confirmar entrega',
                 ).of(context),
                 icon: Icons.verified_user_outlined,
                 loading: _submitting,
@@ -325,6 +387,8 @@ class _PickupVerificationSheetState extends State<_PickupVerificationSheet> {
                 label: const S(
                   "Couldn't verify",
                   'تعذّر التحقق',
+                  fr: 'Impossible de vérifier',
+                  es: 'No se pudo verificar',
                 ).of(context),
                 icon: Icons.person_off_outlined,
                 onPressed: _submitting

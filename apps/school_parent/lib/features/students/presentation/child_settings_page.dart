@@ -83,6 +83,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
         const S(
           'Sent to your school for review.',
           'اتبعتت لمدرستك للمراجعة.',
+          fr: 'Envoyé à votre école pour examen.',
+          es: 'Enviado a tu escuela para su revisión.',
         ).of(context),
       );
     } catch (_) {
@@ -92,6 +94,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
         const S(
           "Couldn't send that — check your connection and try again.",
           'معرفناش نبعتها — اتأكد من الاتصال وجرب تاني.',
+          fr: "Impossible d'envoyer — vérifiez votre connexion et réessayez.",
+          es: 'No se pudo enviar. Comprueba tu conexión e inténtalo de nuevo.',
         ).of(context),
       );
     } finally {
@@ -122,10 +126,14 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               ? S(
                   '${widget.student.name} is marked absent today.',
                   'تم تحديد ${widget.student.name} غايب النهاردة.',
+                  fr: '${widget.student.name} est marqué(e) absent(e) aujourd\'hui.',
+                  es: '${widget.student.name} está marcado/a como ausente hoy.',
                 ).of(context)
               : S(
                   '${widget.student.name} is riding today.',
                   '${widget.student.name} هيركب النهاردة.',
+                  fr: '${widget.student.name} prend le bus aujourd\'hui.',
+                  es: '${widget.student.name} viaja en el autobús hoy.',
                 ).of(context),
         );
       }
@@ -143,6 +151,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
           const S(
             "Couldn't save that — try again.",
             'معرفناش نحفظ ده — جرب تاني.',
+            fr: "Impossible d'enregistrer — réessayez.",
+            es: 'No se pudo guardar. Inténtalo de nuevo.',
           ).of(context),
         );
       }
@@ -179,6 +189,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
           const S(
             "Couldn't save that — try again.",
             'معرفناش نحفظ ده — جرب تاني.',
+            fr: "Impossible d'enregistrer — réessayez.",
+            es: 'No se pudo guardar. Inténtalo de nuevo.',
           ).of(context),
         );
       }
@@ -214,6 +226,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
           const S(
             "Couldn't save that — try again.",
             'معرفناش نحفظ ده — جرب تاني.',
+            fr: "Impossible d'enregistrer — réessayez.",
+            es: 'No se pudo guardar. Inténtalo de nuevo.',
           ).of(context),
         );
       }
@@ -245,6 +259,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       helpText: const S(
         'Pick an absence date',
         'اختار يوم الغياب',
+        fr: "Choisir une date d'absence",
+        es: 'Elige una fecha de ausencia',
       ).of(context),
       // A day that's already scheduled is shown as unavailable rather than
       // silently doing nothing when tapped.
@@ -261,6 +277,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       S(
         'Absence scheduled for ${_absenceDateLabel(context, iso)}.',
         'تم تحديد غياب يوم ${_absenceDateLabel(context, iso)}.',
+        fr: 'Absence programmée pour le ${_absenceDateLabel(context, iso)}.',
+        es: 'Ausencia programada para el ${_absenceDateLabel(context, iso)}.',
       ).of(context),
     );
   }
@@ -275,6 +293,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       S(
         'Absence on ${_absenceDateLabel(context, date)} removed.',
         'اتشال غياب يوم ${_absenceDateLabel(context, date)}.',
+        fr: 'Absence du ${_absenceDateLabel(context, date)} supprimée.',
+        es: 'Se eliminó la ausencia del ${_absenceDateLabel(context, date)}.',
       ).of(context),
     );
   }
@@ -294,6 +314,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       S(
         '${person.name} can now collect ${widget.student.name}.',
         '${person.name} بقى مصرّح له يستلم ${widget.student.name}.',
+        fr: '${person.name} peut désormais récupérer ${widget.student.name}.',
+        es: '${person.name} ahora puede recoger a ${widget.student.name}.',
       ).of(context),
     );
   }
@@ -304,14 +326,25 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
       title: const S(
         'Remove this person?',
         'تشيل الشخص ده؟',
+        fr: 'Supprimer cette personne ?',
+        es: '¿Quitar a esta persona?',
       ).of(context),
       message: S(
         '${person.name} will no longer be listed as authorized to collect '
             '${widget.student.name}.',
         '${person.name} مش هيفضل مكتوب إنه مصرّح له يستلم '
             '${widget.student.name}.',
+        fr: '${person.name} ne sera plus autorisé(e) à récupérer '
+            '${widget.student.name}.',
+        es: '${person.name} ya no figurará como autorizado/a para recoger a '
+            '${widget.student.name}.',
       ).of(context),
-      confirmLabel: const S('Remove', 'شيل').of(context),
+      confirmLabel: const S(
+        'Remove',
+        'شيل',
+        fr: 'Supprimer',
+        es: 'Quitar',
+      ).of(context),
       destructive: true,
     );
     if (confirmed != true) return;
@@ -334,7 +367,14 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Child settings', 'إعدادات الطفل').of(context)),
+        title: Text(
+          const S(
+            'Child settings',
+            'إعدادات الطفل',
+            fr: "Paramètres de l'enfant",
+            es: 'Ajustes del niño/a',
+          ).of(context),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -352,12 +392,23 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
 
           // ---- Attendance -------------------------------------------------
           SectionHeader(
-            title: const S('Attendance', 'الحضور').of(context),
+            title: const S(
+              'Attendance',
+              'الحضور',
+              fr: 'Présence',
+              es: 'Asistencia',
+            ).of(context),
             subtitle: const S(
               "Tell the driver when your child isn't riding, so the bus "
                   "doesn't detour for a stop nobody is waiting at.",
               'قول للسواق لما ابنك مش هيركب، عشان الأتوبيس ما يلفش على محطة '
                   'محدش مستنيه فيها.',
+              fr: "Prévenez le chauffeur quand votre enfant ne prend pas le "
+                  "bus, pour qu'il ne s'arrête pas à un arrêt où personne "
+                  "n'attend.",
+              es: 'Avisa al conductor cuando tu hijo/a no vaya a subir, para '
+                  'que el autobús no se desvíe a una parada donde nadie lo '
+                  'espera.',
             ).of(context),
           ),
           AnimatedContainer(
@@ -381,7 +432,12 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                     vertical: AppSpacing.xs,
                   ),
                   title: Text(
-                    const S('Absent today', 'غايب النهاردة').of(context),
+                    const S(
+                      'Absent today',
+                      'غايب النهاردة',
+                      fr: "Absent(e) aujourd'hui",
+                      es: 'Ausente hoy',
+                    ).of(context),
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -393,12 +449,20 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                                 'point today.',
                             'الأتوبيس مش هيقف عند نقطة استلام ${student.name} '
                                 'النهاردة.',
+                            fr: "Le bus ne s'arrêtera pas au point de "
+                                'ramassage de ${student.name} aujourd\'hui.',
+                            es: 'El autobús no se detendrá hoy en el punto '
+                                'de recogida de ${student.name}.',
                           ).of(context)
                         : S(
                             "Turn this on if ${student.name} isn't riding the "
                                 'bus today.',
                             'شغّل ده لو ${student.name} مش هيركب الأتوبيس '
                                 'النهاردة.',
+                            fr: 'Activez ceci si ${student.name} ne prend '
+                                'pas le bus aujourd\'hui.',
+                            es: 'Activa esto si ${student.name} no va a '
+                                'subir al autobús hoy.',
                           ).of(context),
                     style: TextStyle(color: colors.textSecondary),
                   ),
@@ -418,6 +482,14 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                       'متحدد غايب النهاردة '
                           '${DateFormat('EEE, d MMM').format(DateTime.now())}. '
                           'المدرسة والسواق شايفين ده.',
+                      fr:
+                          "Absent(e) aujourd'hui, "
+                          "${DateFormat('EEE, d MMM').format(DateTime.now())}. "
+                          "Votre école et le chauffeur peuvent le voir.",
+                      es:
+                          'Marcado/a como ausente hoy, '
+                          "${DateFormat('EEE, d MMM').format(DateTime.now())}. "
+                          'La escuela y el conductor pueden verlo.',
                     ).of(context),
                   ),
                 if (todayIsScheduled)
@@ -429,6 +501,14 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                           'there to have your child ride today.',
                       'النهاردة كمان موجود في المواعيد المحددة تحت — شيله من '
                           'هناك لو عايز ابنك يركب النهاردة.',
+                      fr:
+                          "Aujourd'hui figure aussi dans la liste programmée "
+                          "ci-dessous — retirez-la de là pour que votre "
+                          "enfant prenne le bus aujourd'hui.",
+                      es:
+                          'Hoy también está en la lista programada de abajo '
+                          '— quítalo ahí para que tu hijo/a viaje hoy en el '
+                          'autobús.',
                     ).of(context),
                   ),
               ],
@@ -441,11 +521,17 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
             title: const S(
               'Scheduled absences',
               'غياب محدد مقدمًا',
+              fr: 'Absences programmées',
+              es: 'Ausencias programadas',
             ).of(context),
             subtitle: const S(
               'Plan ahead instead of remembering to switch the toggle on '
                   'the day.',
               'خطط قدام بدل ما تفتكر تشغّل المفتاح في يومه.',
+              fr: "Planifiez à l'avance plutôt que de devoir penser à "
+                  'activer le bouton le jour même.',
+              es: 'Planifica con antelación en lugar de acordarte de '
+                  'activar el interruptor ese día.',
             ).of(context),
           ),
           if (_scheduledDates.isEmpty)
@@ -454,6 +540,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               text: const S(
                 'No dates scheduled.',
                 'مفيش أيام محددة.',
+                fr: 'Aucune date programmée.',
+                es: 'No hay fechas programadas.',
               ).of(context),
             )
           else
@@ -472,6 +560,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
             label: const S(
               'Schedule an absence date',
               'حدد يوم غياب',
+              fr: "Programmer une date d'absence",
+              es: 'Programar una fecha de ausencia',
             ).of(context),
             icon: Icons.event_available_outlined,
             loading: _savingScheduledDates,
@@ -481,10 +571,19 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
 
           // ---- Authorized pickup ------------------------------------------
           SectionHeader(
-            title: const S('Who can collect', 'مين يقدر يستلمه').of(context),
+            title: const S(
+              'Who can collect',
+              'مين يقدر يستلمه',
+              fr: 'Qui peut venir le chercher',
+              es: 'Quién puede recogerlo/a',
+            ).of(context),
             subtitle: S(
               'The people you authorize to collect ${student.name}.',
               'الناس اللي بتصرّح لهم يستلموا ${student.name}.',
+              fr: 'Les personnes que vous autorisez à récupérer '
+                  '${student.name}.',
+              es: 'Las personas que autorizas para recoger a '
+                  '${student.name}.',
             ).of(context),
           ),
           // Says exactly what this list is and isn't. It records the
@@ -501,6 +600,18 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               'القايمة دي بتقول للمدرسة والسواق مين اللي انت مصرّح له. السواق '
                   'بيراجع الاسم عليها — التطبيق مش بيتحقق من هوية حد، ومحدش '
                   'في القايمة دي بياخد حساب أو وصول لبياناتك.',
+              fr:
+                  'Cette liste indique à l\'école et au chauffeur qui vous '
+                  'avez autorisé. Le chauffeur y vérifie le nom — '
+                  "l'application ne vérifie l'identité de personne, et "
+                  "personne sur cette liste n'obtient de compte ni d'accès "
+                  'à vos données.',
+              es:
+                  'Esta lista indica a la escuela y al conductor a quién '
+                  'has autorizado. El conductor comprueba el nombre en '
+                  'ella. La aplicación no verifica la identidad de nadie, '
+                  'y nadie de esta lista obtiene una cuenta ni acceso a '
+                  'tus datos.',
             ).of(context),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -512,6 +623,10 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                     '${student.name} are on record.',
                 'محدش متضاف لسه — أولياء أمور ${student.name} بس هما '
                     'المسجلين.',
+                fr: "Personne n'a encore été ajouté — seuls les parents "
+                    'liés à ${student.name} sont enregistrés.',
+                es: 'Aún no se ha añadido a nadie. Solo los padres/madres '
+                    'vinculados a ${student.name} están registrados.',
               ).of(context),
             )
           else
@@ -530,6 +645,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
             label: const S(
               'Add an authorized person',
               'ضيف شخص مصرّح له',
+              fr: 'Ajouter une personne autorisée',
+              es: 'Añadir una persona autorizada',
             ).of(context),
             icon: Icons.person_add_alt,
             loading: _savingPickupPersons,
@@ -539,10 +656,17 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
 
           // ---- Route & pickup ---------------------------------------------
           SectionHeader(
-            title: const S('Route & pickup', 'الخط ونقطة الاستلام').of(context),
+            title: const S(
+              'Route & pickup',
+              'الخط ونقطة الاستلام',
+              fr: 'Trajet et point de ramassage',
+              es: 'Ruta y punto de recogida',
+            ).of(context),
             subtitle: const S(
               'Set by your school — read-only here.',
               'بيحددها المدرسة — للعرض بس هنا.',
+              fr: 'Défini par votre école — lecture seule ici.',
+              es: 'Lo define tu escuela; aquí solo puedes consultarlo.',
             ).of(context),
           ),
           AppListCard(
@@ -550,17 +674,40 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
               SettingsTile(
                 icon: Icons.route_rounded,
                 tone: hasRoute ? colors.success : colors.warning,
-                title: const S('Route', 'الخط').of(context),
+                title: const S(
+                  'Route',
+                  'الخط',
+                  fr: 'Trajet',
+                  es: 'Ruta',
+                ).of(context),
                 subtitle: hasRoute
-                    ? const S('Assigned', 'متحدد').of(context)
+                    ? const S(
+                        'Assigned',
+                        'متحدد',
+                        fr: 'Assigné',
+                        es: 'Asignado',
+                      ).of(context)
                     : const S(
                         'Not assigned yet — contact your school.',
                         'لسه مش متحدد — كلم مدرستك.',
+                        fr: 'Pas encore assigné — contactez votre école.',
+                        es: 'Aún no asignado. Ponte en contacto con tu '
+                            'escuela.',
                       ).of(context),
                 trailing: StatusBadge(
                   label: hasRoute
-                      ? const S('Assigned', 'متحدد').of(context)
-                      : const S('Missing', 'ناقص').of(context),
+                      ? const S(
+                          'Assigned',
+                          'متحدد',
+                          fr: 'Assigné',
+                          es: 'Asignado',
+                        ).of(context)
+                      : const S(
+                          'Missing',
+                          'ناقص',
+                          fr: 'Manquant',
+                          es: 'Falta',
+                        ).of(context),
                   tone: hasRoute ? StatusTone.success : StatusTone.warning,
                 ),
               ),
@@ -571,28 +718,57 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                     : student.hasLocation
                     ? colors.success
                     : colors.warning,
-                title: const S('Pickup point', 'نقطة الاستلام').of(context),
+                title: const S(
+                  'Pickup point',
+                  'نقطة الاستلام',
+                  fr: 'Point de ramassage',
+                  es: 'Punto de recogida',
+                ).of(context),
                 subtitle: _locationRequestPending
                     ? const S(
                         'Your suggested location is waiting for the school '
                             'to review it.',
                         'الموقع اللي اقترحته في انتظار مراجعة المدرسة.',
+                        fr: "L'emplacement que vous avez suggéré est en "
+                            "attente d'examen par l'école.",
+                        es: 'La ubicación que sugeriste está a la espera de '
+                            'que la escuela la revise.',
                       ).of(context)
                     : student.hasLocation
                     ? const S(
                         'Set by the school',
                         'محددة من المدرسة',
+                        fr: "Défini par l'école",
+                        es: 'Definido por la escuela',
                       ).of(context)
                     : const S(
                         'Not set yet — contact your school.',
                         'لسه مش متحددة — كلم مدرستك.',
+                        fr: 'Pas encore défini — contactez votre école.',
+                        es: 'Aún no está definido. Ponte en contacto con tu '
+                            'escuela.',
                       ).of(context),
                 trailing: StatusBadge(
                   label: _locationRequestPending
-                      ? const S('Pending', 'قيد المراجعة').of(context)
+                      ? const S(
+                          'Pending',
+                          'قيد المراجعة',
+                          fr: 'En attente',
+                          es: 'Pendiente',
+                        ).of(context)
                       : student.hasLocation
-                      ? const S('Set', 'محددة').of(context)
-                      : const S('Missing', 'ناقص').of(context),
+                      ? const S(
+                          'Set',
+                          'محددة',
+                          fr: 'Défini',
+                          es: 'Definido',
+                        ).of(context)
+                      : const S(
+                          'Missing',
+                          'ناقص',
+                          fr: 'Manquant',
+                          es: 'Falta',
+                        ).of(context),
                   tone: _locationRequestPending
                       ? StatusTone.info
                       : student.hasLocation
@@ -609,10 +785,18 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
           // disabled while one is already pending review.
           AppButton.secondary(
             label: _locationRequestPending
-                ? const S('Suggestion pending review', 'الاقتراح قيد المراجعة')
-                    .of(context)
-                : const S('Suggest a pickup location', 'اقترح نقطة استلام')
-                    .of(context),
+                ? const S(
+                    'Suggestion pending review',
+                    'الاقتراح قيد المراجعة',
+                    fr: "Suggestion en attente d'examen",
+                    es: 'Sugerencia pendiente de revisión',
+                  ).of(context)
+                : const S(
+                    'Suggest a pickup location',
+                    'اقترح نقطة استلام',
+                    fr: 'Suggérer un point de ramassage',
+                    es: 'Sugerir un punto de recogida',
+                  ).of(context),
             icon: Icons.edit_location_alt_outlined,
             loading: _submittingLocation,
             onPressed: _locationRequestPending ? null : _proposeLocation,
@@ -624,6 +808,8 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
             title: const S(
               'Need something changed?',
               'محتاج تغيّر حاجة؟',
+              fr: "Besoin d'un changement ?",
+              es: '¿Necesitas cambiar algo?',
             ).of(context),
             subtitle: const S(
               'Route, pickup point and bus assignments are set by the '
@@ -631,12 +817,20 @@ class _ChildSettingsPageState extends State<ChildSettingsPage> {
                   'the driver needs on to them.',
               'الخط ونقطة الاستلام والأتوبيس بتحددهم المدرسة — ابعتلهم رسالة '
                   'وهما هيبلغوا السواق باللي يهمه.',
+              fr: 'Le trajet, le point de ramassage et l\'affectation du '
+                  'bus sont définis par l\'école — envoyez-lui un message '
+                  'et elle transmettra tout ce dont le chauffeur a besoin.',
+              es: 'La ruta, el punto de recogida y la asignación del '
+                  'autobús los define la escuela. Envíale un mensaje y '
+                  'ella le pasará al conductor lo que necesite saber.',
             ).of(context),
           ),
           AppButton.secondary(
             label: S(
               'Contact the school about ${student.name}',
               'كلّم المدرسة بخصوص ${student.name}',
+              fr: "Contacter l'école au sujet de ${student.name}",
+              es: 'Contactar con la escuela sobre ${student.name}',
             ).of(context),
             icon: Icons.mail_outline,
             onPressed: () => Navigator.push(
@@ -691,8 +885,18 @@ class _ChildHeader extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 StatusBadge(
                   label: absentToday
-                      ? const S('Absent today', 'غايب النهاردة').of(context)
-                      : const S('Riding today', 'هيركب النهاردة').of(context),
+                      ? const S(
+                          'Absent today',
+                          'غايب النهاردة',
+                          fr: "Absent(e) aujourd'hui",
+                          es: 'Ausente hoy',
+                        ).of(context)
+                      : const S(
+                          'Riding today',
+                          'هيركب النهاردة',
+                          fr: "Prend le bus aujourd'hui",
+                          es: 'Viaja hoy en el autobús',
+                        ).of(context),
                   tone: absentToday ? StatusTone.warning : StatusTone.success,
                 ),
               ],
@@ -852,7 +1056,12 @@ class _ScheduledDateRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: const S('Remove', 'شيل').of(context),
+            tooltip: const S(
+              'Remove',
+              'شيل',
+              fr: 'Supprimer',
+              es: 'Quitar',
+            ).of(context),
             icon: const Icon(Icons.close_rounded),
             color: colors.textMuted,
             onPressed: enabled ? onRemove : null,
@@ -910,7 +1119,12 @@ class _PickupPersonRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: const S('Remove', 'شيل').of(context),
+            tooltip: const S(
+              'Remove',
+              'شيل',
+              fr: 'Supprimer',
+              es: 'Quitar',
+            ).of(context),
             icon: const Icon(Icons.delete_outline_rounded),
             color: colors.textMuted,
             onPressed: enabled ? onRemove : null,
@@ -940,7 +1154,12 @@ String? _absenceRelativeLabel(BuildContext context, String iso) {
   final target = DateTime(parsed.year, parsed.month, parsed.day);
   final days = target.difference(today).inDays;
   if (days <= 1) return null;
-  return S('In $days days', 'بعد $days أيام').of(context);
+  return S(
+    'In $days days',
+    'بعد $days أيام',
+    fr: 'Dans $days jours',
+    es: 'En $days días',
+  ).of(context);
 }
 
 String _pickupPersonSubtitle(
@@ -956,6 +1175,8 @@ String _pickupPersonSubtitle(
     return const S(
       'Authorized to collect',
       'مصرّح له بالاستلام',
+      fr: 'Autorisé(e) à récupérer',
+      es: 'Autorizado/a para recogerlo/a',
     ).of(context);
   }
   return parts.join(' · ');
@@ -1007,7 +1228,12 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        const S('Add an authorized person', 'ضيف شخص مصرّح له').of(context),
+        const S(
+          'Add an authorized person',
+          'ضيف شخص مصرّح له',
+          fr: 'Ajouter une personne autorisée',
+          es: 'Añadir una persona autorizada',
+        ).of(context),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -1019,6 +1245,12 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
                     'here gets an account or access to your data.',
                 'السواق هيراجع الاسم ده عند الباب. محدش بيتضاف هنا بياخد حساب '
                     'أو وصول لبياناتك.',
+                fr: 'Le chauffeur vérifiera ce nom à la porte. Personne '
+                    "ajouté ici n'obtient de compte ni d'accès à vos "
+                    'données.',
+                es: 'El conductor comprobará este nombre en la puerta. '
+                    'Nadie de los añadidos aquí obtiene una cuenta ni '
+                    'acceso a tus datos.',
               ).of(context),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: context.appColors.textSecondary,
@@ -1030,11 +1262,18 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
               autofocus: true,
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
-                labelText: const S('Full name', 'الاسم بالكامل').of(context),
+                labelText: const S(
+                  'Full name',
+                  'الاسم بالكامل',
+                  fr: 'Nom complet',
+                  es: 'Nombre completo',
+                ).of(context),
                 errorText: _nameMissing
                     ? const S(
                         'A name is required.',
                         'الاسم مطلوب.',
+                        fr: 'Un nom est requis.',
+                        es: 'El nombre es obligatorio.',
                       ).of(context)
                     : null,
               ),
@@ -1047,10 +1286,15 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
                 labelText: const S(
                   'Relationship (optional)',
                   'صلة القرابة (اختياري)',
+                  fr: 'Lien de parenté (facultatif)',
+                  es: 'Parentesco (opcional)',
                 ).of(context),
-                hintText: const S('e.g. Grandmother', 'مثلاً: الجدة').of(
-                  context,
-                ),
+                hintText: const S(
+                  'e.g. Grandmother',
+                  'مثلاً: الجدة',
+                  fr: 'ex. Grand-mère',
+                  es: 'p. ej. Abuela',
+                ).of(context),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -1061,6 +1305,8 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
                 labelText: const S(
                   'Phone (optional)',
                   'التليفون (اختياري)',
+                  fr: 'Téléphone (facultatif)',
+                  es: 'Teléfono (opcional)',
                 ).of(context),
               ),
             ),
@@ -1070,11 +1316,25 @@ class _AddPickupPersonDialogState extends State<_AddPickupPersonDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(const S('Cancel', 'إلغاء').of(context)),
+          child: Text(
+            const S(
+              'Cancel',
+              'إلغاء',
+              fr: 'Annuler',
+              es: 'Cancelar',
+            ).of(context),
+          ),
         ),
         FilledButton(
           onPressed: _submit,
-          child: Text(const S('Add', 'إضافة').of(context)),
+          child: Text(
+            const S(
+              'Add',
+              'إضافة',
+              fr: 'Ajouter',
+              es: 'Añadir',
+            ).of(context),
+          ),
         ),
       ],
     );

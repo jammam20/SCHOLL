@@ -5,18 +5,48 @@ import '../data/incidents_repository.dart';
 
 String incidentTypeLabel(IncidentType type, BuildContext context) {
   return switch (type) {
-    IncidentType.accident => const S('Accident', 'حادث').of(context),
-    IncidentType.vehicleBreakdown =>
-      const S('Vehicle breakdown', 'عطل في المركبة').of(context),
-    IncidentType.studentMedical =>
-      const S('Student medical', 'حالة طبية لطالب').of(context),
-    IncidentType.studentBehavior =>
-      const S('Student behavior', 'سلوك طالب').of(context),
-    IncidentType.routeBlocked =>
-      const S('Route blocked', 'الطريق مغلق').of(context),
-    IncidentType.policeEmergency =>
-      const S('Police / authorities', 'الشرطة / الجهات المختصة').of(context),
-    IncidentType.other => const S('Other', 'أخرى').of(context),
+    IncidentType.accident => const S(
+      'Accident',
+      'حادث',
+      fr: 'Accident',
+      es: 'Accidente',
+    ).of(context),
+    IncidentType.vehicleBreakdown => const S(
+      'Vehicle breakdown',
+      'عطل في المركبة',
+      fr: 'Panne du véhicule',
+      es: 'Avería del vehículo',
+    ).of(context),
+    IncidentType.studentMedical => const S(
+      'Student medical',
+      'حالة طبية لطالب',
+      fr: "Urgence médicale d'un élève",
+      es: 'Emergencia médica de un alumno',
+    ).of(context),
+    IncidentType.studentBehavior => const S(
+      'Student behavior',
+      'سلوك طالب',
+      fr: "Comportement d'un élève",
+      es: 'Comportamiento de un alumno',
+    ).of(context),
+    IncidentType.routeBlocked => const S(
+      'Route blocked',
+      'الطريق مغلق',
+      fr: 'Route bloquée',
+      es: 'Ruta bloqueada',
+    ).of(context),
+    IncidentType.policeEmergency => const S(
+      'Police / authorities',
+      'الشرطة / الجهات المختصة',
+      fr: 'Police / autorités',
+      es: 'Policía / autoridades',
+    ).of(context),
+    IncidentType.other => const S(
+      'Other',
+      'أخرى',
+      fr: 'Autre',
+      es: 'Otro',
+    ).of(context),
   };
 }
 
@@ -60,6 +90,8 @@ Future<void> showReportIncidentDialog(
     const S(
       'Incident reported to your school.',
       'تم إبلاغ مدرستك بالحادثة.',
+      fr: 'Incident signalé à votre école.',
+      es: 'Incidente reportado a tu escuela.',
     ).of(context),
   );
 }
@@ -92,7 +124,12 @@ class _IncidentDialogState extends State<_IncidentDialog> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              const S('Report incident', 'الإبلاغ عن حادثة').of(context),
+              const S(
+                'Report incident',
+                'الإبلاغ عن حادثة',
+                fr: 'Signaler un incident',
+                es: 'Reportar incidente',
+              ).of(context),
             ),
           ),
         ],
@@ -109,6 +146,11 @@ class _IncidentDialogState extends State<_IncidentDialog> {
                     'keeps running and parents are not alerted.',
                 'للمشكلات التشغيلية غير الطارئة. رحلتك تكمل عادي ومش هيتم '
                     'تنبيه أولياء الأمور.',
+                fr: 'Pour les problèmes opérationnels qui ne sont pas une '
+                    'urgence. Votre trajet continue et les parents ne sont '
+                    'pas alertés.',
+                es: 'Para problemas operativos que no son una emergencia. '
+                    'Tu viaje continúa y no se avisa a los padres.',
               ).of(context),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: colors.textSecondary,
@@ -118,7 +160,12 @@ class _IncidentDialogState extends State<_IncidentDialog> {
             DropdownButtonFormField<IncidentType>(
               initialValue: _type,
               decoration: InputDecoration(
-                labelText: const S('Type', 'النوع').of(context),
+                labelText: const S(
+                  'Type',
+                  'النوع',
+                  fr: 'Type',
+                  es: 'Tipo',
+                ).of(context),
               ),
               items: IncidentType.values
                   .map(
@@ -138,6 +185,8 @@ class _IncidentDialogState extends State<_IncidentDialog> {
                 labelText: const S(
                   'Notes (optional)',
                   'ملاحظات (اختياري)',
+                  fr: 'Notes (facultatif)',
+                  es: 'Notas (opcional)',
                 ).of(context),
               ),
             ),
@@ -147,14 +196,28 @@ class _IncidentDialogState extends State<_IncidentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(const S('Cancel', 'إلغاء').of(context)),
+          child: Text(
+            const S(
+              'Cancel',
+              'إلغاء',
+              fr: 'Annuler',
+              es: 'Cancelar',
+            ).of(context),
+          ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, (
             type: _type,
             notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
           )),
-          child: Text(const S('Report', 'إبلاغ').of(context)),
+          child: Text(
+            const S(
+              'Report',
+              'إبلاغ',
+              fr: 'Signaler',
+              es: 'Reportar',
+            ).of(context),
+          ),
         ),
       ],
     );

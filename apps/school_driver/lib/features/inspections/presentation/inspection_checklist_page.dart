@@ -6,14 +6,41 @@ import '../domain/inspection_checklist.dart';
 
 String inspectionItemLabel(InspectionItem item, BuildContext context) {
   return switch (item) {
-    InspectionItem.brakes => const S('Brakes', 'الفرامل').of(context),
-    InspectionItem.tires => const S('Tires', 'الإطارات').of(context),
-    InspectionItem.lights => const S('Lights', 'الأنوار').of(context),
-    InspectionItem.mirrors => const S('Mirrors', 'المرايا').of(context),
-    InspectionItem.doors => const S('Doors', 'الأبواب').of(context),
+    InspectionItem.brakes => const S(
+      'Brakes',
+      'الفرامل',
+      fr: 'Freins',
+      es: 'Frenos',
+    ).of(context),
+    InspectionItem.tires => const S(
+      'Tires',
+      'الإطارات',
+      fr: 'Pneus',
+      es: 'Neumáticos',
+    ).of(context),
+    InspectionItem.lights => const S(
+      'Lights',
+      'الأنوار',
+      fr: 'Feux',
+      es: 'Luces',
+    ).of(context),
+    InspectionItem.mirrors => const S(
+      'Mirrors',
+      'المرايا',
+      fr: 'Rétroviseurs',
+      es: 'Espejos',
+    ).of(context),
+    InspectionItem.doors => const S(
+      'Doors',
+      'الأبواب',
+      fr: 'Portes',
+      es: 'Puertas',
+    ).of(context),
     InspectionItem.emergencyEquipment => const S(
       'Emergency equipment',
       'معدات الطوارئ',
+      fr: "Équipement d'urgence",
+      es: 'Equipo de emergencia',
     ).of(context),
   };
 }
@@ -116,6 +143,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                 const S(
                   '🚨 Vehicle cannot start route',
                   '🚨 المركبة لا يمكنها بدء خط السير',
+                  fr: '🚨 Le véhicule ne peut pas démarrer la route',
+                  es: '🚨 El vehículo no puede iniciar la ruta',
                 ).of(dialogContext),
               ),
             ),
@@ -131,6 +160,12 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                     'started. Report this to your school administrator.',
                 'فشل بند حرج في هذا الفحص. لا يمكن بدء الرحلة. أبلغ أدمن '
                     'مدرستك بذلك.',
+                fr: 'Un élément critique a échoué à cette inspection. Le '
+                    "trajet ne peut pas démarrer. Signalez-le à "
+                    "l'administrateur de votre école.",
+                es: 'Un elemento crítico no pasó esta inspección. El viaje '
+                    'no puede iniciar. Repórtalo al administrador de tu '
+                    'escuela.',
               ).of(dialogContext),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -154,7 +189,12 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
             style: FilledButton.styleFrom(backgroundColor: colors.emergency),
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
-              const S('Understood', 'مفهوم').of(dialogContext),
+              const S(
+                'Understood',
+                'مفهوم',
+                fr: 'Compris',
+                es: 'Entendido',
+              ).of(dialogContext),
             ),
           ),
         ],
@@ -170,10 +210,17 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
       appBar: AppBar(
         title: Text(
           isPre
-              ? const S('Pre-trip inspection', 'فحص ما قبل الرحلة').of(context)
+              ? const S(
+                  'Pre-trip inspection',
+                  'فحص ما قبل الرحلة',
+                  fr: 'Inspection avant le trajet',
+                  es: 'Inspección antes del viaje',
+                ).of(context)
               : const S(
                   'Post-trip inspection',
                   'فحص ما بعد الرحلة',
+                  fr: 'Inspection après le trajet',
+                  es: 'Inspección después del viaje',
                 ).of(context),
         ),
       ),
@@ -190,10 +237,17 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
                 ? const S(
                     'Every item must pass before this trip can start.',
                     'يجب اجتياز كل بند قبل أن تبدأ هذه الرحلة.',
+                    fr: 'Chaque élément doit être validé avant que ce '
+                        'trajet puisse démarrer.',
+                    es: 'Cada elemento debe aprobarse antes de que este '
+                        'viaje pueda comenzar.',
                   ).of(context)
                 : const S(
                     'Record the condition the vehicle came back in.',
                     'سجّل الحالة التي عادت بها المركبة.',
+                    fr: "Enregistrez l'état dans lequel le véhicule est "
+                        'revenu.',
+                    es: 'Registra el estado en que regresó el vehículo.',
                   ).of(context),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: context.appColors.textSecondary,
@@ -217,6 +271,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
               labelText: const S(
                 'Notes (optional)',
                 'ملاحظات (اختياري)',
+                fr: 'Notes (facultatif)',
+                es: 'Notas (opcional)',
               ).of(context),
             ),
           ),
@@ -224,7 +280,12 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
           SizedBox(
             width: double.infinity,
             child: AppButton.primary(
-              label: const S('Submit inspection', 'إرسال الفحص').of(context),
+              label: const S(
+                'Submit inspection',
+                'إرسال الفحص',
+                fr: "Envoyer l'inspection",
+                es: 'Enviar inspección',
+              ).of(context),
               icon: Icons.assignment_turned_in_outlined,
               loading: _submitting,
               onPressed: _allAnswered ? _submit : null,
@@ -236,6 +297,8 @@ class _InspectionChecklistPageState extends State<InspectionChecklistPage> {
               const S(
                 'Answer every item to submit.',
                 'أجب عن كل بند حتى ترسل الفحص.',
+                fr: 'Répondez à chaque élément pour envoyer.',
+                es: 'Responde cada elemento para enviar.',
               ).of(context),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -284,12 +347,26 @@ class _ChecklistRow extends StatelessWidget {
             segments: [
               ButtonSegment(
                 value: true,
-                label: Text(const S('OK', 'سليم').of(context)),
+                label: Text(
+                  const S(
+                    'OK',
+                    'سليم',
+                    fr: 'Bon',
+                    es: 'Bien',
+                  ).of(context),
+                ),
                 icon: const Icon(Icons.check, size: 16),
               ),
               ButtonSegment(
                 value: false,
-                label: Text(const S('Not OK', 'غير سليم').of(context)),
+                label: Text(
+                  const S(
+                    'Not OK',
+                    'غير سليم',
+                    fr: 'Mauvais',
+                    es: 'Mal',
+                  ).of(context),
+                ),
                 icon: const Icon(Icons.close, size: 16),
               ),
             ],

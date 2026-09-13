@@ -23,7 +23,16 @@ class ParentDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(const S('Parent', 'ولي الأمر').of(context))),
+      appBar: AppBar(
+        title: Text(
+          const S(
+            'Parent',
+            'ولي الأمر',
+            fr: 'Parent',
+            es: 'Familiar',
+          ).of(context),
+        ),
+      ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance
             .collection('schools')
@@ -47,6 +56,8 @@ class ParentDetailPage extends StatelessWidget {
               title: const S(
                 'This parent is no longer in your school.',
                 'ولي الأمر ده مبقاش في مدرستك.',
+                fr: 'Ce parent ne fait plus partie de votre école.',
+                es: 'Este familiar ya no pertenece a tu colegio.',
               ).of(context),
             );
           }
@@ -106,7 +117,12 @@ class _ParentDetailBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl2),
 
             SectionHeader(
-              title: const S('Children', 'الأبناء').of(context),
+              title: const S(
+                'Children',
+                'الأبناء',
+                fr: 'Enfants',
+                es: 'Hijos',
+              ).of(context),
             ),
             const SizedBox(height: AppSpacing.sm),
             StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -127,6 +143,8 @@ class _ParentDetailBody extends StatelessWidget {
                     title: const S(
                       'No children linked yet',
                       'مفيش أبناء مرتبطين لسه',
+                      fr: 'Aucun enfant lié pour le moment',
+                      es: 'Aún no hay hijos vinculados',
                     ).of(context),
                   );
                 }
@@ -140,17 +158,43 @@ class _ParentDetailBody extends StatelessWidget {
                             ? const S(
                                 'Awaiting approval',
                                 'في انتظار الموافقة',
+                                fr: "En attente d'approbation",
+                                es: 'Pendiente de aprobación',
                               ).of(context)
                             : child.isAbsentToday
-                            ? const S('Absent today', 'غايب النهاردة')
-                                .of(context)
-                            : const S('Active', 'نشط').of(context),
+                            ? const S(
+                                'Absent today',
+                                'غايب النهاردة',
+                                fr: "Absent aujourd'hui",
+                                es: 'Ausente hoy',
+                              ).of(context)
+                            : const S(
+                                'Active',
+                                'نشط',
+                                fr: 'Actif',
+                                es: 'Activo',
+                              ).of(context),
                         trailing: StatusBadge(
                           label: !child.approved
-                              ? const S('Pending', 'قيد الانتظار').of(context)
+                              ? const S(
+                                  'Pending',
+                                  'قيد الانتظار',
+                                  fr: 'En attente',
+                                  es: 'Pendiente',
+                                ).of(context)
                               : child.isAbsentToday
-                              ? const S('Absent', 'غايب').of(context)
-                              : const S('Active', 'نشط').of(context),
+                              ? const S(
+                                  'Absent',
+                                  'غايب',
+                                  fr: 'Absent',
+                                  es: 'Ausente',
+                                ).of(context)
+                              : const S(
+                                  'Active',
+                                  'نشط',
+                                  fr: 'Actif',
+                                  es: 'Activo',
+                                ).of(context),
                           tone: !child.approved
                               ? StatusTone.warning
                               : child.isAbsentToday
@@ -165,7 +209,12 @@ class _ParentDetailBody extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl2),
 
             SectionHeader(
-              title: const S('Recent activity', 'النشاط الأخير').of(context),
+              title: const S(
+                'Recent activity',
+                'النشاط الأخير',
+                fr: 'Activité récente',
+                es: 'Actividad reciente',
+              ).of(context),
             ),
             const SizedBox(height: AppSpacing.sm),
             ActivityTimeline(

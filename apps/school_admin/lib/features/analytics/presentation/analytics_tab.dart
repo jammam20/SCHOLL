@@ -134,25 +134,45 @@ class _AnalyticsBody extends StatelessWidget {
 
     final statCards = [
       MetricStatCard(
-        label: const S('Active students', 'الطلاب النشطين').of(context),
+        label: const S(
+          'Active students',
+          'الطلاب النشطين',
+          fr: 'Élèves actifs',
+          es: 'Alumnos activos',
+        ).of(context),
         value: '$activeStudentCount',
         icon: Icons.people,
         tone: appColors.info,
       ),
       MetricStatCard(
-        label: const S('Active buses', 'الأتوبيسات النشطة').of(context),
+        label: const S(
+          'Active buses',
+          'الأتوبيسات النشطة',
+          fr: 'Bus actifs',
+          es: 'Autobuses activos',
+        ).of(context),
         value: '$activeBusCount',
         icon: Icons.directions_bus,
         tone: appColors.success,
       ),
       MetricStatCard(
-        label: const S('Approved drivers', 'السائقين المعتمدين').of(context),
+        label: const S(
+          'Approved drivers',
+          'السائقين المعتمدين',
+          fr: 'Chauffeurs approuvés',
+          es: 'Conductores aprobados',
+        ).of(context),
         value: '$approvedDrivers',
         icon: Icons.badge,
         tone: appColors.success,
       ),
       MetricStatCard(
-        label: const S('Trips today', 'رحلات النهارده').of(context),
+        label: const S(
+          'Trips today',
+          'رحلات النهارده',
+          fr: "Trajets aujourd'hui",
+          es: 'Viajes hoy',
+        ).of(context),
         value: '$tripsToday',
         icon: Icons.today,
       ),
@@ -188,7 +208,12 @@ class _AnalyticsBody extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl2),
           SectionHeader(
-            title: const S('Trip status mix', 'توزيع حالات الرحلات').of(context),
+            title: const S(
+              'Trip status mix',
+              'توزيع حالات الرحلات',
+              fr: 'Répartition des statuts de trajet',
+              es: 'Distribución de estados de viaje',
+            ).of(context),
           ),
           _TripStatusChart(trips: trips),
           const SizedBox(height: AppSpacing.xl2),
@@ -196,12 +221,19 @@ class _AnalyticsBody extends StatelessWidget {
             title: const S(
               'Trip volume, last 7 days',
               'حجم الرحلات آخر 7 أيام',
+              fr: 'Volume de trajets, 7 derniers jours',
+              es: 'Volumen de viajes, últimos 7 días',
             ).of(context),
           ),
           _WeeklyVolumeChart(trips: trips),
           const SizedBox(height: AppSpacing.xl2),
           SectionHeader(
-            title: const S('Students per route', 'الطلاب في كل خط').of(context),
+            title: const S(
+              'Students per route',
+              'الطلاب في كل خط',
+              fr: 'Élèves par itinéraire',
+              es: 'Alumnos por ruta',
+            ).of(context),
           ),
           _StudentsPerRouteChart(routeIds: studentRouteIds, routeNames: routeNames),
           const SizedBox(height: AppSpacing.xl2),
@@ -209,6 +241,8 @@ class _AnalyticsBody extends StatelessWidget {
             title: const S(
               'Driver approval status',
               'حالة اعتماد السائقين',
+              fr: "Statut d'approbation des chauffeurs",
+              es: 'Estado de aprobación de conductores',
             ).of(context),
           ),
           _DriverStatusChart(statuses: driverStatuses),
@@ -221,6 +255,56 @@ class _AnalyticsBody extends StatelessWidget {
     );
   }
 }
+
+/// Not centralized in `domain_labels.dart` — `_tripStatusLabel` is kept as
+/// a small per-file copy in every screen that needs it (see that file's
+/// doc comment), so this chart gets its own rather than reaching for a
+/// shared helper that doesn't exist.
+String _tripStatusLabel(TripStatus status, BuildContext context) =>
+    switch (status) {
+      TripStatus.scheduled => const S(
+        'Scheduled',
+        'مجدولة',
+        fr: 'Planifié',
+        es: 'Programado',
+      ).of(context),
+      TripStatus.starting => const S(
+        'Starting',
+        'جاري البدء',
+        fr: 'Démarrage',
+        es: 'Iniciando',
+      ).of(context),
+      TripStatus.active => const S(
+        'En route',
+        'في الطريق',
+        fr: 'En route',
+        es: 'En camino',
+      ).of(context),
+      TripStatus.paused => const S(
+        'Paused',
+        'متوقفة مؤقتاً',
+        fr: 'En pause',
+        es: 'En pausa',
+      ).of(context),
+      TripStatus.completed => const S(
+        'Completed',
+        'مكتملة',
+        fr: 'Terminé',
+        es: 'Completado',
+      ).of(context),
+      TripStatus.cancelled => const S(
+        'Cancelled',
+        'ملغاة',
+        fr: 'Annulé',
+        es: 'Cancelado',
+      ).of(context),
+      TripStatus.emergency => const S(
+        'Emergency',
+        'حالة طوارئ',
+        fr: 'Urgence',
+        es: 'Emergencia',
+      ).of(context),
+    };
 
 const _statusColors = {
   TripStatus.scheduled: Colors.blueGrey,
@@ -243,7 +327,12 @@ class _TripStatusChart extends StatelessWidget {
       return EmptyStateView(
         compact: true,
         icon: Icons.pie_chart_outline,
-        title: const S('No trips scheduled yet.', 'مفيش رحلات متجدولة لسه.').of(context),
+        title: const S(
+          'No trips scheduled yet.',
+          'مفيش رحلات متجدولة لسه.',
+          fr: 'Aucun trajet programmé pour le moment.',
+          es: 'Aún no hay viajes programados.',
+        ).of(context),
       );
     }
 
@@ -299,7 +388,8 @@ class _TripStatusChart extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          '${entry.key.name} (${entry.value})',
+                          '${_tripStatusLabel(entry.key, context)} '
+                          '(${entry.value})',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -417,6 +507,8 @@ class _StudentsPerRouteChart extends StatelessWidget {
         title: const S(
           'No students are assigned to a route yet.',
           'مفيش طلاب متحدد لهم خط لسه.',
+          fr: "Aucun élève n'est encore affecté à un itinéraire.",
+          es: 'Aún no hay alumnos asignados a una ruta.',
         ).of(context),
       );
     }
@@ -482,7 +574,12 @@ class _DriverStatusChart extends StatelessWidget {
       return EmptyStateView(
         compact: true,
         icon: Icons.badge_outlined,
-        title: const S('No drivers registered yet.', 'مفيش سائقين متسجلين لسه.').of(context),
+        title: const S(
+          'No drivers registered yet.',
+          'مفيش سائقين متسجلين لسه.',
+          fr: 'Aucun chauffeur enregistré pour le moment.',
+          es: 'Aún no hay conductores registrados.',
+        ).of(context),
       );
     }
 

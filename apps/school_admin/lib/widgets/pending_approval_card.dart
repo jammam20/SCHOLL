@@ -95,13 +95,19 @@ class _PendingApprovalCardState extends State<PendingApprovalCard> {
           const S(
             'Are you sure?',
             'متأكد؟',
+            fr: 'Êtes-vous sûr ?',
+            es: '¿Estás seguro?',
           ).of(context),
       confirmLabel: action.label,
       destructive: action.destructive,
       reasonController: reasonController,
       reasonHint: action.requiresReason
-          ? const S('Reason (visible in the audit log)', 'السبب (يظهر في سجل التدقيق)')
-              .of(context)
+          ? const S(
+              'Reason (visible in the audit log)',
+              'السبب (يظهر في سجل التدقيق)',
+              fr: "Motif (visible dans le journal d'audit)",
+              es: 'Motivo (visible en el registro de auditoría)',
+            ).of(context)
           : null,
       reasonRequired: action.requiresReason,
     );
@@ -123,7 +129,12 @@ class _PendingApprovalCardState extends State<PendingApprovalCard> {
       if (!mounted) return;
       AppSnackbar.success(
         context,
-        S('${action.label} — done.', '${action.label} — تم.').of(context),
+        S(
+          '${action.label} — done.',
+          '${action.label} — تم.',
+          fr: '${action.label} — terminé.',
+          es: '${action.label} — listo.',
+        ).of(context),
       );
     } catch (_) {
       if (!mounted) return;
@@ -132,6 +143,8 @@ class _PendingApprovalCardState extends State<PendingApprovalCard> {
         const S(
           "Couldn't complete that — try again.",
           'معرفناش نكمل — جرب تاني.',
+          fr: "Ça n'a pas abouti — réessayez.",
+          es: 'No se pudo completar — inténtalo de nuevo.',
         ).of(context),
       );
     } finally {

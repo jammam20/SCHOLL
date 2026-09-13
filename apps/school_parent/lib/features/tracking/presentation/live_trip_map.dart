@@ -255,12 +255,19 @@ class _LiveTripMapState extends State<LiveTripMap> {
           title: const S(
             "Pickup point isn't set yet",
             'نقطة الاستلام لسه مش متحددة',
+            fr: "Le point de ramassage n'est pas encore défini",
+            es: 'El punto de recogida aún no está definido',
           ).of(context),
           message: const S(
             'Your school sets it from the Students tab — the live map '
                 'turns on as soon as it does.',
             'المدرسة بتحددها من تبويب الطلاب — الخريطة المباشرة هتشتغل '
                 'أول ما تتحدد.',
+            fr:
+                "Votre école le définit depuis l'onglet Élèves — la carte "
+                "en direct s'active dès que c'est fait.",
+            es: 'Tu escuela lo define desde la pestaña Alumnos. El mapa '
+                'en vivo se activará en cuanto lo haga.',
           ).of(context),
         ),
       );
@@ -651,7 +658,12 @@ class _MapSurface extends StatelessWidget {
                 ),
             zIndexInt: 3,
             infoWindow: InfoWindow(
-              title: const S('School bus', 'أتوبيس المدرسة').of(context),
+              title: const S(
+                'School bus',
+                'أتوبيس المدرسة',
+                fr: 'Bus scolaire',
+                es: 'Autobús escolar',
+              ).of(context),
             ),
           ),
         Marker(
@@ -668,8 +680,17 @@ class _MapSurface extends StatelessWidget {
                 ? S(
                     'Stop ${tripEta.stopNumber} of ${tripEta.totalStops}',
                     'المحطة ${tripEta.stopNumber} من ${tripEta.totalStops}',
+                    fr: 'Arrêt ${tripEta.stopNumber} sur '
+                        '${tripEta.totalStops}',
+                    es: 'Parada ${tripEta.stopNumber} de '
+                        '${tripEta.totalStops}',
                   ).of(context)
-                : const S('Your pickup point', 'نقطة استلامك').of(context),
+                : const S(
+                    'Your pickup point',
+                    'نقطة استلامك',
+                    fr: 'Votre point de ramassage',
+                    es: 'Tu punto de recogida',
+                  ).of(context),
           ),
         ),
         if (schoolPoint != null)
@@ -686,10 +707,17 @@ class _MapSurface extends StatelessWidget {
             infoWindow: InfoWindow(
               title: school?.name.isNotEmpty == true
                   ? school!.name
-                  : const S('School', 'المدرسة').of(context),
+                  : const S(
+                      'School',
+                      'المدرسة',
+                      fr: 'École',
+                      es: 'Escuela',
+                    ).of(context),
               snippet: const S(
                 'Final stop on this trip',
                 'آخر محطة في الرحلة',
+                fr: 'Dernier arrêt de ce trajet',
+                es: 'Última parada de este viaje',
               ).of(context),
             ),
           ),

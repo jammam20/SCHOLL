@@ -75,7 +75,12 @@ class _TripDetailPageState extends State<TripDetailPage> {
           appBar: AppBar(
             title: Text(
               trip.routeName.isEmpty
-                  ? S('Route ${trip.routeId}', 'خط سير ${trip.routeId}').of(context)
+                  ? S(
+                      'Route ${trip.routeId}',
+                      'خط سير ${trip.routeId}',
+                      fr: 'Route ${trip.routeId}',
+                      es: 'Ruta ${trip.routeId}',
+                    ).of(context)
                   : trip.routeName,
             ),
           ),
@@ -184,13 +189,48 @@ StatusTone tripStatusTone(TripStatus status) => switch (status) {
 };
 
 String tripStatusLabel(TripStatus status, BuildContext context) => switch (status) {
-  TripStatus.scheduled => const S('Scheduled', 'مجدولة').of(context),
-  TripStatus.starting => const S('Starting', 'جاري البدء').of(context),
-  TripStatus.active => const S('En route', 'في الطريق').of(context),
-  TripStatus.paused => const S('Paused', 'متوقفة مؤقتاً').of(context),
-  TripStatus.completed => const S('Completed', 'مكتملة').of(context),
-  TripStatus.cancelled => const S('Cancelled', 'ملغاة').of(context),
-  TripStatus.emergency => const S('Emergency', 'حالة طوارئ').of(context),
+  TripStatus.scheduled => const S(
+    'Scheduled',
+    'مجدولة',
+    fr: 'Prévu',
+    es: 'Programado',
+  ).of(context),
+  TripStatus.starting => const S(
+    'Starting',
+    'جاري البدء',
+    fr: 'Démarrage',
+    es: 'Iniciando',
+  ).of(context),
+  TripStatus.active => const S(
+    'En route',
+    'في الطريق',
+    fr: 'En route',
+    es: 'En camino',
+  ).of(context),
+  TripStatus.paused => const S(
+    'Paused',
+    'متوقفة مؤقتاً',
+    fr: 'En pause',
+    es: 'Pausado',
+  ).of(context),
+  TripStatus.completed => const S(
+    'Completed',
+    'مكتملة',
+    fr: 'Terminé',
+    es: 'Completado',
+  ).of(context),
+  TripStatus.cancelled => const S(
+    'Cancelled',
+    'ملغاة',
+    fr: 'Annulé',
+    es: 'Cancelado',
+  ).of(context),
+  TripStatus.emergency => const S(
+    'Emergency',
+    'حالة طوارئ',
+    fr: 'Urgence',
+    es: 'Emergencia',
+  ).of(context),
 };
 
 /// Route name, direction, bus and scheduled time — everything the compact
@@ -218,8 +258,18 @@ class _TripSummaryHeader extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Text(
               trip.direction == TripDirection.returnTrip
-                  ? const S('← Return home', '← رجوع للمنزل').of(context)
-                  : const S('→ To school', '→ للمدرسة').of(context),
+                  ? const S(
+                      '← Return home',
+                      '← رجوع للمنزل',
+                      fr: '← Retour à la maison',
+                      es: '← Regreso a casa',
+                    ).of(context)
+                  : const S(
+                      '→ To school',
+                      '→ للمدرسة',
+                      fr: "→ Vers l'école",
+                      es: '→ A la escuela',
+                    ).of(context),
               style: theme.textTheme.labelLarge?.copyWith(
                 color: colors.textSecondary,
                 fontWeight: FontWeight.w700,
@@ -297,7 +347,12 @@ class _TripActions {
         return [
           full(
             primary(
-              const S('Start trip', 'ابدأ الرحلة').of(context),
+              const S(
+                'Start trip',
+                'ابدأ الرحلة',
+                fr: 'Démarrer le trajet',
+                es: 'Iniciar viaje',
+              ).of(context),
               Icons.play_arrow,
               () => _startTrip(context, alreadyStarting: false),
             ),
@@ -307,7 +362,12 @@ class _TripActions {
         return [
           full(
             primary(
-              const S('Continue starting', 'كمّل البدء').of(context),
+              const S(
+                'Continue starting',
+                'كمّل البدء',
+                fr: 'Continuer le démarrage',
+                es: 'Continuar el inicio',
+              ).of(context),
               Icons.play_arrow,
               () => _startTrip(context, alreadyStarting: true),
             ),
@@ -317,12 +377,22 @@ class _TripActions {
         return [
           row(
             primary(
-              const S('Complete', 'إنهاء').of(context),
+              const S(
+                'Complete',
+                'إنهاء',
+                fr: 'Terminer',
+                es: 'Completar',
+              ).of(context),
               Icons.check,
               () => _completeTrip(context),
             ),
             secondary(
-              const S('Pause', 'وقف مؤقت').of(context),
+              const S(
+                'Pause',
+                'وقف مؤقت',
+                fr: 'Pause',
+                es: 'Pausar',
+              ).of(context),
               Icons.pause,
               () => bloc.add(TripPauseRequested(schoolId: schoolId, tripId: trip.id)),
             ),
@@ -340,12 +410,22 @@ class _TripActions {
         return [
           row(
             primary(
-              const S('Resume', 'استكمال').of(context),
+              const S(
+                'Resume',
+                'استكمال',
+                fr: 'Reprendre',
+                es: 'Reanudar',
+              ).of(context),
               Icons.play_arrow,
               () => bloc.add(TripResumeRequested(schoolId: schoolId, tripId: trip.id)),
             ),
             secondary(
-              const S('Cancel', 'إلغاء').of(context),
+              const S(
+                'Cancel',
+                'إلغاء',
+                fr: 'Annuler',
+                es: 'Cancelar',
+              ).of(context),
               Icons.close,
               () => bloc.add(TripCancelRequested(schoolId: schoolId, tripId: trip.id)),
             ),
@@ -363,12 +443,22 @@ class _TripActions {
         return [
           row(
             primary(
-              const S('Complete', 'إنهاء').of(context),
+              const S(
+                'Complete',
+                'إنهاء',
+                fr: 'Terminer',
+                es: 'Completar',
+              ).of(context),
               Icons.check,
               () => _completeTrip(context),
             ),
             secondary(
-              const S('Cancel', 'إلغاء').of(context),
+              const S(
+                'Cancel',
+                'إلغاء',
+                fr: 'Annuler',
+                es: 'Cancelar',
+              ).of(context),
               Icons.close,
               () => bloc.add(TripCancelRequested(schoolId: schoolId, tripId: trip.id)),
             ),
@@ -398,8 +488,14 @@ class _TripActions {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S("You can't start this trip yet", 'لسه معندكش تبدأ الرحلة')
-            .of(dialogContext)),
+        title: Text(
+          const S(
+            "You can't start this trip yet",
+            'لسه معندكش تبدأ الرحلة',
+            fr: 'Vous ne pouvez pas encore démarrer ce trajet',
+            es: 'Aún no puedes iniciar este viaje',
+          ).of(dialogContext),
+        ),
         content: Directionality(
           textDirection: TextDirection.ltr,
           child: Text(
@@ -409,13 +505,27 @@ class _TripActions {
                   'onward.',
               'مجدولة الساعة ${timeFormat.format(trip.scheduledAt)}. '
                   'مدرستك بتسمح بالبدء من الساعة ${timeFormat.format(earliest)}.',
+              fr: 'Prévu pour ${timeFormat.format(trip.scheduledAt)}. '
+                  'Votre école autorise le démarrage à partir de '
+                  '${timeFormat.format(earliest)}.',
+              es: 'Programado para las '
+                  '${timeFormat.format(trip.scheduledAt)}. Tu escuela '
+                  'permite iniciar a partir de las '
+                  '${timeFormat.format(earliest)}.',
             ).of(dialogContext),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(const S('OK', 'تمام').of(dialogContext)),
+            child: Text(
+              const S(
+                'OK',
+                'تمام',
+                fr: 'OK',
+                es: 'Aceptar',
+              ).of(dialogContext),
+            ),
           ),
         ],
       ),
@@ -477,13 +587,32 @@ class _TripActions {
 
     final wantsCheck = await showAppConfirmDialog(
       context,
-      title: const S('Post-trip inspection', 'فحص ما بعد الرحلة').of(context),
+      title: const S(
+        'Post-trip inspection',
+        'فحص ما بعد الرحلة',
+        fr: 'Inspection après le trajet',
+        es: 'Inspección después del viaje',
+      ).of(context),
       message: const S(
         'Record the vehicle check for the end of this trip now?',
         'تسجّل فحص المركبة لنهاية الرحلة دي دلوقتي؟',
+        fr: 'Enregistrer maintenant le contrôle du véhicule pour la fin '
+            'de ce trajet ?',
+        es: '¿Registrar ahora la revisión del vehículo para el final de '
+            'este viaje?',
       ).of(context),
-      confirmLabel: const S('Start check', 'ابدأ الفحص').of(context),
-      cancelLabel: const S('Not now', 'مش دلوقتي').of(context),
+      confirmLabel: const S(
+        'Start check',
+        'ابدأ الفحص',
+        fr: 'Démarrer le contrôle',
+        es: 'Iniciar revisión',
+      ).of(context),
+      cancelLabel: const S(
+        'Not now',
+        'مش دلوقتي',
+        fr: 'Pas maintenant',
+        es: 'Ahora no',
+      ).of(context),
     );
     if (wantsCheck != true || !context.mounted) return;
 
@@ -534,7 +663,12 @@ class _TripActions {
       side: BorderSide(color: colors.info.withValues(alpha: 0.6)),
       foregroundColor: colors.info,
       icon: Icons.assignment_late_outlined,
-      label: const S('Report incident', 'الإبلاغ عن حادثة').of(context),
+      label: const S(
+        'Report incident',
+        'الإبلاغ عن حادثة',
+        fr: 'Signaler un incident',
+        es: 'Reportar incidente',
+      ).of(context),
       onPressed: () => showReportIncidentDialog(
         context,
         schoolId: schoolId,
@@ -552,7 +686,12 @@ class _TripActions {
       side: BorderSide(color: colors.emergency, width: 1.6),
       foregroundColor: colors.emergency,
       icon: Icons.warning_amber_rounded,
-      label: const S('Emergency', 'طوارئ').of(context),
+      label: const S(
+        'Emergency',
+        'طوارئ',
+        fr: 'Urgence',
+        es: 'Emergencia',
+      ).of(context),
       onPressed: onPressed,
     );
   }
@@ -582,12 +721,36 @@ class _TripActions {
 
 String _emergencyTypeLabel(EmergencyType type, BuildContext context) {
   return switch (type) {
-    EmergencyType.accident => const S('Accident', 'حادث').of(context),
-    EmergencyType.vehicleBreakdown =>
-      const S('Vehicle breakdown', 'عطل في المركبة').of(context),
-    EmergencyType.medical => const S('Medical', 'حالة طبية').of(context),
-    EmergencyType.security => const S('Security', 'أمنية').of(context),
-    EmergencyType.other => const S('Other', 'أخرى').of(context),
+    EmergencyType.accident => const S(
+      'Accident',
+      'حادث',
+      fr: 'Accident',
+      es: 'Accidente',
+    ).of(context),
+    EmergencyType.vehicleBreakdown => const S(
+      'Vehicle breakdown',
+      'عطل في المركبة',
+      fr: 'Panne du véhicule',
+      es: 'Avería del vehículo',
+    ).of(context),
+    EmergencyType.medical => const S(
+      'Medical',
+      'حالة طبية',
+      fr: 'Médical',
+      es: 'Médico',
+    ).of(context),
+    EmergencyType.security => const S(
+      'Security',
+      'أمنية',
+      fr: 'Sécurité',
+      es: 'Seguridad',
+    ).of(context),
+    EmergencyType.other => const S(
+      'Other',
+      'أخرى',
+      fr: 'Autre',
+      es: 'Otro',
+    ).of(context),
   };
 }
 
@@ -621,7 +784,12 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              const S('Report emergency', 'الإبلاغ عن حالة طوارئ').of(context),
+              const S(
+                'Report emergency',
+                'الإبلاغ عن حالة طوارئ',
+                fr: 'Signaler une urgence',
+                es: 'Reportar una emergencia',
+              ).of(context),
             ),
           ),
         ],
@@ -635,7 +803,12 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
             DropdownButtonFormField<EmergencyType>(
               initialValue: _type,
               decoration: InputDecoration(
-                labelText: const S('Type', 'النوع').of(context),
+                labelText: const S(
+                  'Type',
+                  'النوع',
+                  fr: 'Type',
+                  es: 'Tipo',
+                ).of(context),
               ),
               items: EmergencyType.values
                   .map(
@@ -655,6 +828,8 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
                 labelText: const S(
                   'Notes (optional)',
                   'ملاحظات (اختياري)',
+                  fr: 'Notes (facultatif)',
+                  es: 'Notas (opcional)',
                 ).of(context),
               ),
             ),
@@ -664,7 +839,14 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text(const S('Cancel', 'إلغاء').of(context)),
+          child: Text(
+            const S(
+              'Cancel',
+              'إلغاء',
+              fr: 'Annuler',
+              es: 'Cancelar',
+            ).of(context),
+          ),
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: colors.emergency),
@@ -672,7 +854,14 @@ class _EmergencyDialogState extends State<_EmergencyDialog> {
             type: _type,
             note: _note.text.trim().isEmpty ? null : _note.text.trim(),
           )),
-          child: Text(const S('Report', 'إبلاغ').of(context)),
+          child: Text(
+            const S(
+              'Report',
+              'إبلاغ',
+              fr: 'Signaler',
+              es: 'Reportar',
+            ).of(context),
+          ),
         ),
       ],
     );
@@ -751,7 +940,14 @@ class _ActiveEmergencyBanner extends StatelessWidget {
                     emergencyId: emergency.id,
                   ),
                 ),
-                child: Text(const S('Mark resolved', 'تم الحل').of(context)),
+                child: Text(
+                  const S(
+                    'Mark resolved',
+                    'تم الحل',
+                    fr: 'Marquer comme résolu',
+                    es: 'Marcar como resuelto',
+                  ).of(context),
+                ),
               ),
             ],
           ),

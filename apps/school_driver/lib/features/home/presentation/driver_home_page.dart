@@ -67,12 +67,22 @@ class _DriverHomePageState extends State<DriverHomePage> {
           NavigationDestination(
             icon: const Icon(Icons.directions_bus_outlined),
             selectedIcon: const Icon(Icons.directions_bus_filled),
-            label: const S('Trips', 'الرحلات').of(context),
+            label: const S(
+              'Trips',
+              'الرحلات',
+              fr: 'Trajets',
+              es: 'Viajes',
+            ).of(context),
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person),
-            label: const S('Profile', 'حسابي').of(context),
+            label: const S(
+              'Profile',
+              'حسابي',
+              fr: 'Profil',
+              es: 'Perfil',
+            ).of(context),
           ),
         ],
       ),
@@ -113,7 +123,12 @@ class _TripsTab extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            S('Welcome, ${user.name}', 'أهلاً بيك، ${user.name}').of(context),
+            S(
+              'Welcome, ${user.name}',
+              'أهلاً بيك، ${user.name}',
+              fr: 'Bienvenue, ${user.name}',
+              es: 'Bienvenido, ${user.name}',
+            ).of(context),
           ),
         ),
         // The one-tap SOS floats above the whole trip list rather than
@@ -184,11 +199,17 @@ class _TripsTab extends StatelessWidget {
                   title: const S(
                     'No trips assigned yet',
                     'مفيش رحلات متعينة لسه',
+                    fr: 'Aucun trajet assigné pour le moment',
+                    es: 'Aún no tienes viajes asignados',
                   ).of(context),
                   message: const S(
                     'Your school administrator will assign a route before '
                         'your next trip.',
                     'أدمن مدرستك هيعيّنلك خط سير قبل رحلتك الجاية.',
+                    fr: 'Votre administrateur scolaire assignera un '
+                        'itinéraire avant votre prochain trajet.',
+                    es: 'El administrador de tu escuela asignará una ruta '
+                        'antes de tu próximo viaje.',
                   ).of(context),
                 );
               } else {
@@ -274,6 +295,8 @@ class _SosButton extends StatelessWidget {
       const S(
         'SOS sent. Your school has been alerted.',
         'تم إرسال نداء الطوارئ. تم تنبيه مدرستك.',
+        fr: 'SOS envoyé. Votre école a été alertée.',
+        es: 'SOS enviado. Se ha alertado a tu escuela.',
       ).of(context),
     );
   }
@@ -287,6 +310,8 @@ class _SosButton extends StatelessWidget {
       label: const S(
         'SOS. Press and hold to raise an emergency.',
         'نداء طوارئ. اضغط مطولاً للإبلاغ عن حالة طوارئ.',
+        fr: 'SOS. Appuyez de manière prolongée pour signaler une urgence.',
+        es: 'SOS. Mantén presionado para reportar una emergencia.',
       ).of(context),
       child: Material(
         color: colors.emergency,
@@ -300,6 +325,9 @@ class _SosButton extends StatelessWidget {
             const S(
               'Press and hold SOS to raise an emergency.',
               'اضغط مطولاً على زر الطوارئ للإبلاغ.',
+              fr: 'Appuyez de manière prolongée sur SOS pour signaler une '
+                  'urgence.',
+              es: 'Mantén presionado SOS para reportar una emergencia.',
             ).of(context),
           ),
           child: Padding(
@@ -313,7 +341,12 @@ class _SosButton extends StatelessWidget {
                 const Icon(Icons.sos_rounded, color: Colors.white),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  const S('Hold for SOS', 'اضغط مطولاً للطوارئ').of(context),
+                  const S(
+                    'Hold for SOS',
+                    'اضغط مطولاً للطوارئ',
+                    fr: 'Maintenir pour SOS',
+                    es: 'Mantener para SOS',
+                  ).of(context),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -409,8 +442,12 @@ class _TripCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             trip.routeName.isEmpty
-                                ? S('Route ${trip.routeId}', 'خط سير ${trip.routeId}')
-                                      .of(context)
+                                ? S(
+                                    'Route ${trip.routeId}',
+                                    'خط سير ${trip.routeId}',
+                                    fr: 'Route ${trip.routeId}',
+                                    es: 'Ruta ${trip.routeId}',
+                                  ).of(context)
                                 : trip.routeName,
                             style: theme.textTheme.titleMedium,
                             overflow: TextOverflow.ellipsis,
@@ -425,8 +462,18 @@ class _TripCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       trip.direction == TripDirection.returnTrip
-                          ? const S('← Return home', '← رجوع للمنزل').of(context)
-                          : const S('→ To school', '→ للمدرسة').of(context),
+                          ? const S(
+                              '← Return home',
+                              '← رجوع للمنزل',
+                              fr: '← Retour à la maison',
+                              es: '← Regreso a casa',
+                            ).of(context)
+                          : const S(
+                              '→ To school',
+                              '→ للمدرسة',
+                              fr: "→ Vers l'école",
+                              es: '→ A la escuela',
+                            ).of(context),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colors.textSecondary,
                         fontWeight: FontWeight.w600,

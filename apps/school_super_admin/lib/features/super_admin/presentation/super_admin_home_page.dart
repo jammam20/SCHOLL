@@ -44,22 +44,42 @@ class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
           NavigationDestination(
             icon: const Icon(Icons.dashboard_outlined),
             selectedIcon: const Icon(Icons.dashboard),
-            label: const S('Dashboard', 'الرئيسية').of(context),
+            label: const S(
+              'Dashboard',
+              'الرئيسية',
+              fr: 'Tableau de bord',
+              es: 'Panel',
+            ).of(context),
           ),
           NavigationDestination(
             icon: const Icon(Icons.school_outlined),
             selectedIcon: const Icon(Icons.school),
-            label: const S('Schools', 'المدارس').of(context),
+            label: const S(
+              'Schools',
+              'المدارس',
+              fr: 'Écoles',
+              es: 'Escuelas',
+            ).of(context),
           ),
           NavigationDestination(
             icon: const Icon(Icons.pending_actions_outlined),
             selectedIcon: const Icon(Icons.pending_actions),
-            label: const S('Requests', 'الطلبات').of(context),
+            label: const S(
+              'Requests',
+              'الطلبات',
+              fr: 'Demandes',
+              es: 'Solicitudes',
+            ).of(context),
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person),
-            label: const S('Profile', 'حسابي').of(context),
+            label: const S(
+              'Profile',
+              'حسابي',
+              fr: 'Profil',
+              es: 'Perfil',
+            ).of(context),
           ),
         ],
       ),
@@ -76,7 +96,14 @@ class _DashboardTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Dashboard', 'الرئيسية').of(context)),
+        title: Text(
+          const S(
+            'Dashboard',
+            'الرئيسية',
+            fr: 'Tableau de bord',
+            es: 'Panel',
+          ).of(context),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: SuperAdminRepository().watchSchools(),
@@ -101,7 +128,12 @@ class _DashboardTab extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.xl2),
                 children: [
                   Text(
-                    S('Welcome, $name', 'أهلاً بيك، $name').of(context),
+                    S(
+                      'Welcome, $name',
+                      'أهلاً بيك، $name',
+                      fr: 'Bienvenue, $name',
+                      es: 'Bienvenido, $name',
+                    ).of(context),
                     style: Theme.of(context).textTheme.headlineSmall
                         ?.copyWith(
                           fontWeight: FontWeight.w800,
@@ -113,6 +145,8 @@ class _DashboardTab extends StatelessWidget {
                     const S(
                       "Here's your platform at a glance.",
                       'دي نظرة عامة على المنصة.',
+                      fr: 'Voici un aperçu de votre plateforme.',
+                      es: 'Aquí tienes un vistazo general de tu plataforma.',
                     ).of(context),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: context.appColors.textSecondary,
@@ -132,6 +166,8 @@ class _DashboardTab extends StatelessWidget {
                             label: const S(
                               'Total schools',
                               'إجمالي المدارس',
+                              fr: 'Total des écoles',
+                              es: 'Total de escuelas',
                             ).of(context),
                             value: '${schools.length}',
                           ),
@@ -143,6 +179,8 @@ class _DashboardTab extends StatelessWidget {
                             label: const S(
                               'Active schools',
                               'مدارس نشطة',
+                              fr: 'Écoles actives',
+                              es: 'Escuelas activas',
                             ).of(context),
                             value: '$activeSchools',
                             tone: context.appColors.success,
@@ -155,6 +193,8 @@ class _DashboardTab extends StatelessWidget {
                             label: const S(
                               'Pending requests',
                               'طلبات معلّقة',
+                              fr: 'Demandes en attente',
+                              es: 'Solicitudes pendientes',
                             ).of(context),
                             value: '$pendingCount',
                             tone: context.appColors.warning,
@@ -220,11 +260,27 @@ class _SchoolsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(const S('Schools', 'المدارس').of(context))),
+      appBar: AppBar(
+        title: Text(
+          const S(
+            'Schools',
+            'المدارس',
+            fr: 'Écoles',
+            es: 'Escuelas',
+          ).of(context),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _createSchool(context),
         icon: const Icon(Icons.add),
-        label: Text(const S('School', 'مدرسة').of(context)),
+        label: Text(
+          const S(
+            'School',
+            'مدرسة',
+            fr: 'École',
+            es: 'Escuela',
+          ).of(context),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: SuperAdminRepository().watchSchools(),
@@ -243,14 +299,28 @@ class _SchoolsTab extends StatelessWidget {
           if (docs.isEmpty) {
             return EmptyStateView(
               icon: Icons.school_outlined,
-              title: const S('No schools yet.', 'مفيش مدارس لسه.').of(
-                context,
-              ),
+              title: const S(
+                'No schools yet.',
+                'مفيش مدارس لسه.',
+                fr: "Aucune école pour l'instant.",
+                es: 'Todavía no hay escuelas.',
+              ).of(context),
               message: const S(
                 'Add your first school to give it a join code.',
                 'ضيف أول مدرسة عشان تاخد كود انضمام.',
+                fr:
+                    "Ajoutez votre première école pour lui attribuer un "
+                    "code d'inscription.",
+                es:
+                    'Añade tu primera escuela para asignarle un código de '
+                    'inscripción.',
               ).of(context),
-              actionLabel: const S('Add school', 'إضافة مدرسة').of(context),
+              actionLabel: const S(
+                'Add school',
+                'إضافة مدرسة',
+                fr: 'Ajouter une école',
+                es: 'Añadir escuela',
+              ).of(context),
               onAction: () => _createSchool(context),
             );
           }
@@ -329,8 +399,18 @@ class _SchoolsTab extends StatelessWidget {
                       children: [
                         StatusBadge(
                           label: isActive
-                              ? const S('Active', 'نشطة').of(context)
-                              : const S('Inactive', 'غير نشطة').of(context),
+                              ? const S(
+                                  'Active',
+                                  'نشطة',
+                                  fr: 'Active',
+                                  es: 'Activa',
+                                ).of(context)
+                              : const S(
+                                  'Inactive',
+                                  'غير نشطة',
+                                  fr: 'Inactive',
+                                  es: 'Inactiva',
+                                ).of(context),
                           tone: isActive
                               ? StatusTone.success
                               : StatusTone.neutral,
@@ -362,7 +442,14 @@ class _SchoolsTab extends StatelessWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(const S('Add school', 'إضافة مدرسة').of(dialogContext)),
+        title: Text(
+          const S(
+            'Add school',
+            'إضافة مدرسة',
+            fr: 'Ajouter une école',
+            es: 'Añadir escuela',
+          ).of(dialogContext),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -372,6 +459,8 @@ class _SchoolsTab extends StatelessWidget {
                 labelText: const S(
                   'School name',
                   'اسم المدرسة',
+                  fr: "Nom de l'école",
+                  es: 'Nombre de la escuela',
                 ).of(dialogContext),
               ),
             ),
@@ -383,10 +472,18 @@ class _SchoolsTab extends StatelessWidget {
                 labelText: const S(
                   'Join code',
                   'كود الانضمام',
+                  fr: "Code d'inscription",
+                  es: 'Código de inscripción',
                 ).of(dialogContext),
                 helperText: const S(
                   "The school's owner uses this to self-register.",
                   'صاحب المدرسة هيستخدم الكود ده عشان يسجل نفسه.',
+                  fr:
+                      "Le responsable de l'école l'utilise pour s'inscrire "
+                      "lui-même.",
+                  es:
+                      'El responsable de la escuela lo usa para '
+                      'registrarse por su cuenta.',
                 ).of(dialogContext),
               ),
             ),
@@ -395,11 +492,25 @@ class _SchoolsTab extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+            child: Text(
+              const S(
+                'Cancel',
+                'إلغاء',
+                fr: 'Annuler',
+                es: 'Cancelar',
+              ).of(dialogContext),
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(const S('Create', 'إنشاء').of(dialogContext)),
+            child: Text(
+              const S(
+                'Create',
+                'إنشاء',
+                fr: 'Créer',
+                es: 'Crear',
+              ).of(dialogContext),
+            ),
           ),
         ],
       ),
@@ -416,7 +527,12 @@ class _SchoolsTab extends StatelessWidget {
         if (context.mounted) {
           AppSnackbar.success(
             context,
-            const S('School created.', 'اتعملت المدرسة.').of(context),
+            const S(
+              'School created.',
+              'اتعملت المدرسة.',
+              fr: 'École créée.',
+              es: 'Escuela creada.',
+            ).of(context),
           );
         }
       } on SchoolCodeTakenException catch (error) {
@@ -428,6 +544,12 @@ class _SchoolsTab extends StatelessWidget {
                   '— pick a different one.',
               'كود الانضمام "${error.code}" مستخدم بالفعل لمدرسة تانية — '
                   'اختار كود مختلف.',
+              fr:
+                  "Le code d'inscription « ${error.code} » est déjà "
+                  "utilisé par une autre école — choisissez-en un autre.",
+              es:
+                  'El código de inscripción "${error.code}" ya está en uso '
+                  'por otra escuela — elige uno diferente.',
             ).of(context),
           );
         }
@@ -435,8 +557,12 @@ class _SchoolsTab extends StatelessWidget {
         if (context.mounted) {
           AppSnackbar.error(
             context,
-            const S("Couldn't create the school — try again.", 'معرفناش نعمل المدرسة — جرب تاني.')
-                .of(context),
+            const S(
+              "Couldn't create the school — try again.",
+              'معرفناش نعمل المدرسة — جرب تاني.',
+              fr: "Impossible de créer l'école — réessayez.",
+              es: 'No se pudo crear la escuela — inténtalo de nuevo.',
+            ).of(context),
           );
         }
       }
@@ -460,7 +586,14 @@ class _PendingAdminsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Pending Admins', 'طلبات الأدمن').of(context)),
+        title: Text(
+          const S(
+            'Pending Admins',
+            'طلبات الأدمن',
+            fr: 'Administrateurs en attente',
+            es: 'Administradores pendientes',
+          ).of(context),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: SuperAdminRepository().watchPendingAdmins(),
@@ -482,10 +615,18 @@ class _PendingAdminsTab extends StatelessWidget {
               title: const S(
                 'No pending admin requests.',
                 'مفيش طلبات أدمن معلّقة.',
+                fr: "Aucune demande d'administrateur en attente.",
+                es: 'No hay solicitudes de administrador pendientes.',
               ).of(context),
               message: const S(
                 "New requests from a school's first admin will show up here.",
                 'الطلبات الجديدة من أول أدمن للمدرسة هتظهر هنا.',
+                fr:
+                    "Les nouvelles demandes du premier administrateur "
+                    "d'une école s'affichent ici.",
+                es:
+                    'Aquí aparecerán las nuevas solicitudes del primer '
+                    'administrador de una escuela.',
               ).of(context),
             );
           }
@@ -538,14 +679,28 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
   Future<void> _approve() async {
     final confirmed = await showAppConfirmDialog(
       context,
-      title: const S('Approve this admin?', 'الموافقة على الأدمن ده؟').of(
-        context,
-      ),
+      title: const S(
+        'Approve this admin?',
+        'الموافقة على الأدمن ده؟',
+        fr: 'Approuver cet administrateur ?',
+        es: '¿Aprobar a este administrador?',
+      ).of(context),
       message: S(
         '${widget.displayName} will get full admin access to their school.',
         '${widget.displayName} هياخد صلاحيات أدمن كاملة على مدرسته.',
+        fr:
+            '${widget.displayName} obtiendra un accès administrateur '
+            'complet à son école.',
+        es:
+            '${widget.displayName} obtendrá acceso completo de '
+            'administrador a su escuela.',
       ).of(context),
-      confirmLabel: const S('Approve', 'موافقة').of(context),
+      confirmLabel: const S(
+        'Approve',
+        'موافقة',
+        fr: 'Approuver',
+        es: 'Aprobar',
+      ).of(context),
     );
     if (confirmed != true || !mounted) return;
 
@@ -558,14 +713,23 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
       if (!mounted) return;
       AppSnackbar.success(
         context,
-        const S('Admin approved.', 'تمت الموافقة على الأدمن.').of(context),
+        const S(
+          'Admin approved.',
+          'تمت الموافقة على الأدمن.',
+          fr: 'Administrateur approuvé.',
+          es: 'Administrador aprobado.',
+        ).of(context),
       );
     } catch (_) {
       if (!mounted) return;
       AppSnackbar.error(
         context,
-        const S("Couldn't approve — try again.", 'معرفناش نوافق — جرب تاني.')
-            .of(context),
+        const S(
+          "Couldn't approve — try again.",
+          'معرفناش نوافق — جرب تاني.',
+          fr: "Impossible d'approuver — réessayez.",
+          es: 'No se pudo aprobar — inténtalo de nuevo.',
+        ).of(context),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -576,17 +740,31 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
     final reasonController = TextEditingController();
     final confirmed = await showAppConfirmDialog(
       context,
-      title: const S('Reject this admin?', 'رفض الأدمن ده؟').of(context),
+      title: const S(
+        'Reject this admin?',
+        'رفض الأدمن ده؟',
+        fr: 'Refuser cet administrateur ?',
+        es: '¿Rechazar a este administrador?',
+      ).of(context),
       message: S(
         '${widget.displayName} will not be able to sign in.',
         '${widget.displayName} مش هيقدر يسجّل دخول.',
+        fr: '${widget.displayName} ne pourra pas se connecter.',
+        es: '${widget.displayName} no podrá iniciar sesión.',
       ).of(context),
-      confirmLabel: const S('Reject', 'رفض').of(context),
+      confirmLabel: const S(
+        'Reject',
+        'رفض',
+        fr: 'Refuser',
+        es: 'Rechazar',
+      ).of(context),
       destructive: true,
       reasonController: reasonController,
       reasonHint: const S(
         'Reason (shown to the applicant)',
         'السبب (بيتشاف لصاحب الطلب)',
+        fr: 'Motif (visible par le candidat)',
+        es: 'Motivo (visible para el solicitante)',
       ).of(context),
     );
     // Deliberately not disposed here: the dialog's own TextField is still
@@ -607,13 +785,13 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
       if (!mounted) return;
       AppSnackbar.success(
         context,
-        const S('Admin rejected.', 'تم رفض الأدمن.').of(context),
+        const S('Admin rejected.', 'تم رفض الأدمن.', fr: 'Administrateur rejeté.', es: 'Administrador rechazado.').of(context),
       );
     } catch (_) {
       if (!mounted) return;
       AppSnackbar.error(
         context,
-        const S("Couldn't reject — try again.", 'معرفناش نرفض — جرب تاني.')
+        const S("Couldn't reject — try again.", 'معرفناش نرفض — جرب تاني.', fr: "Échec du rejet — réessayez.", es: 'No se pudo rechazar: inténtalo de nuevo.')
             .of(context),
       );
     } finally {
@@ -664,7 +842,7 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     StatusBadge(
-                      label: const S('Pending', 'معلّق').of(context),
+                      label: const S('Pending', 'معلّق', fr: 'En attente', es: 'Pendiente').of(context),
                       tone: StatusTone.warning,
                     ),
                   ],
@@ -688,9 +866,12 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
                         schoolSnapshot.data?.data()?['name']?.toString() ??
                         widget.schoolId;
                     return Text(
-                      S('School: $schoolName', 'المدرسة: $schoolName').of(
-                        context,
-                      ),
+                      S(
+                        'School: $schoolName',
+                        'المدرسة: $schoolName',
+                        fr: 'École : $schoolName',
+                        es: 'Escuela: $schoolName',
+                      ).of(context),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colors.textMuted,
                       ),
@@ -716,7 +897,7 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton.filled(
-                  tooltip: const S('Approve', 'موافقة').of(context),
+                  tooltip: const S('Approve', 'موافقة', fr: 'Approuver', es: 'Aprobar').of(context),
                   style: IconButton.styleFrom(
                     backgroundColor: colors.success.withValues(alpha: 0.12),
                     foregroundColor: colors.success,
@@ -726,7 +907,7 @@ class _PendingAdminCardState extends State<_PendingAdminCard> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 IconButton.filled(
-                  tooltip: const S('Reject', 'رفض').of(context),
+                  tooltip: const S('Reject', 'رفض', fr: 'Rejeter', es: 'Rechazar').of(context),
                   style: IconButton.styleFrom(
                     backgroundColor: colors.error.withValues(alpha: 0.12),
                     foregroundColor: colors.error,

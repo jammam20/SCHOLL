@@ -4,6 +4,7 @@ import 'package:school_shared/school_shared.dart';
 
 import '../../../super_admin/presentation/super_admin_home_page.dart';
 import '../../data/firebase_auth_repository.dart';
+import '../auth_failure_message.dart';
 import '../cubit/auth_cubit.dart';
 
 class LoginPage extends StatefulWidget {
@@ -103,9 +104,12 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             const SizedBox(height: AppSpacing.xl),
                             Text(
-                              const S('Super Admin', 'المشرف العام').of(
-                                context,
-                              ),
+                              const S(
+                                'Super Admin',
+                                'المشرف العام',
+                                fr: 'Super administrateur',
+                                es: 'Superadministrador',
+                              ).of(context),
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: appColors.textPrimary,
@@ -118,6 +122,14 @@ class _LoginPageState extends State<LoginPage> {
                                     'school from one place',
                                 'لوحة تحكم المنصة — تحكم في كل المدارس '
                                     'من مكان واحد',
+                                fr:
+                                    'Panneau de contrôle de la plateforme — '
+                                    'gérez toutes les écoles depuis un seul '
+                                    'endroit',
+                                es:
+                                    'Panel de control de la plataforma — '
+                                    'gestiona todas las escuelas desde un '
+                                    'solo lugar',
                               ).of(context),
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: appColors.textSecondary,
@@ -128,9 +140,12 @@ class _LoginPageState extends State<LoginPage> {
                               controller: _email,
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
-                                labelText: const S('Email', 'الإيميل').of(
-                                  context,
-                                ),
+                                labelText: const S(
+                                  'Email',
+                                  'الإيميل',
+                                  fr: 'E-mail',
+                                  es: 'Correo electrónico',
+                                ).of(context),
                                 prefixIcon: const Icon(
                                   Icons.alternate_email_rounded,
                                 ),
@@ -140,6 +155,8 @@ class _LoginPageState extends State<LoginPage> {
                                   : const S(
                                       'Enter a valid email',
                                       'اكتب إيميل صحيح',
+                                      fr: 'Saisissez une adresse e-mail valide',
+                                      es: 'Introduce un correo electrónico válido',
                                     ).of(context),
                             ),
                             const SizedBox(height: AppSpacing.lg),
@@ -147,9 +164,12 @@ class _LoginPageState extends State<LoginPage> {
                               controller: _password,
                               obscureText: true,
                               decoration: InputDecoration(
-                                labelText: const S('Password', 'كلمة السر').of(
-                                  context,
-                                ),
+                                labelText: const S(
+                                  'Password',
+                                  'كلمة السر',
+                                  fr: 'Mot de passe',
+                                  es: 'Contraseña',
+                                ).of(context),
                                 prefixIcon: const Icon(
                                   Icons.lock_outline_rounded,
                                 ),
@@ -158,14 +178,19 @@ class _LoginPageState extends State<LoginPage> {
                                   ? const S(
                                       'Enter your password',
                                       'اكتب كلمة السر',
+                                      fr: 'Saisissez votre mot de passe',
+                                      es: 'Introduce tu contraseña',
                                     ).of(context)
                                   : null,
                             ),
                             const SizedBox(height: AppSpacing.xl2),
                             AppButton.primary(
-                              label: const S('Sign in', 'تسجيل الدخول').of(
-                                context,
-                              ),
+                              label: const S(
+                                'Sign in',
+                                'تسجيل الدخول',
+                                fr: 'Se connecter',
+                                es: 'Iniciar sesión',
+                              ).of(context),
                               onPressed: isLoading ? null : _submit,
                               loading: isLoading,
                             ),
@@ -182,12 +207,14 @@ class _LoginPageState extends State<LoginPage> {
                                   const S(
                                     'Forgot password?',
                                     'نسيت كلمة السر؟',
+                                    fr: 'Mot de passe oublié ?',
+                                    es: '¿Olvidaste tu contraseña?',
                                   ).of(context),
                                 ),
                               ),
                             ),
                             if (state is AuthSignedOut &&
-                                state.message != null)
+                                state.code != null)
                               Container(
                                 margin: const EdgeInsets.only(
                                   top: AppSpacing.sm,
@@ -214,7 +241,10 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(width: AppSpacing.sm),
                                     Expanded(
                                       child: Text(
-                                        state.message!,
+                                        authFailureMessage(
+                                          state.code!,
+                                          context,
+                                        ),
                                         style: TextStyle(
                                           color: appColors.error,
                                         ),
@@ -248,7 +278,12 @@ Future<void> _showForgotPasswordDialog(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: Text(
-        const S('Reset password', 'استعادة كلمة السر').of(dialogContext),
+        const S(
+          'Reset password',
+          'استعادة كلمة السر',
+          fr: 'Réinitialiser le mot de passe',
+          es: 'Restablecer contraseña',
+        ).of(dialogContext),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -258,6 +293,12 @@ Future<void> _showForgotPasswordDialog(
             const S(
               "We'll email you a link to reset your password.",
               'هنبعتلك لينك على إيميلك عشان تغيّر كلمة السر.',
+              fr:
+                  'Nous vous enverrons un lien par e-mail pour réinitialiser '
+                  'votre mot de passe.',
+              es:
+                  'Te enviaremos un enlace por correo electrónico para '
+                  'restablecer tu contraseña.',
             ).of(dialogContext),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -266,7 +307,12 @@ Future<void> _showForgotPasswordDialog(
             autofocus: true,
             keyboardType: TextInputType.emailAddress,
             decoration: InputDecoration(
-              labelText: const S('Email', 'الإيميل').of(dialogContext),
+              labelText: const S(
+                'Email',
+                'الإيميل',
+                fr: 'E-mail',
+                es: 'Correo electrónico',
+              ).of(dialogContext),
             ),
           ),
         ],
@@ -274,11 +320,25 @@ Future<void> _showForgotPasswordDialog(
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
-          child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+          child: Text(
+            const S(
+              'Cancel',
+              'إلغاء',
+              fr: 'Annuler',
+              es: 'Cancelar',
+            ).of(dialogContext),
+          ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, controller.text),
-          child: Text(const S('Send', 'إرسال').of(dialogContext)),
+          child: Text(
+            const S(
+              'Send',
+              'إرسال',
+              fr: 'Envoyer',
+              es: 'Enviar',
+            ).of(dialogContext),
+          ),
         ),
       ],
     ),
@@ -293,23 +353,34 @@ Future<void> _showForgotPasswordDialog(
   // collect once this closure returns.
   if (email == null || !email.contains('@') || !context.mounted) return;
 
-  final isArabic = Localizations.localeOf(context).languageCode == 'ar';
   try {
     await FirebaseAuthRepository().sendPasswordResetEmail(email);
     if (!context.mounted) return;
     AppSnackbar.success(
       context,
-      isArabic
-          ? 'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.'
-          : "If $email has an account, we've sent a reset link.",
+      S(
+        "If $email has an account, we've sent a reset link.",
+        'لو $email ليه حساب، بعتنالك لينك استعادة كلمة السر.',
+        fr:
+            'Si $email correspond à un compte, nous avons envoyé un lien '
+            'de réinitialisation.',
+        es:
+            'Si $email tiene una cuenta, te hemos enviado un enlace para '
+            'restablecer la contraseña.',
+      ).of(context),
     );
   } catch (_) {
     if (!context.mounted) return;
     AppSnackbar.error(
       context,
-      isArabic
-          ? 'معرفناش نبعت إيميل الاستعادة — جرب تاني.'
-          : "Couldn't send the reset email — try again.",
+      const S(
+        "Couldn't send the reset email — try again.",
+        'معرفناش نبعت إيميل الاستعادة — جرب تاني.',
+        fr: "Impossible d'envoyer l'e-mail de réinitialisation — réessayez.",
+        es:
+            'No se pudo enviar el correo de restablecimiento — inténtalo '
+            'de nuevo.',
+      ).of(context),
     );
   }
 }
@@ -330,7 +401,12 @@ class _TopControls extends StatelessWidget {
         ValueListenableBuilder<ThemeMode>(
           valueListenable: AppSettings.themeMode,
           builder: (context, mode, _) => IconButton.filledTonal(
-            tooltip: 'Theme',
+            tooltip: const S(
+              'Theme',
+              'المظهر',
+              fr: 'Thème',
+              es: 'Tema',
+            ).of(context),
             onPressed: AppSettings.toggleTheme,
             icon: Icon(
               mode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,

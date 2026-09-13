@@ -73,6 +73,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         _searchError = const S(
           "Couldn't search for that location right now.",
           'معرفناش ندور على الموقع ده دلوقتي.',
+          fr: 'Impossible de rechercher ce lieu pour le moment.',
+          es: 'No se pudo buscar esa ubicación en este momento.',
         ).of(context);
       });
     }
@@ -104,6 +106,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 'Location permission is needed to use your current '
                     'location.',
                 'محتاجين إذن الموقع عشان نستخدم موقعك الحالي.',
+                fr: "L'autorisation de localisation est nécessaire pour "
+                    'utiliser votre position actuelle.',
+                es: 'Se necesita el permiso de ubicación para usar tu '
+                    'ubicación actual.',
               ).of(context),
             ),
           ),
@@ -118,6 +124,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
               const S(
                 'Turn on location services and try again.',
                 'شغّل خدمة الموقع وجرب تاني.',
+                fr: 'Activez les services de localisation et réessayez.',
+                es: 'Activa los servicios de ubicación e inténtalo de nuevo.',
               ).of(context),
             ),
           ),
@@ -138,6 +146,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             const S(
               "Couldn't get your current location.",
               'معرفناش نجيب موقعك الحالي.',
+              fr: "Impossible d'obtenir votre position actuelle.",
+              es: 'No se pudo obtener tu ubicación actual.',
             ).of(context),
           ),
         ),
@@ -160,7 +170,12 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             padding: const EdgeInsetsDirectional.only(end: AppSpacing.lg),
             child: Center(
               child: AppButton.primary(
-                label: const S('Save', 'حفظ').of(context),
+                label: const S(
+                  'Save',
+                  'حفظ',
+                  fr: 'Enregistrer',
+                  es: 'Guardar',
+                ).of(context),
                 onPressed: _picked == null
                     ? null
                     : () => Navigator.pop(context, _picked),
@@ -205,6 +220,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                       hintText: const S(
                         'Search for a location',
                         'دور على موقع',
+                        fr: 'Rechercher un lieu',
+                        es: 'Buscar una ubicación',
                       ).of(context),
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searching
@@ -288,7 +305,12 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             bottom: 96,
             child: FloatingActionButton.small(
               heroTag: 'location-picker-my-location',
-              tooltip: const S('My location', 'موقعي').of(context),
+              tooltip: const S(
+                'My location',
+                'موقعي',
+                fr: 'Ma position',
+                es: 'Mi ubicación',
+              ).of(context),
               onPressed: _locating ? null : _useMyLocation,
               child: _locating
                   ? const SizedBox(
@@ -330,6 +352,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                                   'drop a pin.',
                               'دور، استخدم موقعك، أو دوس على الخريطة عشان '
                                   'تحط دبوس.',
+                              fr: 'Recherchez, utilisez votre position, ou '
+                                  'touchez la carte pour placer un repère.',
+                              es: 'Busca, usa tu ubicación o toca el mapa '
+                                  'para colocar un marcador.',
                             ).of(context),
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyMedium?.copyWith(

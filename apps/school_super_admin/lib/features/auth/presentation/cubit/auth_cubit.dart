@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_shared/school_shared.dart';
 
 import '../../data/firebase_auth_repository.dart';
 
@@ -14,8 +15,19 @@ final class AuthLoading extends AuthState {
 }
 
 final class AuthSignedOut extends AuthState {
-  const AuthSignedOut({this.message});
-  final String? message;
+  const AuthSignedOut({this.code});
+
+  /// Why the admin isn't signed in, or null for the ordinary signed-out
+  /// state (a cold start, an explicit sign-out) that needs no explanation.
+  ///
+  /// This used to be a `String? message` holding an English sentence built
+  /// right here — which login_page.dart then rendered verbatim, so a system
+  /// admin running the app in Arabic, French or Spanish read English at the
+  /// one screen they cannot get past. A cubit has no BuildContext and
+  /// therefore no language; carrying the failure's *identity* instead lets
+  /// the presentation layer say it in the admin's own (see
+  /// `authFailureMessage`).
+  final AuthFailureCode? code;
 }
 
 final class AuthSignedIn extends AuthState {
@@ -34,7 +46,7 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
     _subscription ??= _repository.watchUser().listen(
       _handleProfile,
       onError: (error, stackTrace) {
-        emit(const AuthSignedOut(message: 'Unable to load your account.'));
+        emit(AuthSignedOut(code: authFailureCodeFor(error)));
       },
     );
     WidgetsBinding.instance.addObserver(this);
@@ -77,8 +89,8 @@ class AuthCubit extends Cubit<AuthState> with WidgetsBindingObserver {
       // comment for why that stream can't be trusted for this transition.
       final profile = await _repository.fetchCurrentUser();
       emit(profile == null ? const AuthSignedOut() : AuthSignedIn(profile));
-    } catch (_) {
-      emit(const AuthSignedOut(message: 'Email or password is incorrect.'));
+    } catch (error) {
+      emit(AuthSignedOut(code: authFailureCodeFor(error)));
     }
   }
 

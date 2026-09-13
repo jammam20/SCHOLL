@@ -68,6 +68,8 @@ class ActivityTimeline extends StatelessWidget {
             title: const S(
               'No recorded activity yet',
               'مفيش نشاط مسجل لسه',
+              fr: 'Aucune activité enregistrée pour le moment',
+              es: 'Aún no hay actividad registrada',
             ).of(context),
           );
         }
@@ -95,6 +97,8 @@ class ActivityTimeline extends StatelessWidget {
                   S(
                     'View all ${entries.length} in the audit trail',
                     'عرض كل الـ ${entries.length} في سجل التدقيق',
+                    fr: "Voir les ${entries.length} entrées du journal d'audit",
+                    es: 'Ver las ${entries.length} entradas del registro de auditoría',
                   ).of(context),
                 ),
               ),
@@ -191,6 +195,8 @@ class _TimelineRow extends StatelessWidget {
       return S(
         'Yesterday · ${DateFormat.jm().format(timestamp)}',
         'إمبارح · ${DateFormat.jm().format(timestamp)}',
+        fr: 'Hier · ${DateFormat.jm().format(timestamp)}',
+        es: 'Ayer · ${DateFormat.jm().format(timestamp)}',
       ).of(context);
     }
     return DateFormat.yMMMd().add_jm().format(timestamp);

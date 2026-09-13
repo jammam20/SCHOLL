@@ -67,6 +67,10 @@ class _AdminThreadPageState extends State<AdminThreadPage> {
         const S(
           "Couldn't send that — check your connection and try again.",
           'معرفناش نبعتها — اتأكد من الاتصال وجرب تاني.',
+          fr: "Impossible de l'envoyer — vérifiez votre connexion et "
+              'réessayez.',
+          es: 'No se pudo enviar — comprueba tu conexión e inténtalo de '
+              'nuevo.',
         ).of(context),
       );
     } finally {
@@ -77,12 +81,26 @@ class _AdminThreadPageState extends State<AdminThreadPage> {
   Future<void> _close() async {
     final confirmed = await showAppConfirmDialog(
       context,
-      title: const S('Close this conversation?', 'تقفل المحادثة دي؟').of(context),
+      title: const S(
+        'Close this conversation?',
+        'تقفل المحادثة دي؟',
+        fr: 'Clôturer cette conversation ?',
+        es: '¿Cerrar esta conversación?',
+      ).of(context),
       message: const S(
         'The parent can still see it, but it moves out of your open inbox.',
         'ولي الأمر لسه هيشوفها، بس هتتشال من صندوق الوارد المفتوح عندك.',
+        fr: 'Le parent peut toujours la voir, mais elle sort de votre boîte '
+            'de réception ouverte.',
+        es: 'El familiar aún podrá verla, pero saldrá de tu bandeja de '
+            'entrada abierta.',
       ).of(context),
-      confirmLabel: const S('Close', 'قفل').of(context),
+      confirmLabel: const S(
+        'Close',
+        'قفل',
+        fr: 'Fermer',
+        es: 'Cerrar',
+      ).of(context),
     );
     if (confirmed != true || !mounted) return;
     await _repository.closeThread(schoolId: widget.schoolId, requestId: widget.request.id);
@@ -98,7 +116,12 @@ class _AdminThreadPageState extends State<AdminThreadPage> {
         actions: [
           if (request.status != ParentRequestStatus.closed)
             IconButton(
-              tooltip: const S('Close conversation', 'قفل المحادثة').of(context),
+              tooltip: const S(
+                'Close conversation',
+                'قفل المحادثة',
+                fr: 'Fermer la conversation',
+                es: 'Cerrar conversación',
+              ).of(context),
               icon: const Icon(Icons.check_circle_outline),
               onPressed: _close,
             ),
@@ -111,6 +134,8 @@ class _AdminThreadPageState extends State<AdminThreadPage> {
               label: S(
                 'About ${request.studentName}',
                 'بخصوص ${request.studentName}',
+                fr: 'À propos de ${request.studentName}',
+                es: 'Sobre ${request.studentName}',
               ).of(context),
             ),
           Expanded(
@@ -214,7 +239,12 @@ class _MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
-                  const S('Parent', 'ولي الأمر').of(context),
+                  const S(
+                    'Parent',
+                    'ولي الأمر',
+                    fr: 'Parent',
+                    es: 'Familiar',
+                  ).of(context),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: colors.textMuted,
@@ -274,6 +304,8 @@ class _Composer extends StatelessWidget {
                   hintText: const S(
                     'Reply to the parent…',
                     'رد على ولي الأمر…',
+                    fr: 'Répondre au parent…',
+                    es: 'Responder al familiar…',
                   ).of(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.pill),

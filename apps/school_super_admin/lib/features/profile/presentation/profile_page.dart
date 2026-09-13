@@ -14,14 +14,35 @@ class ProfilePage extends StatelessWidget {
   Future<void> _confirmSignOut(BuildContext context) async {
     final confirmed = await showAppConfirmDialog(
       context,
-      title: const S('Sign out?', 'تسجيل الخروج؟').of(context),
+      title: const S(
+        'Sign out?',
+        'تسجيل الخروج؟',
+        fr: 'Se déconnecter ?',
+        es: '¿Cerrar sesión?',
+      ).of(context),
       message: const S(
         "You'll need to sign in again to access the platform control "
             'panel.',
         'هتحتاج تسجل دخولك تاني عشان توصل للوحة تحكم المنصة.',
+        fr:
+            'Vous devrez vous reconnecter pour accéder au panneau de '
+            'contrôle de la plateforme.',
+        es:
+            'Deberás iniciar sesión de nuevo para acceder al panel de '
+            'control de la plataforma.',
       ).of(context),
-      confirmLabel: const S('Sign out', 'تسجيل الخروج').of(context),
-      cancelLabel: const S('Cancel', 'إلغاء').of(context),
+      confirmLabel: const S(
+        'Sign out',
+        'تسجيل الخروج',
+        fr: 'Se déconnecter',
+        es: 'Cerrar sesión',
+      ).of(context),
+      cancelLabel: const S(
+        'Cancel',
+        'إلغاء',
+        fr: 'Annuler',
+        es: 'Cancelar',
+      ).of(context),
       destructive: true,
     );
     if (confirmed == true) onSignOut();
@@ -35,7 +56,14 @@ class ProfilePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Profile', 'الملف الشخصي').of(context)),
+        title: Text(
+          const S(
+            'Profile',
+            'الملف الشخصي',
+            fr: 'Profil',
+            es: 'Perfil',
+          ).of(context),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
@@ -84,7 +112,12 @@ class ProfilePage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
-                    const S('Platform owner', 'مالك المنصة').of(context),
+                    const S(
+                      'Platform owner',
+                      'مالك المنصة',
+                      fr: 'Propriétaire de la plateforme',
+                      es: 'Propietario de la plataforma',
+                    ).of(context),
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: colors.onPrimaryContainer,
                       fontSize: 12.5,
@@ -96,7 +129,12 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl3),
           SectionHeader(
-            title: const S('Preferences', 'التفضيلات').of(context),
+            title: const S(
+              'Preferences',
+              'التفضيلات',
+              fr: 'Préférences',
+              es: 'Preferencias',
+            ).of(context),
           ),
           Card(
             child: Column(
@@ -116,7 +154,14 @@ class ProfilePage extends StatelessWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.dark_mode_outlined),
-                  title: Text(const S('Dark mode', 'الوضع الليلي').of(context)),
+                  title: Text(
+                    const S(
+                      'Dark mode',
+                      'الوضع الليلي',
+                      fr: 'Mode sombre',
+                      es: 'Modo oscuro',
+                    ).of(context),
+                  ),
                   trailing: ValueListenableBuilder<ThemeMode>(
                     valueListenable: AppSettings.themeMode,
                     builder: (context, mode, _) => Switch(
@@ -129,7 +174,12 @@ class ProfilePage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: Text(
-                    const S('Privacy & Terms', 'الخصوصية والشروط').of(context),
+                    const S(
+                      'Privacy & Terms',
+                      'الخصوصية والشروط',
+                      fr: 'Confidentialité et conditions',
+                      es: 'Privacidad y términos',
+                    ).of(context),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
@@ -142,7 +192,12 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl3),
           AppButton.destructive(
-            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            label: const S(
+              'Sign out',
+              'تسجيل الخروج',
+              fr: 'Se déconnecter',
+              es: 'Cerrar sesión',
+            ).of(context),
             icon: Icons.logout,
             onPressed: () => _confirmSignOut(context),
           ),

@@ -17,7 +17,14 @@ class ParentMessagesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Parent messages', 'رسايل أولياء الأمور').of(context)),
+        title: Text(
+          const S(
+            'Parent messages',
+            'رسايل أولياء الأمور',
+            fr: 'Messages des parents',
+            es: 'Mensajes de los padres',
+          ).of(context),
+        ),
       ),
       body: StreamBuilder<List<ParentRequest>>(
         stream: ParentMessagesRepository().watchThreads(schoolId),
@@ -40,10 +47,17 @@ class ParentMessagesPage extends StatelessWidget {
           if (threads.isEmpty) {
             return EmptyStateView(
               icon: Icons.forum_outlined,
-              title: const S('No messages yet', 'مفيش رسايل لسه').of(context),
+              title: const S(
+                'No messages yet',
+                'مفيش رسايل لسه',
+                fr: 'Aucun message pour le moment',
+                es: 'Aún no hay mensajes',
+              ).of(context),
               message: const S(
                 "Parents' messages to the school will show up here.",
                 'رسايل أولياء الأمور للمدرسة هتظهر هنا.',
+                fr: "Les messages des parents à l'école apparaîtront ici.",
+                es: 'Los mensajes de los padres al colegio aparecerán aquí.',
               ).of(context),
             );
           }
@@ -59,14 +73,28 @@ class ParentMessagesPage extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
               if (open.isNotEmpty) ...[
-                SectionHeader(title: const S('Open', 'مفتوحة').of(context)),
+                SectionHeader(
+                  title: const S(
+                    'Open',
+                    'مفتوحة',
+                    fr: 'Ouvertes',
+                    es: 'Abiertas',
+                  ).of(context),
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 for (final thread in open)
                   _ThreadTile(schoolId: schoolId, request: thread),
               ],
               if (closed.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xl2),
-                SectionHeader(title: const S('Closed', 'مقفولة').of(context)),
+                SectionHeader(
+                  title: const S(
+                    'Closed',
+                    'مقفولة',
+                    fr: 'Fermées',
+                    es: 'Cerradas',
+                  ).of(context),
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 for (final thread in closed)
                   _ThreadTile(schoolId: schoolId, request: thread),
@@ -111,7 +139,12 @@ class _ThreadTile extends StatelessWidget {
         ),
         title: Text(
           request.subject.isEmpty
-              ? const S('General question', 'سؤال عام').of(context)
+              ? const S(
+                  'General question',
+                  'سؤال عام',
+                  fr: 'Question générale',
+                  es: 'Pregunta general',
+                ).of(context)
               : request.subject,
           style: TextStyle(fontWeight: unread ? FontWeight.w800 : FontWeight.w600),
         ),

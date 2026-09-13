@@ -12,6 +12,7 @@ import '../features/onboarding/presentation/onboarding_page.dart';
 import '../firebase_options.dart';
 import 'analytics.dart';
 import 'app_settings.dart';
+import 'language_sync.dart';
 import 'notification_routing.dart';
 import 'theme.dart';
 
@@ -110,6 +111,10 @@ class ParentApp extends StatelessWidget {
               listener: (context, state) {
                 if (state is AuthSignedIn) {
                   PushNotificationsRepository().register();
+                  // Carries a language chosen on the login or onboarding screen —
+                  // where there was no uid to attach it to — up to the server, so
+                  // push notifications arrive in it.
+                  LanguageSync.syncCurrent();
                 }
               },
               child: const AuthPage(),

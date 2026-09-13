@@ -143,7 +143,12 @@ class _TodayPanel extends StatelessWidget {
     return _Panel(
       icon: Icons.today_rounded,
       iconColor: colors.textMuted,
-      title: const S('Today', 'النهاردة').of(context),
+      title: const S(
+        'Today',
+        'النهاردة',
+        fr: "Aujourd'hui",
+        es: 'Hoy',
+      ).of(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -180,12 +185,42 @@ class _TodayPanel extends StatelessWidget {
   }
 
   S _toneLabel(StatusTone tone) => switch (tone) {
-    StatusTone.success => const S('Finished', 'خلصت'),
-    StatusTone.info => const S('Scheduled', 'مجدولة'),
-    StatusTone.error => const S('Cancelled', 'ملغاة'),
-    StatusTone.warning => const S('Delayed', 'متأخرة'),
-    StatusTone.emergency => const S('Emergency', 'طوارئ'),
-    StatusTone.neutral => const S('No trip', 'مفيش رحلة'),
+    StatusTone.success => const S(
+      'Finished',
+      'خلصت',
+      fr: 'Terminé',
+      es: 'Finalizado',
+    ),
+    StatusTone.info => const S(
+      'Scheduled',
+      'مجدولة',
+      fr: 'Prévu',
+      es: 'Programado',
+    ),
+    StatusTone.error => const S(
+      'Cancelled',
+      'ملغاة',
+      fr: 'Annulé',
+      es: 'Cancelado',
+    ),
+    StatusTone.warning => const S(
+      'Delayed',
+      'متأخرة',
+      fr: 'En retard',
+      es: 'Con retraso',
+    ),
+    StatusTone.emergency => const S(
+      'Emergency',
+      'طوارئ',
+      fr: 'Urgence',
+      es: 'Emergencia',
+    ),
+    StatusTone.neutral => const S(
+      'No trip',
+      'مفيش رحلة',
+      fr: 'Aucun trajet',
+      es: 'Sin viaje',
+    ),
   };
 
   (String, String?, StatusTone?) _resolve(BuildContext context) {
@@ -195,10 +230,14 @@ class _TodayPanel extends StatelessWidget {
         const S(
           'No trip on record today',
           'مفيش رحلة مسجلة النهاردة',
+          fr: "Aucun trajet enregistré aujourd'hui",
+          es: 'No hay ningún viaje registrado hoy',
         ).of(context),
         const S(
           "This child's route hasn't had a trip created for it yet.",
           'خط سير الطفل ده لسه ما اتعملتلوش رحلة.',
+          fr: "L'itinéraire de cet enfant n'a pas encore de trajet créé.",
+          es: 'La ruta de este niño/a aún no tiene ningún viaje creado.',
         ).of(context),
         null,
       );
@@ -209,11 +248,17 @@ class _TodayPanel extends StatelessWidget {
         const S(
           'No trip on record today',
           'مفيش رحلة مسجلة النهاردة',
+          fr: "Aucun trajet enregistré aujourd'hui",
+          es: 'No hay ningún viaje registrado hoy',
         ).of(context),
         S(
           'The last trip on this route ran on '
               '${DateFormat.MMMEd().format(trip.scheduledAt)}.',
           'آخر رحلة على الخط ده كانت يوم '
+              '${DateFormat.MMMEd().format(trip.scheduledAt)}.',
+          fr: 'Le dernier trajet sur cet itinéraire a eu lieu le '
+              '${DateFormat.MMMEd().format(trip.scheduledAt)}.',
+          es: 'El último viaje de esta ruta fue el '
               '${DateFormat.MMMEd().format(trip.scheduledAt)}.',
         ).of(context),
         null,
@@ -229,31 +274,48 @@ class _TodayPanel extends StatelessWidget {
           S(
             "Today's trip is scheduled for $scheduled",
             'رحلة النهاردة متجدولة الساعة $scheduled',
+            fr: "Le trajet d'aujourd'hui est prévu à $scheduled",
+            es: 'El viaje de hoy está programado para las $scheduled',
           ).of(context),
           late
               ? const S(
                   "It hasn't started yet — you'll see it here the moment "
                       'the driver begins.',
                   'لسه ما بدأتش — هتشوفها هنا أول ما السواق يبدأ.',
+                  fr:
+                      "Il n'a pas encore commencé — vous le verrez ici dès "
+                      'que le chauffeur démarre.',
+                  es: 'Aún no ha comenzado. Lo verás aquí en cuanto el '
+                      'conductor empiece.',
                 ).of(context)
               : const S(
                   "You'll see the bus here live as soon as the driver "
                       'starts.',
                   'هتشوف الأتوبيس هنا مباشر أول ما السواق يبدأ.',
+                  fr: 'Vous verrez le bus ici en direct dès que le '
+                      'chauffeur démarre.',
+                  es: 'Verás el autobús aquí en directo en cuanto el '
+                      'conductor salga.',
                 ).of(context),
           late ? StatusTone.warning : StatusTone.info,
         );
       case TripStatus.completed:
         final finishedAt = trip.completedAt;
         return (
-          const S("Today's trip is finished", 'رحلة النهاردة خلصت').of(
-            context,
-          ),
+          const S(
+            "Today's trip is finished",
+            'رحلة النهاردة خلصت',
+            fr: "Le trajet d'aujourd'hui est terminé",
+            es: 'El viaje de hoy ha terminado',
+          ).of(context),
           finishedAt == null
               ? null
               : S(
                   'Completed at ${DateFormat.jm().format(finishedAt)}.',
                   'اكتملت الساعة ${DateFormat.jm().format(finishedAt)}.',
+                  fr: 'Terminé à ${DateFormat.jm().format(finishedAt)}.',
+                  es: 'Completado a las '
+                      '${DateFormat.jm().format(finishedAt)}.',
                 ).of(context),
           StatusTone.success,
         );
@@ -263,12 +325,19 @@ class _TodayPanel extends StatelessWidget {
           const S(
             "Today's trip was cancelled",
             'رحلة النهاردة اتلغت',
+            fr: "Le trajet d'aujourd'hui a été annulé",
+            es: 'El viaje de hoy fue cancelado',
           ).of(context),
           reason == null || reason.isEmpty
               ? const S(
                   'Your school cancelled it. Contact them if you need '
                       'more detail.',
                   'المدرسة لغتها. كلّمهم لو محتاج تفاصيل أكتر.',
+                  fr:
+                      "Votre école l'a annulé. Contactez-la si vous avez "
+                      'besoin de plus de détails.',
+                  es: 'Tu escuela lo canceló. Contáctala si necesitas más '
+                      'información.',
                 ).of(context)
               : reason,
           StatusTone.error,
@@ -281,7 +350,12 @@ class _TodayPanel extends StatelessWidget {
       case TripStatus.paused:
       case TripStatus.emergency:
         return (
-          const S('Trip in progress', 'الرحلة شغالة').of(context),
+          const S(
+            'Trip in progress',
+            'الرحلة شغالة',
+            fr: 'Trajet en cours',
+            es: 'Viaje en curso',
+          ).of(context),
           null,
           trip.status == TripStatus.emergency
               ? StatusTone.emergency
@@ -305,7 +379,12 @@ class _AbsencePanel extends StatelessWidget {
     return _Panel(
       icon: Icons.event_busy_rounded,
       iconColor: colors.warning,
-      title: const S('Absence', 'الغياب').of(context),
+      title: const S(
+        'Absence',
+        'الغياب',
+        fr: 'Absence',
+        es: 'Ausencia',
+      ).of(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -314,6 +393,11 @@ class _AbsencePanel extends StatelessWidget {
               const S(
                 "Marked absent today — the bus will skip this child's stop.",
                 'متعلّم غايب النهاردة — الأتوبيس هيتخطى محطته.',
+                fr:
+                    "Marqué(e) absent(e) aujourd'hui — le bus sautera "
+                    "l'arrêt de cet enfant.",
+                es: 'Marcado como ausente hoy: el autobús se saltará la '
+                    'parada de este niño/a.',
               ).of(context),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colors.textPrimary,
@@ -323,7 +407,12 @@ class _AbsencePanel extends StatelessWidget {
           if (upcoming.isNotEmpty) ...[
             if (absentToday) const SizedBox(height: AppSpacing.sm),
             Text(
-              const S('Scheduled ahead', 'مجدول قدام').of(context),
+              const S(
+                'Scheduled ahead',
+                'مجدول قدام',
+                fr: "Programmé à l'avance",
+                es: 'Programado con antelación',
+              ).of(context),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.textSecondary,
               ),
@@ -372,13 +461,25 @@ class _PickupPointPanel extends StatelessWidget {
       return _Panel(
         icon: Icons.location_off_outlined,
         iconColor: colors.textMuted,
-        title: const S('Pickup point', 'نقطة الاستلام').of(context),
+        title: const S(
+          'Pickup point',
+          'نقطة الاستلام',
+          fr: 'Point de ramassage',
+          es: 'Punto de recogida',
+        ).of(context),
         child: Text(
           const S(
             "Your school hasn't set a pickup point for this child yet. "
                 'Live tracking turns on once they do.',
             'المدرسة لسه ما حددتش نقطة استلام للطفل ده. المتابعة المباشرة '
                 'هتشتغل أول ما تتحدد.',
+            fr:
+                "Votre école n'a pas encore défini de point de ramassage "
+                "pour cet enfant. Le suivi en direct s'activera dès que ce "
+                'sera fait.',
+            es: 'Tu escuela aún no ha definido un punto de recogida para '
+                'este niño/a. El seguimiento en vivo se activará en '
+                'cuanto lo haga.',
           ).of(context),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: colors.textSecondary,
@@ -392,7 +493,12 @@ class _PickupPointPanel extends StatelessWidget {
     return _Panel(
       icon: Icons.place_rounded,
       iconColor: Theme.of(context).colorScheme.primary,
-      title: const S('Pickup point', 'نقطة الاستلام').of(context),
+      title: const S(
+        'Pickup point',
+        'نقطة الاستلام',
+        fr: 'Point de ramassage',
+        es: 'Punto de recogida',
+      ).of(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -402,10 +508,17 @@ class _PickupPointPanel extends StatelessWidget {
                     'Your school assigned a shared pickup point for this '
                         'child.',
                     'المدرسة حددت نقطة استلام مشتركة للطفل ده.',
+                    fr: 'Votre école a assigné un point de ramassage '
+                        'partagé pour cet enfant.',
+                    es: 'Tu escuela asignó un punto de recogida compartido '
+                        'para este niño/a.',
                   ).of(context)
                 : const S(
                     'Door-to-door pickup, set by your school.',
                     'استلام من باب البيت، محدد من المدرسة.',
+                    fr: 'Ramassage porte-à-porte, défini par votre école.',
+                    es: 'Recogida puerta a puerta, definida por tu '
+                        'escuela.',
                   ).of(context),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.textPrimary,
@@ -471,21 +584,41 @@ class _RoutePanel extends StatelessWidget {
       icon: Icons.route_rounded,
       iconColor: colors.textMuted,
       title: isTripToday
-          ? const S("Today's route", 'خط النهاردة').of(context)
-          : const S('Most recent route', 'آخر خط سير').of(context),
+          ? const S(
+              "Today's route",
+              'خط النهاردة',
+              fr: 'Itinéraire du jour',
+              es: 'Ruta de hoy',
+            ).of(context)
+          : const S(
+              'Most recent route',
+              'آخر خط سير',
+              fr: 'Itinéraire le plus récent',
+              es: 'Ruta más reciente',
+            ).of(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (trip.routeName.isNotEmpty)
             _DetailRow(
               icon: Icons.alt_route_rounded,
-              label: const S('Route', 'الخط').of(context),
+              label: const S(
+                'Route',
+                'الخط',
+                fr: 'Itinéraire',
+                es: 'Ruta',
+              ).of(context),
               value: trip.routeName,
             ),
           if (trip.busName.isNotEmpty)
             _DetailRow(
               icon: Icons.directions_bus_rounded,
-              label: const S('Bus', 'الأتوبيس').of(context),
+              label: const S(
+                'Bus',
+                'الأتوبيس',
+                fr: 'Bus',
+                es: 'Autobús',
+              ).of(context),
               value: trip.busPlateNumber.isEmpty
                   ? trip.busName
                   : '${trip.busName} · ${trip.busPlateNumber}',
@@ -493,7 +626,12 @@ class _RoutePanel extends StatelessWidget {
           if (trip.driverName.isNotEmpty)
             _DetailRow(
               icon: Icons.badge_outlined,
-              label: const S('Driver', 'السواق').of(context),
+              label: const S(
+                'Driver',
+                'السواق',
+                fr: 'Chauffeur',
+                es: 'Conductor',
+              ).of(context),
               value: trip.driverName,
             ),
         ],
@@ -560,7 +698,12 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final messageButton = AppButton.secondary(
-      label: const S('Message school', 'راسل المدرسة').of(context),
+      label: const S(
+        'Message school',
+        'راسل المدرسة',
+        fr: "Écrire à l'école",
+        es: 'Mensaje a la escuela',
+      ).of(context),
       icon: Icons.chat_bubble_outline_rounded,
       onPressed: () => Navigator.push(
         context,
@@ -571,7 +714,12 @@ class _QuickActions extends StatelessWidget {
     if (!student.approved) return messageButton;
 
     final settingsButton = AppButton.secondary(
-      label: const S('Child settings', 'إعدادات الطفل').of(context),
+      label: const S(
+        'Child settings',
+        'إعدادات الطفل',
+        fr: "Paramètres de l'enfant",
+        es: 'Ajustes del niño/a',
+      ).of(context),
       icon: Icons.tune_rounded,
       onPressed: () => Navigator.push(
         context,

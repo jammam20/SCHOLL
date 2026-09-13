@@ -71,32 +71,119 @@ IconData stageIcon(JourneyStage stage) => switch (stage) {
 S stageBadgeLabel(JourneyStage stage, {TripDirection direction = TripDirection.outbound}) {
   final isReturn = direction == TripDirection.returnTrip;
   return switch (stage) {
-    JourneyStage.noActiveTrip => const S('Idle', 'مفيش رحلة'),
-    JourneyStage.scheduled => const S('Scheduled', 'مجدولة'),
-    JourneyStage.delayed => const S('Delayed', 'متأخرة'),
+    JourneyStage.noActiveTrip => const S(
+      'Idle',
+      'مفيش رحلة',
+      fr: 'Inactif',
+      es: 'Inactivo',
+    ),
+    JourneyStage.scheduled => const S(
+      'Scheduled',
+      'مجدولة',
+      fr: 'Prévu',
+      es: 'Programado',
+    ),
+    JourneyStage.delayed => const S(
+      'Delayed',
+      'متأخرة',
+      fr: 'En retard',
+      es: 'Con retraso',
+    ),
     JourneyStage.started => isReturn
-        ? const S('Leaving school', 'طالع من المدرسة')
-        : const S('Starting', 'بدأت'),
+        ? const S(
+            'Leaving school',
+            'طالع من المدرسة',
+            fr: "Départ de l'école",
+            es: 'Saliendo de la escuela',
+          )
+        : const S('Starting', 'بدأت', fr: 'Départ', es: 'Saliendo'),
     JourneyStage.onTheWay => isReturn
-        ? const S('On the way home', 'في الطريق للبيت')
-        : const S('En route', 'في الطريق'),
+        ? const S(
+            'On the way home',
+            'في الطريق للبيت',
+            fr: 'En route vers la maison',
+            es: 'En camino a casa',
+          )
+        : const S(
+            'En route',
+            'في الطريق',
+            fr: 'En route',
+            es: 'En camino',
+          ),
     JourneyStage.approachingPickup => isReturn
-        ? const S('Approaching home', 'قريب من البيت')
-        : const S('Approaching', 'قريب من محطتك'),
+        ? const S(
+            'Approaching home',
+            'قريب من البيت',
+            fr: 'En approche de la maison',
+            es: 'Llegando a casa',
+          )
+        : const S(
+            'Approaching',
+            'قريب من محطتك',
+            fr: 'En approche',
+            es: 'Llegando',
+          ),
     JourneyStage.arrivedAtPickup => isReturn
-        ? const S('Near home', 'وصل قريب من البيت')
-        : const S('Arrived at stop', 'وصل المحطة'),
-    JourneyStage.boarded => const S('Boarded', 'ركب الأتوبيس'),
+        ? const S(
+            'Near home',
+            'وصل قريب من البيت',
+            fr: 'Près de la maison',
+            es: 'Cerca de casa',
+          )
+        : const S(
+            'Arrived at stop',
+            'وصل المحطة',
+            fr: "Arrivé à l'arrêt",
+            es: 'Llegó a la parada',
+          ),
+    JourneyStage.boarded => const S(
+      'Boarded',
+      'ركب الأتوبيس',
+      fr: 'À bord',
+      es: 'A bordo',
+    ),
     JourneyStage.continuingToSchool => const S(
       'En route to school',
       'متجه للمدرسة',
+      fr: "En route vers l'école",
+      es: 'Camino a la escuela',
     ),
-    JourneyStage.arrivedAtSchool => const S('At school', 'في المدرسة'),
-    JourneyStage.droppedOff => const S('Dropped off', 'اتسلّم للبيت'),
-    JourneyStage.completed => const S('Completed', 'اكتملت'),
-    JourneyStage.paused => const S('Paused', 'متوقفة مؤقتًا'),
-    JourneyStage.emergency => const S('Emergency', 'طوارئ'),
-    JourneyStage.cancelled => const S('Cancelled', 'ملغاة'),
+    JourneyStage.arrivedAtSchool => const S(
+      'At school',
+      'في المدرسة',
+      fr: "À l'école",
+      es: 'En la escuela',
+    ),
+    JourneyStage.droppedOff => const S(
+      'Dropped off',
+      'اتسلّم للبيت',
+      fr: 'Déposé(e)',
+      es: 'Entregado/a',
+    ),
+    JourneyStage.completed => const S(
+      'Completed',
+      'اكتملت',
+      fr: 'Terminé',
+      es: 'Completado',
+    ),
+    JourneyStage.paused => const S(
+      'Paused',
+      'متوقفة مؤقتًا',
+      fr: 'En pause',
+      es: 'En pausa',
+    ),
+    JourneyStage.emergency => const S(
+      'Emergency',
+      'طوارئ',
+      fr: 'Urgence',
+      es: 'Emergencia',
+    ),
+    JourneyStage.cancelled => const S(
+      'Cancelled',
+      'ملغاة',
+      fr: 'Annulé',
+      es: 'Cancelado',
+    ),
   };
 }
 
@@ -113,75 +200,135 @@ S stageHeadline(
     JourneyStage.noActiveTrip => const S(
       'No active trip',
       'مفيش رحلة شغالة',
+      fr: 'Aucun trajet en cours',
+      es: 'No hay ningún viaje en curso',
     ),
     JourneyStage.scheduled => isReturn
-        ? const S('Return trip scheduled', 'رحلة العودة متجدولة')
-        : const S('Trip scheduled', 'الرحلة متجدولة'),
+        ? const S(
+            'Return trip scheduled',
+            'رحلة العودة متجدولة',
+            fr: 'Trajet retour prévu',
+            es: 'Viaje de regreso programado',
+          )
+        : const S(
+            'Trip scheduled',
+            'الرحلة متجدولة',
+            fr: 'Trajet prévu',
+            es: 'Viaje programado',
+          ),
     JourneyStage.delayed => const S(
       'Running late to start',
       'متأخرة عن معادها',
+      fr: 'Retard au démarrage',
+      es: 'Retraso en la salida',
     ),
     JourneyStage.started => isReturn
         ? S(
             '$studentName is boarding for the ride home',
             '$studentName بيركب عشان يرجع البيت',
+            fr: '$studentName monte pour rentrer à la maison',
+            es: '$studentName está subiendo para volver a casa',
           )
-        : const S('Trip starting…', 'الرحلة بتبدأ…'),
+        : const S(
+            'Trip starting…',
+            'الرحلة بتبدأ…',
+            fr: 'Le trajet démarre…',
+            es: 'El viaje está comenzando…',
+          ),
     JourneyStage.onTheWay => isReturn
         ? S(
             '$studentName is on the bus home',
             '$studentName في الأتوبيس رايح البيت',
+            fr: '$studentName est dans le bus pour rentrer à la maison',
+            es: '$studentName va en el autobús de regreso a casa',
           )
         : const S(
             'Bus is on the way',
             'الأتوبيس في الطريق',
+            fr: 'Le bus est en route',
+            es: 'El autobús está en camino',
           ),
     JourneyStage.approachingPickup => isReturn
         ? const S(
             'Bus is approaching home',
             'الأتوبيس قرّب من البيت',
+            fr: 'Le bus est en approche de la maison',
+            es: 'El autobús está llegando a casa',
           )
         : const S(
             'Bus is approaching your stop',
             'الأتوبيس قرّب من محطتك',
+            fr: 'Le bus est en approche de votre arrêt',
+            es: 'El autobús está llegando a tu parada',
           ),
     JourneyStage.arrivedAtPickup => isReturn
         ? const S(
             'Bus has arrived near home',
             'الأتوبيس وصل قريب من البيت',
+            fr: 'Le bus est arrivé près de la maison',
+            es: 'El autobús llegó cerca de casa',
           )
         : const S(
             'Bus has arrived at your stop',
             'الأتوبيس وصل محطتك',
+            fr: 'Le bus est arrivé à votre arrêt',
+            es: 'El autobús llegó a tu parada',
           ),
     JourneyStage.boarded => S(
       '$studentName boarded the bus',
       '$studentName ركب الأتوبيس',
+      fr: '$studentName est monté(e) dans le bus',
+      es: '$studentName subió al autobús',
     ),
     JourneyStage.continuingToSchool => S(
       '$studentName is on the bus to school',
       '$studentName في الأتوبيس متجه للمدرسة',
+      fr: "$studentName est dans le bus vers l'école",
+      es: '$studentName va en el autobús a la escuela',
     ),
     JourneyStage.arrivedAtSchool => const S(
       'Bus arrived at school',
       'الأتوبيس وصل المدرسة',
+      fr: "Le bus est arrivé à l'école",
+      es: 'El autobús llegó a la escuela',
     ),
     JourneyStage.droppedOff => S(
       '$studentName was dropped off at home',
       '$studentName اتسلّم في البيت',
+      fr: '$studentName a été déposé(e) à la maison',
+      es: '$studentName fue dejado/a en casa',
     ),
     JourneyStage.completed => isReturn
-        ? const S('Return trip completed', 'رحلة العودة خلصت')
-        : const S('Trip completed', 'الرحلة خلصت'),
+        ? const S(
+            'Return trip completed',
+            'رحلة العودة خلصت',
+            fr: 'Trajet retour terminé',
+            es: 'Viaje de regreso completado',
+          )
+        : const S(
+            'Trip completed',
+            'الرحلة خلصت',
+            fr: 'Trajet terminé',
+            es: 'Viaje completado',
+          ),
     JourneyStage.paused => const S(
       'Trip paused',
       'الرحلة متوقفة مؤقتًا',
+      fr: 'Trajet en pause',
+      es: 'Viaje en pausa',
     ),
     JourneyStage.emergency => const S(
       'Emergency reported on this trip',
       'اتبلّغ عن طوارئ في الرحلة دي',
+      fr: 'Une urgence a été signalée sur ce trajet',
+      es: 'Se informó una emergencia en este viaje',
     ),
-    JourneyStage.cancelled => const S('Trip cancelled', 'الرحلة اتلغت'),
+    JourneyStage.cancelled => const S(
+      'Trip cancelled',
+      'الرحلة اتلغت',
+      fr: 'Trajet annulé',
+      es: 'Viaje cancelado',
+    ),
   };
 }
 

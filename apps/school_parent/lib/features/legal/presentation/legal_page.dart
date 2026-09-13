@@ -17,7 +17,7 @@ class LegalPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          const S('Privacy & Terms', 'الخصوصية والشروط').of(context),
+          const S('Privacy & Terms', 'الخصوصية والشروط', fr: 'Confidentialité et conditions', es: 'Privacidad y términos').of(context),
         ),
       ),
       body: ListView(

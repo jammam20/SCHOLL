@@ -41,7 +41,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Profile', 'الملف الشخصي').of(context)),
+        title: Text(
+          const S(
+            'Profile',
+            'الملف الشخصي',
+            fr: 'Profil',
+            es: 'Perfil',
+          ).of(context),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -84,7 +91,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: const S('Edit name', 'تعديل الاسم').of(context),
+                      tooltip: const S(
+                        'Edit name',
+                        'تعديل الاسم',
+                        fr: 'Modifier le nom',
+                        es: 'Editar nombre',
+                      ).of(context),
                       onPressed: () => _editName(context),
                     ),
                   ],
@@ -99,7 +111,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    const S('Driver', 'سائق').of(context),
+                    const S(
+                      'Driver',
+                      'سائق',
+                      fr: 'Chauffeur',
+                      es: 'Conductor',
+                    ).of(context),
                     style: TextStyle(
                       color: colors.onPrimaryContainer,
                       fontWeight: FontWeight.w700,
@@ -111,7 +128,14 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(height: AppSpacing.xl3),
-          SectionHeader(title: const S('Preferences', 'التفضيلات').of(context)),
+          SectionHeader(
+            title: const S(
+              'Preferences',
+              'التفضيلات',
+              fr: 'Préférences',
+              es: 'Preferencias',
+            ).of(context),
+          ),
           Card(
             child: Column(
               children: [
@@ -130,7 +154,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.dark_mode_outlined),
-                  title: Text(const S('Dark mode', 'الوضع الليلي').of(context)),
+                  title: Text(
+                    const S(
+                      'Dark mode',
+                      'الوضع الليلي',
+                      fr: 'Mode sombre',
+                      es: 'Modo oscuro',
+                    ).of(context),
+                  ),
                   trailing: ValueListenableBuilder<ThemeMode>(
                     valueListenable: AppSettings.themeMode,
                     builder: (context, mode, _) => Switch(
@@ -143,7 +174,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: Text(
-                    const S('Privacy & Terms', 'الخصوصية والشروط').of(context),
+                    const S(
+                      'Privacy & Terms',
+                      'الخصوصية والشروط',
+                      fr: 'Confidentialité et conditions',
+                      es: 'Privacidad y términos',
+                    ).of(context),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.push(
@@ -156,7 +192,12 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: AppSpacing.xl3),
           AppButton.destructive(
-            label: const S('Sign out', 'تسجيل الخروج').of(context),
+            label: const S(
+              'Sign out',
+              'تسجيل الخروج',
+              fr: 'Se déconnecter',
+              es: 'Cerrar sesión',
+            ).of(context),
             icon: Icons.logout,
             onPressed: onSignOut,
           ),
@@ -174,7 +215,14 @@ class _ProfilePageState extends State<ProfilePage> {
       barrierDismissible: false,
       builder: (_) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
-          title: Text(const S('Edit name', 'تعديل الاسم').of(dialogContext)),
+          title: Text(
+            const S(
+              'Edit name',
+              'تعديل الاسم',
+              fr: 'Modifier le nom',
+              es: 'Editar nombre',
+            ).of(dialogContext),
+          ),
           content: TextField(
             controller: controller,
             autofocus: true,
@@ -185,10 +233,22 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: isSaving
                   ? null
                   : () => Navigator.pop(dialogContext, false),
-              child: Text(const S('Cancel', 'إلغاء').of(dialogContext)),
+              child: Text(
+                const S(
+                  'Cancel',
+                  'إلغاء',
+                  fr: 'Annuler',
+                  es: 'Cancelar',
+                ).of(dialogContext),
+              ),
             ),
             AppButton.primary(
-              label: const S('Save', 'حفظ').of(dialogContext),
+              label: const S(
+                'Save',
+                'حفظ',
+                fr: 'Enregistrer',
+                es: 'Guardar',
+              ).of(dialogContext),
               loading: isSaving,
               onPressed: () async {
                 final name = controller.text.trim();
@@ -210,6 +270,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       const S(
                         "Couldn't save your name — try again.",
                         'تعذّر حفظ اسمك — حاول مرة أخرى.',
+                        fr: "Impossible d'enregistrer votre nom — "
+                            'réessayez.',
+                        es: 'No se pudo guardar tu nombre — inténtalo '
+                            'de nuevo.',
                       ).of(dialogContext),
                     );
                   }
@@ -227,7 +291,12 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _displayName = savedName);
       AppSnackbar.success(
         context,
-        const S('Name updated', 'تم تحديث الاسم').of(context),
+        const S(
+          'Name updated',
+          'تم تحديث الاسم',
+          fr: 'Nom mis à jour',
+          es: 'Nombre actualizado',
+        ).of(context),
       );
     }
   }

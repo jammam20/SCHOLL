@@ -35,10 +35,14 @@ class SafetyAnalyticsSection extends StatelessWidget {
           title: const S(
             'Incidents over time',
             'البلاغات عبر الوقت',
+            fr: 'Signalements dans le temps',
+            es: 'Incidencias a lo largo del tiempo',
           ).of(context),
           subtitle: const S(
             'Reported incidents by type, last 14 days.',
             'البلاغات حسب النوع، آخر 14 يوم.',
+            fr: 'Incidents signalés par type, 14 derniers jours.',
+            es: 'Incidencias reportadas por tipo, últimos 14 días.',
           ).of(context),
         ),
         _IncidentsOverTimeChart(schoolId: schoolId),
@@ -47,10 +51,14 @@ class SafetyAnalyticsSection extends StatelessWidget {
           title: const S(
             'Route deviation frequency',
             'تكرار الخروج عن المسار',
+            fr: 'Fréquence des écarts de trajet',
+            es: 'Frecuencia de desvíos de ruta',
           ).of(context),
           subtitle: const S(
             'Closed deviation episodes per route.',
             'مرات الخروج عن المسار المنتهية لكل خط.',
+            fr: 'Épisodes de déviation clôturés par itinéraire.',
+            es: 'Episodios de desvío cerrados por ruta.',
           ).of(context),
         ),
         _DeviationsByRouteChart(schoolId: schoolId),
@@ -89,6 +97,8 @@ class _IncidentsOverTimeChart extends StatelessWidget {
             title: const S(
               'No incidents reported yet.',
               'مفيش بلاغات لسه.',
+              fr: 'Aucun incident signalé pour le moment.',
+              es: 'Aún no se han reportado incidencias.',
             ).of(context),
           );
         }
@@ -195,6 +205,8 @@ class _IncidentsOverTimeChart extends StatelessWidget {
                 const S(
                   'No incidents in the last 14 days.',
                   'مفيش بلاغات في آخر 14 يوم.',
+                  fr: 'Aucun incident au cours des 14 derniers jours.',
+                  es: 'No hay incidencias en los últimos 14 días.',
                 ).of(context),
                 style: Theme.of(
                   context,
@@ -261,6 +273,8 @@ class _DeviationsByRouteChart extends StatelessWidget {
                   title: const S(
                     'No route deviations recorded yet.',
                     'مفيش خروج عن المسار متسجل لسه.',
+                    fr: 'Aucun écart de trajet enregistré pour le moment.',
+                    es: 'Aún no se han registrado desvíos de ruta.',
                   ).of(context),
                 );
               }
@@ -290,6 +304,8 @@ class _DeviationsByRouteChart extends StatelessWidget {
                                   ? const S(
                                       'No route',
                                       'من غير خط',
+                                      fr: 'Aucun itinéraire',
+                                      es: 'Sin ruta',
                                     ).of(context)
                                   : directory.routeLabel(entry.key),
                               overflow: TextOverflow.ellipsis,
@@ -375,10 +391,14 @@ class _PickupVerificationSection extends StatelessWidget {
               title: const S(
                 'Pickup verification',
                 'تأكيد الاستلام',
+                fr: 'Vérification de la prise en charge',
+                es: 'Verificación de recogida',
               ).of(context),
               subtitle: S(
                 '${verifications.length} recorded attempt(s).',
                 '${verifications.length} محاولة متسجلة.',
+                fr: '${verifications.length} tentative(s) enregistrée(s).',
+                es: '${verifications.length} intento(s) registrado(s).',
               ).of(context),
             ),
             LayoutBuilder(
@@ -391,7 +411,12 @@ class _PickupVerificationSection extends StatelessWidget {
                   MetricStatCard(
                     icon: Icons.verified_outlined,
                     tone: colors.success,
-                    label: const S('Success rate', 'نسبة النجاح').of(context),
+                    label: const S(
+                      'Success rate',
+                      'نسبة النجاح',
+                      fr: 'Taux de réussite',
+                      es: 'Tasa de éxito',
+                    ).of(context),
                     value: decided == 0
                         ? '—'
                         : '${(verified / decided * 100).round()}%',
@@ -399,13 +424,23 @@ class _PickupVerificationSection extends StatelessWidget {
                   MetricStatCard(
                     icon: Icons.cancel_outlined,
                     tone: failed > 0 ? colors.error : colors.success,
-                    label: const S('Failed', 'فشلت').of(context),
+                    label: const S(
+                      'Failed',
+                      'فشلت',
+                      fr: 'Échoués',
+                      es: 'Fallidos',
+                    ).of(context),
                     value: '$failed',
                   ),
                   MetricStatCard(
                     icon: Icons.hourglass_bottom,
                     tone: colors.textMuted,
-                    label: const S('Pending', 'معلقة').of(context),
+                    label: const S(
+                      'Pending',
+                      'معلقة',
+                      fr: 'En attente',
+                      es: 'Pendientes',
+                    ).of(context),
                     value: '$pending',
                   ),
                 ];

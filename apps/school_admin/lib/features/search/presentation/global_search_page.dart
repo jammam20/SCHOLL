@@ -70,6 +70,9 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
         _error = const S(
           "Couldn't search right now — check your connection.",
           'معرفناش ندور دلوقتي — اتأكد من الاتصال.',
+          fr: 'Impossible de rechercher pour le moment — vérifiez votre '
+              'connexion.',
+          es: 'No se pudo buscar en este momento — comprueba tu conexión.',
         ).of(context);
       });
     }
@@ -122,6 +125,8 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
           const S(
             'Manage routes from Operations → Routes.',
             'إدارة الخطوط من العمليات ← الخطوط.',
+            fr: 'Gérez les itinéraires depuis Opérations → Itinéraires.',
+            es: 'Gestiona las rutas desde Operaciones → Rutas.',
           ).of(context),
         );
     }
@@ -136,11 +141,36 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
   };
 
   String _kindLabel(BuildContext context, SearchResultKind kind) => switch (kind) {
-    SearchResultKind.student => const S('Student', 'طالب').of(context),
-    SearchResultKind.parent => const S('Parent', 'ولي أمر').of(context),
-    SearchResultKind.driver => const S('Driver', 'سائق').of(context),
-    SearchResultKind.bus => const S('Bus', 'أتوبيس').of(context),
-    SearchResultKind.route => const S('Route', 'خط سير').of(context),
+    SearchResultKind.student => const S(
+      'Student',
+      'طالب',
+      fr: 'Élève',
+      es: 'Alumno',
+    ).of(context),
+    SearchResultKind.parent => const S(
+      'Parent',
+      'ولي أمر',
+      fr: 'Parent',
+      es: 'Familiar',
+    ).of(context),
+    SearchResultKind.driver => const S(
+      'Driver',
+      'سائق',
+      fr: 'Chauffeur',
+      es: 'Conductor',
+    ).of(context),
+    SearchResultKind.bus => const S(
+      'Bus',
+      'أتوبيس',
+      fr: 'Bus',
+      es: 'Autobús',
+    ).of(context),
+    SearchResultKind.route => const S(
+      'Route',
+      'خط سير',
+      fr: 'Itinéraire',
+      es: 'Ruta',
+    ).of(context),
   };
 
   @override
@@ -157,6 +187,10 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
             hintText: const S(
               'Search students, parents, drivers, buses, routes…',
               'دور على طلاب، أولياء أمور، سائقين، أتوبيسات، خطوط…',
+              fr: 'Rechercher des élèves, parents, chauffeurs, bus, '
+                  'itinéraires…',
+              es: 'Buscar alumnos, familias, conductores, autobuses, '
+                  'rutas…',
             ).of(context),
             border: InputBorder.none,
           ),
@@ -171,12 +205,20 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
               title: const S(
                 'Search your whole school',
                 'دور في مدرستك كلها',
+                fr: 'Recherchez dans toute votre école',
+                es: 'Busca en todo tu colegio',
               ).of(context),
               message: const S(
                 'Matches names from the start — try the first few letters '
                     'of a student, parent, driver, bus or route.',
                 'بيدور من أول الاسم — جرب أول كام حرف من اسم طالب أو ولي '
                     'أمر أو سائق أو أتوبيس أو خط.',
+                fr: "Cherche à partir du début du nom — essayez les "
+                    "premières lettres d'un élève, parent, chauffeur, bus "
+                    'ou itinéraire.',
+                es: 'Busca coincidencias desde el inicio del nombre — '
+                    'prueba con las primeras letras de un alumno, '
+                    'familiar, conductor, autobús o ruta.',
               ).of(context),
             );
           }
@@ -197,11 +239,20 @@ class _GlobalSearchPageState extends State<GlobalSearchPage> {
           if (results.isEmpty) {
             return EmptyStateView(
               icon: Icons.search_off,
-              title: const S('No matches', 'مفيش نتايج').of(context),
+              title: const S(
+                'No matches',
+                'مفيش نتايج',
+                fr: 'Aucun résultat',
+                es: 'Sin resultados',
+              ).of(context),
               message: const S(
                 'Nothing starts with that — search matches from the '
                     'beginning of a name.',
                 'مفيش حاجة بتبدأ بكده — البحث بيدور من أول الاسم.',
+                fr: 'Rien ne commence par ça — la recherche compare à '
+                    "partir du début du nom.",
+                es: 'Nada empieza así — la búsqueda encuentra '
+                    'coincidencias desde el inicio del nombre.',
               ).of(context),
             );
           }

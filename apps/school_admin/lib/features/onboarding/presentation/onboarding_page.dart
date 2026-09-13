@@ -53,32 +53,64 @@ class _Slide {
 const _slides = [
   _Slide(
     Icons.dashboard_customize_outlined,
-    S('Run your whole school from one app', 'شغّل مدرستك كلها من تطبيق واحد'),
+    S(
+      'Run your whole school from one app',
+      'شغّل مدرستك كلها من تطبيق واحد',
+      fr: 'Gérez toute votre école depuis une seule application',
+      es: 'Gestiona todo tu colegio desde una sola aplicación',
+    ),
     S(
       'Buses, routes, trips, drivers and parents — manage everything your '
           "school's transportation needs in one place.",
       'الأتوبيسات والخطوط والرحلات والسواقين وأولياء الأمور — كل حاجة '
           'مواصلات مدرستك محتاجاها في مكان واحد.',
+      fr: 'Bus, itinéraires, trajets, chauffeurs et parents — gérez tous '
+          'les besoins de transport de votre école en un seul endroit.',
+      es: 'Autobuses, rutas, viajes, conductores y familias — gestiona '
+          'todas las necesidades de transporte de tu colegio en un solo '
+          'lugar.',
     ),
   ),
   _Slide(
     Icons.fact_check_outlined,
-    S('Approve who joins your school', 'وافق على مين ينضم لمدرستك'),
+    S(
+      'Approve who joins your school',
+      'وافق على مين ينضم لمدرستك',
+      fr: 'Approuvez qui rejoint votre école',
+      es: 'Aprueba quién se une a tu colegio',
+    ),
     S(
       'Drivers and parents register themselves with your school code — '
           "you approve each one before they can see anything.",
       'السواقين وأولياء الأمور بيسجلوا نفسهم بكود مدرستك — إنت اللي '
           'بتوافق على كل واحد قبل ما يشوف أي حاجة.',
+      fr: 'Les chauffeurs et les parents s\'inscrivent eux-mêmes avec le '
+          'code de votre école — vous approuvez chacun avant qu\'il '
+          'puisse voir quoi que ce soit.',
+      es: 'Los conductores y las familias se registran con el código de '
+          'tu colegio — tú apruebas a cada uno antes de que pueda ver '
+          'nada.',
     ),
   ),
   _Slide(
     Icons.map_outlined,
-    S('Watch every bus, live', 'تابع كل أتوبيس، لحظة بلحظة'),
+    S(
+      'Watch every bus, live',
+      'تابع كل أتوبيس، لحظة بلحظة',
+      fr: 'Suivez chaque bus, en direct',
+      es: 'Sigue cada autobús, en vivo',
+    ),
     S(
       "See every trip on the road at once, and dig into stats on students, "
           'drivers and routes whenever you need to.',
       'شوف كل الرحلات الشغالة في نفس الوقت، وادخل على إحصائيات الطلاب '
           'والسواقين والخطوط وقت ما تحتاج.',
+      fr: "Voyez tous les trajets en cours en un coup d'œil, et consultez "
+          'les statistiques sur les élèves, les chauffeurs et les '
+          'itinéraires quand vous en avez besoin.',
+      es: 'Consulta todos los viajes en curso a la vez, y revisa las '
+          'estadísticas de alumnos, conductores y rutas cuando lo '
+          'necesites.',
     ),
   ),
 ];
@@ -134,7 +166,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     const SizedBox(width: AppSpacing.sm),
                     TextButton(
                       onPressed: _finish,
-                      child: Text(const S('Skip', 'تخطي').of(context)),
+                      child: Text(
+                        const S(
+                          'Skip',
+                          'تخطي',
+                          fr: 'Passer',
+                          es: 'Omitir',
+                        ).of(context),
+                      ),
                     ),
                   ],
                 ),
@@ -207,8 +246,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 width: double.infinity,
                 child: AppButton.primary(
                   label: isLast
-                      ? const S('Get started', 'يلا نبدأ').of(context)
-                      : const S('Next', 'التالي').of(context),
+                      ? const S(
+                          'Get started',
+                          'يلا نبدأ',
+                          fr: 'Commencer',
+                          es: 'Empezar',
+                        ).of(context)
+                      : const S(
+                          'Next',
+                          'التالي',
+                          fr: 'Suivant',
+                          es: 'Siguiente',
+                        ).of(context),
                   onPressed: isLast
                       ? _finish
                       : () => _controller.nextPage(

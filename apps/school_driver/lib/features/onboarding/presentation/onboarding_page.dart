@@ -53,33 +53,64 @@ class _Slide {
 const _slides = [
   _Slide(
     Icons.route_outlined,
-    S("See today's route, in order", 'شوف خط سيرك النهاردة بالترتيب'),
+    S(
+      "See today's route, in order",
+      'شوف خط سيرك النهاردة بالترتيب',
+      fr: "Voyez votre itinéraire du jour, dans l'ordre",
+      es: 'Mira tu ruta de hoy, en orden',
+    ),
     S(
       'Your pickup order is worked out for you automatically, stop by '
           'stop — and you can still reorder it by hand if the road tells '
           'you otherwise.',
       'ترتيب الاستلام بيتحسب لك تلقائيًا محطة محطة — وتقدر تغيّره بإيدك '
           'لو الطريق قال حاجة تانية.',
+      fr: 'Votre ordre de ramassage est calculé automatiquement, arrêt '
+          'par arrêt — et vous pouvez toujours le réorganiser à la main '
+          'si la route en décide autrement.',
+      es: 'Tu orden de recogida se calcula automáticamente, parada por '
+          'parada — y aún puedes reordenarlo a mano si la carretera '
+          'dice lo contrario.',
     ),
   ),
   _Slide(
     Icons.how_to_reg_outlined,
-    S('Tap when a student boards', 'دوس لما الطالب يركب'),
+    S(
+      'Tap when a student boards',
+      'دوس لما الطالب يركب',
+      fr: 'Appuyez quand un élève monte',
+      es: 'Toca cuando un alumno sube',
+    ),
     S(
       "One tap marks a student picked up and lets their parent know "
           'instantly — no calls, no guessing.',
       'ضغطة واحدة تحدد إن الطالب ركب وتوصل لولي أمره فورًا — من غير '
           'مكالمات ولا تخمين.',
+      fr: "Un seul geste marque l'élève comme récupéré et informe "
+          'aussitôt son parent — sans appel, sans supposition.',
+      es: 'Un solo toque marca al alumno como recogido y avisa a su '
+          'padre al instante — sin llamadas, sin adivinar.',
     ),
   ),
   _Slide(
     Icons.event_busy_outlined,
-    S('Absent students are skipped', 'الطلاب الغايبين يتخطوا تلقائي'),
+    S(
+      'Absent students are skipped',
+      'الطلاب الغايبين يتخطوا تلقائي',
+      fr: 'Les élèves absents sont sautés',
+      es: 'Los alumnos ausentes se omiten',
+    ),
     S(
       "If a parent marks their child absent for the day, that stop drops "
           "out of your route automatically — no wasted detour.",
       'لو ولي الأمر حدد إن ابنه غايب النهاردة، المحطة دي بتتشال من خط '
           'سيرك تلقائي — من غير لف فاضي.',
+      fr: "Si un parent signale l'absence de son enfant pour la "
+          'journée, cet arrêt disparaît automatiquement de votre '
+          'itinéraire — aucun détour inutile.',
+      es: 'Si un padre marca a su hijo como ausente por el día, esa '
+          'parada desaparece automáticamente de tu ruta — sin '
+          'desvíos innecesarios.',
     ),
   ),
 ];
@@ -135,7 +166,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     const SizedBox(width: AppSpacing.sm),
                     TextButton(
                       onPressed: _finish,
-                      child: Text(const S('Skip', 'تخطي').of(context)),
+                      child: Text(
+                        const S(
+                          'Skip',
+                          'تخطي',
+                          fr: 'Passer',
+                          es: 'Omitir',
+                        ).of(context),
+                      ),
                     ),
                   ],
                 ),
@@ -208,8 +246,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 width: double.infinity,
                 child: AppButton.primary(
                   label: isLast
-                      ? const S('Get started', 'يلا نبدأ').of(context)
-                      : const S('Next', 'التالي').of(context),
+                      ? const S(
+                          'Get started',
+                          'يلا نبدأ',
+                          fr: 'Commencer',
+                          es: 'Comenzar',
+                        ).of(context)
+                      : const S(
+                          'Next',
+                          'التالي',
+                          fr: 'Suivant',
+                          es: 'Siguiente',
+                        ).of(context),
                   onPressed: isLast
                       ? _finish
                       : () => _controller.nextPage(

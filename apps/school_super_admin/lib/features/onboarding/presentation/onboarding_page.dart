@@ -53,23 +53,51 @@ class _Slide {
 const _slides = [
   _Slide(
     Icons.school_outlined,
-    S('Bring a new school on board', 'ضيف مدرسة جديدة للمنصة'),
+    S(
+      'Bring a new school on board',
+      'ضيف مدرسة جديدة للمنصة',
+      fr: 'Intégrez une nouvelle école',
+      es: 'Incorpora una nueva escuela',
+    ),
     S(
       'Create a school and hand its owner a join code — they use it to '
           'register themselves as that school\'s first admin, no Firebase '
           'Console needed.',
       'اعمل مدرسة وادّي صاحبها كود انضمام — هيستخدمه يسجل نفسه كأول أدمن '
           'للمدرسة دي، من غير ما يلمس Firebase Console خالص.',
+      fr:
+          "Créez une école et remettez à son responsable un code "
+          "d'inscription — il l'utilisera pour s'inscrire lui-même comme "
+          "premier administrateur de cette école, sans passer par la "
+          "Firebase Console.",
+      es:
+          'Crea una escuela y entrega a su responsable un código de '
+          'inscripción — lo usará para registrarse como primer '
+          'administrador de esa escuela, sin necesidad de la consola de '
+          'Firebase.',
     ),
   ),
   _Slide(
     Icons.pending_actions_outlined,
-    S("Approve each school's first admin", 'وافق على أول أدمن لكل مدرسة'),
+    S(
+      "Approve each school's first admin",
+      'وافق على أول أدمن لكل مدرسة',
+      fr: "Validez le premier administrateur de chaque école",
+      es: 'Aprueba al primer administrador de cada escuela',
+    ),
     S(
       "Every new school's first admin request lands here for you to "
           'approve or reject before they can access anything.',
       'أول طلب أدمن لأي مدرسة جديدة بيوصلك هنا عشان توافق عليه أو ترفضه '
           'قبل ما يقدر يدخل أي حاجة.',
+      fr:
+          "Chaque demande de premier administrateur d'une nouvelle école "
+          "arrive ici pour que vous l'approuviez ou la refusiez avant "
+          "qu'il ne puisse accéder à quoi que ce soit.",
+      es:
+          'Cada solicitud de primer administrador de una nueva escuela '
+          'llega aquí para que la apruebes o la rechaces antes de que '
+          'pueda acceder a nada.',
     ),
   ),
 ];
@@ -134,7 +162,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     const SizedBox(width: AppSpacing.sm),
                     TextButton(
                       onPressed: _finish,
-                      child: Text(const S('Skip', 'تخطي').of(context)),
+                      child: Text(
+                        const S(
+                          'Skip',
+                          'تخطي',
+                          fr: 'Passer',
+                          es: 'Omitir',
+                        ).of(context),
+                      ),
                     ),
                   ],
                 ),
@@ -215,8 +250,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 width: double.infinity,
                 child: AppButton.primary(
                   label: isLast
-                      ? const S('Get started', 'يلا نبدأ').of(context)
-                      : const S('Next', 'التالي').of(context),
+                      ? const S(
+                          'Get started',
+                          'يلا نبدأ',
+                          fr: 'Commencer',
+                          es: 'Empezar',
+                        ).of(context)
+                      : const S(
+                          'Next',
+                          'التالي',
+                          fr: 'Suivant',
+                          es: 'Siguiente',
+                        ).of(context),
                   onPressed: isLast ? _finish : _next,
                 ),
               ),

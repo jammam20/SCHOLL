@@ -1,5 +1,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:school_shared/school_shared.dart';
+
+/// Turns whatever this layer threw into the framework-agnostic
+/// [AuthFailureCode] the rest of the app reasons about.
+///
+/// The point is language, not tidiness: everything below the widget tree
+/// runs without a BuildContext, so any sentence built here could only ever
+/// be in one language — and it used to be, since the cubit put English
+/// straight into `AuthSignedOut.message` and login_page.dart rendered it
+/// verbatim, leaving a French or Spanish system admin reading English at
+/// the one screen they cannot get past. A code carries the *identity* of
+/// the failure up to the presentation layer, which has a context and can
+/// pick the right words (see `authFailureMessage`).
+AuthFailureCode authFailureCodeFor(Object error) {
+  if (error is AuthFailure) return error.code;
+  if (error is! FirebaseAuthException) return AuthFailureCode.unknown;
+  return switch (error.code) {
+    // Recent firebase_auth collapses wrong-password/user-not-found into
+    // 'invalid-credential' to avoid leaking which of the two it was; older
+    // versions (and the emulator) still send the split codes, so both
+    // spellings are handled.
+    'invalid-credential' ||
+    'invalid-login-credentials' ||
+    'wrong-password' ||
+    'user-not-found' => AuthFailureCode.invalidCredentials,
+    'invalid-email' => AuthFailureCode.invalidEmail,
+    'too-many-requests' => AuthFailureCode.tooManyRequests,
+    'network-request-failed' => AuthFailureCode.network,
+    'user-disabled' => AuthFailureCode.disabled,
+    _ => AuthFailureCode.unknown,
+  };
+}
 
 /// A signed-in system admin — this app has exactly one kind of user.
 class SuperAdminProfile {

@@ -53,26 +53,54 @@ class _CommunityAdminPageState extends State<CommunityAdminPage> {
 
   String _filterLabel(BuildContext context, _AdminCommunityFilter filter) {
     return switch (filter) {
-      _AdminCommunityFilter.all => const S('All', 'الكل').of(context),
+      _AdminCommunityFilter.all => const S(
+        'All',
+        'الكل',
+        fr: 'Tous',
+        es: 'Todos',
+      ).of(context),
       _AdminCommunityFilter.complaint => const S(
         'Complaints',
         'الشكاوى',
+        fr: 'Plaintes',
+        es: 'Quejas',
       ).of(context),
       _AdminCommunityFilter.busIssue => const S(
         'Bus issues',
         'مشاكل الأتوبيس',
+        fr: 'Problèmes de bus',
+        es: 'Problemas con el autobús',
       ).of(context),
       _AdminCommunityFilter.pickupPoint => const S(
         'Pickup point',
         'نقطة الاستلام',
+        fr: 'Point de ramassage',
+        es: 'Punto de recogida',
       ).of(context),
-      _AdminCommunityFilter.delay => const S('Delay', 'تأخير').of(context),
+      _AdminCommunityFilter.delay => const S(
+        'Delay',
+        'تأخير',
+        fr: 'Retard',
+        es: 'Retraso',
+      ).of(context),
       _AdminCommunityFilter.suggestion => const S(
         'Suggestions',
         'اقتراحات',
+        fr: 'Suggestions',
+        es: 'Sugerencias',
       ).of(context),
-      _AdminCommunityFilter.question => const S('Questions', 'أسئلة').of(context),
-      _AdminCommunityFilter.reported => const S('Reports', 'البلاغات').of(context),
+      _AdminCommunityFilter.question => const S(
+        'Questions',
+        'أسئلة',
+        fr: 'Questions',
+        es: 'Preguntas',
+      ).of(context),
+      _AdminCommunityFilter.reported => const S(
+        'Reports',
+        'البلاغات',
+        fr: 'Signalements',
+        es: 'Reportes',
+      ).of(context),
     };
   }
 
@@ -82,10 +110,22 @@ class _CommunityAdminPageState extends State<CommunityAdminPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(const S('Parent Community', 'مجتمع أولياء الأمور').of(context)),
+        title: Text(
+          const S(
+            'Parent Community',
+            'مجتمع أولياء الأمور',
+            fr: 'Communauté des parents',
+            es: 'Comunidad de familias',
+          ).of(context),
+        ),
         actions: [
           IconButton(
-            tooltip: const S('Search', 'بحث').of(context),
+            tooltip: const S(
+              'Search',
+              'بحث',
+              fr: 'Rechercher',
+              es: 'Buscar',
+            ).of(context),
             icon: Icon(_searching ? Icons.close : Icons.search),
             onPressed: () => setState(() {
               _searching = !_searching;
@@ -115,6 +155,8 @@ class _CommunityAdminPageState extends State<CommunityAdminPage> {
                       hintText: const S(
                         'Search posts…',
                         'دور في المنشورات…',
+                        fr: 'Rechercher des publications…',
+                        es: 'Buscar publicaciones…',
                       ).of(context),
                     ),
                   ),
@@ -168,6 +210,10 @@ class _CommunityAdminPageState extends State<CommunityAdminPage> {
                 "Couldn't load the community feed — check your connection "
                     'and try again.',
                 'معرفناش نحمّل مجتمع المدرسة — اتأكد من الاتصال وجرب تاني.',
+                fr: 'Impossible de charger le fil de la communauté — '
+                    'vérifiez votre connexion et réessayez.',
+                es: 'No se pudo cargar el feed de la comunidad — comprueba '
+                    'tu conexión e inténtalo de nuevo.',
               ).of(context),
               onRetry: () => setState(() {}),
             );
@@ -187,6 +233,8 @@ class _CommunityAdminPageState extends State<CommunityAdminPage> {
               title: const S(
                 'No posts match this filter',
                 'مفيش منشورات مطابقة للفلتر ده',
+                fr: 'Aucune publication ne correspond à ce filtre',
+                es: 'Ninguna publicación coincide con este filtro',
               ).of(context),
             );
           }
@@ -277,6 +325,8 @@ class _AdminPostCard extends StatelessWidget {
                           label: S(
                             '${post.reportCount} report(s)',
                             '${post.reportCount} بلاغ',
+                            fr: '${post.reportCount} signalement(s)',
+                            es: '${post.reportCount} reporte(s)',
                           ).of(context),
                           tone: StatusTone.error,
                         ),

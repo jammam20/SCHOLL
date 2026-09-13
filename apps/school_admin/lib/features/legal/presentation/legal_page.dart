@@ -13,16 +13,26 @@ class LegalPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final languageCode = Localizations.localeOf(context).languageCode;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          const S('Privacy & Terms', 'الخصوصية والشروط').of(context),
+          const S(
+            'Privacy & Terms',
+            'الخصوصية والشروط',
+            fr: 'Confidentialité et conditions',
+            es: 'Privacidad y términos',
+          ).of(context),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        children: isArabic ? _arabicSections(context) : _englishSections(context),
+        children: switch (languageCode) {
+          'ar' => _arabicSections(context),
+          'fr' => _frenchSections(context),
+          'es' => _spanishSections(context),
+          _ => _englishSections(context),
+        },
       ),
     );
   }
@@ -94,6 +104,42 @@ class LegalPage extends StatelessWidget {
           'لما تكون متأكد، لأن خط سير السواق بيتعدل على أساسها.\n\n'
           'الخدمة دي متاحة زي ما هي عشان تنظيم مواصلات المدرسة، ومش بديل '
           'عن التواصل المباشر مع المدرسة في حالة الطوارئ.',
+    ),
+  ];
+
+  List<Widget> _frenchSections(BuildContext context) => [
+    _Section(
+      title: 'Politique de confidentialité',
+      body: '''Cette application est utilisée par une seule école pour gérer son propre service de bus. Les données qu'elle collecte — le nom, l'e-mail et le téléphone d'un parent ou d'un membre du personnel ; le nom, la classe et le point de ramassage d'un élève ; ainsi que la position GPS en temps réel d'un bus pendant qu'une course est en cours — sont saisies par le personnel de votre école ou par vous-même, et ne sont visibles que par le personnel agréé de votre propre école et par les parents liés à un élève. Elles ne sont ni vendues, ni partagées avec des annonceurs, ni utilisées à d'autres fins que la gestion du service de bus scolaire.
+
+La position en temps réel n'est diffusée que pendant qu'une course d'un chauffeur est en cours, et uniquement à l'école concernée par cette course. Les jetons de notification push de l'appareil sont conservés afin que l'application puisse vous alerter au sujet du trajet de votre enfant ; vous pouvez les effacer en vous déconnectant.
+
+Pour consulter, corriger ou supprimer vos données, contactez l'administrateur de votre école — il gère votre compte et peut traiter la demande directement, l'école (et non cette application) étant responsable de ces données.''',
+    ),
+    const SizedBox(height: AppSpacing.xl2),
+    _Section(
+      title: "Conditions d'utilisation",
+      body: '''Les comptes sont approuvés par votre école et peuvent être suspendus ou supprimés par celle-ci à sa discrétion. Les informations de localisation et de point de ramassage doivent rester à jour — un point de ramassage périmé peut amener le chauffeur à manquer l'arrêt d'un élève. Signaler l'absence d'un élève revient à confirmer qu'il ne montera pas dans le bus ce jour-là ; merci de ne l'utiliser que lorsque c'est exact, car l'itinéraire du chauffeur est ajusté en fonction de cette information.
+
+Ce service est fourni tel quel pour coordonner le transport scolaire et ne remplace pas une communication directe avec l'école en cas d'urgence.''',
+    ),
+  ];
+
+  List<Widget> _spanishSections(BuildContext context) => [
+    _Section(
+      title: 'Política de privacidad',
+      body: '''Esta aplicación la utiliza un único colegio para gestionar su propio servicio de autobús. Los datos que recopila — el nombre, correo electrónico y teléfono de un padre/madre o miembro del personal; el nombre, curso y punto de recogida de un alumno; y la ubicación GPS en tiempo real de un autobús mientras un viaje está en curso — los introduce el personal de tu colegio o tú mismo, y solo son visibles para el personal autorizado de tu propio colegio y para los padres vinculados a un alumno. No se venden, no se comparten con anunciantes ni se usan para nada que no sea gestionar el servicio de autobús escolar.
+
+La ubicación en tiempo real solo se transmite mientras el viaje de un conductor está activo, y únicamente al colegio de ese viaje. Se almacenan los tokens de notificaciones push del dispositivo para que la aplicación pueda avisarte sobre el viaje de tu hijo o hija; puedes borrarlos cerrando sesión.
+
+Para revisar, corregir o eliminar tus datos, contacta con el administrador de tu colegio: gestiona tu cuenta y puede tramitar la solicitud directamente, ya que el colegio (y no esta aplicación) es el responsable de esos datos.''',
+    ),
+    const SizedBox(height: AppSpacing.xl2),
+    _Section(
+      title: 'Términos de uso',
+      body: '''Las cuentas son aprobadas por tu colegio y este puede suspenderlas o eliminarlas a su discreción. La información de ubicación y del punto de recogida debe mantenerse actualizada: un punto de recogida desactualizado puede hacer que el conductor se salte la parada de un alumno. Marcar a un alumno como ausente es un compromiso de que no viajará ese día; utilízalo solo cuando sea exacto, ya que la ruta del conductor se ajusta en función de ello.
+
+Este servicio se ofrece tal cual para coordinar el transporte escolar y no sustituye la comunicación directa con el colegio en caso de emergencia.''',
     ),
   ];
 }
