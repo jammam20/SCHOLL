@@ -130,6 +130,12 @@ const TITLES: Record<string, Phrase> = {
     fr: "Écart d'itinéraire",
     es: "Desvío de ruta",
   },
+  notAtStop: {
+    en: "Not at the stop",
+    ar: "مكانش في المحطة",
+    fr: "Absent à l'arrêt",
+    es: "No estaba en la parada",
+  },
 };
 
 /// Every notification body, keyed by the `type` also written to the in-app
@@ -167,6 +173,22 @@ const BODIES: Record<string, Phrase> = {
     ar: "رحلة {routeName} اتلغت.",
     fr: "Le trajet {routeName} a été annulé.",
     es: "El viaje de {routeName} fue cancelado.",
+  },
+  student_not_at_stop: {
+    en:
+      "The {routeName} bus reached {studentName}'s stop and they were not " +
+      "there. If they are not riding today, mark them absent in the app.",
+    ar:
+      "أتوبيس {routeName} وصل محطة {studentName} وملقهوش. لو مش هيركب " +
+      "النهاردة، سجّله غايب من التطبيق.",
+    fr:
+      "Le bus {routeName} est arrivé à l'arrêt de {studentName} et " +
+      "l'enfant n'y était pas. S'il ne prend pas le bus aujourd'hui, " +
+      "marquez-le absent dans l'application.",
+    es:
+      "El autobús de {routeName} llegó a la parada de {studentName} y no " +
+      "estaba allí. Si hoy no viaja, márquelo como ausente en la " +
+      "aplicación.",
   },
   student_boarded: {
     en: "{studentName} boarded the {routeName} bus.",
@@ -263,6 +285,7 @@ const EMOJI: Record<string, string> = {
   trip_paused: "🚌",
   trip_completed: "🚌",
   trip_cancelled: "🚌",
+  student_not_at_stop: "⚠️",
   student_boarded: "✅",
   student_dropped_off: "🏫",
   trip_bus_changed: "🚍",
@@ -283,6 +306,7 @@ const TITLE_FOR_TYPE: Record<string, keyof typeof TITLES> = {
   bus_minutes_away: "busOnTheWay",
   bus_arrived_school: "busArrived",
   route_deviation: "routeDeviation",
+  student_not_at_stop: "notAtStop",
 };
 
 export function notificationTitle(type: string, language: Language): string {

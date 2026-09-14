@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:school_shared/school_shared.dart';
 
 import '../../schools/data/schools_repository.dart';
+import '../../students/data/students_repository.dart';
 import '../../students/presentation/child_settings_page.dart';
 import '../../tracking/data/parent_tracking_repository.dart';
 import '../../tracking/domain/live_bus_position.dart';
@@ -344,6 +345,44 @@ class _TripSectionState extends State<_TripSection> {
         routeId: widget.routeId,
       );
 
+  // Today's attendance record, memoized for the same reason as the trip
+  // stream above. This is how a driver's "wasn't at the stop" report
+  // reaches the parent at all — the driver cannot write the student
+  // document, so that fact only ever lands here.
+  late final Stream<AttendanceRecord?> _attendanceStream =
+      StudentsRepository().watchTodayAttendance(
+        schoolId: user.schoolId,
+        studentId: student.id,
+      );
+
+  StreamSubscription<AttendanceRecord?>? _attendanceSub;
+  AttendanceRecord? _attendance;
+
+  bool get _driverNoShow => _attendance?.isDriverNoShow ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listened to rather than nested in a second StreamBuilder: this only
+    // decides which banner the card shows, and a nested builder would add
+    // another subscription that tears down on every ancestor rebuild —
+    // the exact flicker the memoized _tripStream above exists to avoid.
+    _attendanceSub = _attendanceStream.listen((record) {
+      if (!mounted) return;
+      if (record?.isDriverNoShow != _attendance?.isDriverNoShow) {
+        setState(() => _attendance = record);
+      } else {
+        _attendance = record;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _attendanceSub?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -388,37 +427,68 @@ class _TripSectionState extends State<_TripSection> {
                 trip.status == TripStatus.paused ||
                 trip.status == TripStatus.emergency);
 
-        // A child marked absent today is not being collected today. Putting
-        // a "bus approaching your stop" timeline in front of their parent
-        // would be actively misleading — the bus is running, it just isn't
-        // stopping for them — so the absence takes over the card and the
-        // day dashboard explains the rest.
-        if (student.isAbsentToday) {
+        // Two different facts share the word "absent", and they must not
+        // share a banner. A parent declaring "not riding today" is a plan;
+        // a driver reporting "wasn't at the stop" is something that just
+        // happened and may need acting on. Either way, putting a "bus
+        // approaching your stop" countdown in front of the parent would be
+        // actively misleading — the bus is running, it just isn't stopping
+        // for them — so the absence takes over the card.
+        final noShow = _driverNoShow;
+        if (student.isAbsentToday || noShow) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _InfoBanner(
-                icon: Icons.event_busy_rounded,
-                tone: StatusTone.warning,
-                title: const S(
-                  'Absent today',
-                  'غايب النهاردة',
-                  fr: "Absent aujourd'hui",
-                  es: 'Ausente hoy',
-                ).of(context),
-                subtitle: const S(
-                  "The bus will skip this child's stop today. You can undo "
-                      'this in child settings.',
-                  'الأتوبيس هيتخطى محطة الطفل ده النهاردة. تقدر تلغي ده من '
-                      'إعدادات الطفل.',
-                  fr:
-                      "Le bus sautera l'arrêt de cet enfant aujourd'hui. "
-                      "Vous pouvez annuler cela dans les paramètres de "
-                      "l'enfant.",
-                  es:
-                      'El autobús se saltará la parada de este niño hoy. '
-                      'Puede deshacerlo en los ajustes del niño.',
-                ).of(context),
+                icon: noShow
+                    ? Icons.person_search_rounded
+                    : Icons.event_busy_rounded,
+                tone: noShow ? StatusTone.error : StatusTone.warning,
+                title: noShow
+                    ? const S(
+                        'Not at the stop',
+                        'مكانش في المحطة',
+                        fr: "Absent à l'arrêt",
+                        es: 'No estaba en la parada',
+                      ).of(context)
+                    : const S(
+                        'Absent today',
+                        'غايب النهاردة',
+                        fr: "Absent aujourd'hui",
+                        es: 'Ausente hoy',
+                      ).of(context),
+                subtitle: noShow
+                    ? const S(
+                        'The driver reached this stop and reported that '
+                            'your child was not there. If they are not '
+                            'riding today, mark them absent in child '
+                            'settings.',
+                        'السواق وصل المحطة دي وبلّغ إن ابنك مكانش موجود. لو '
+                            'مش هيركب النهاردة، سجّله غايب من إعدادات الطفل.',
+                        fr:
+                            "Le chauffeur est arrivé à cet arrêt et a "
+                            "signalé que votre enfant n'y était pas. S'il "
+                            "ne prend pas le bus aujourd'hui, marquez-le "
+                            "absent dans les paramètres de l'enfant.",
+                        es:
+                            'El conductor llegó a esta parada e informó '
+                            'que su hijo no estaba allí. Si hoy no viaja, '
+                            'márquelo como ausente en los ajustes del '
+                            'niño.',
+                      ).of(context)
+                    : const S(
+                        "The bus will skip this child's stop today. You can "
+                            'undo this in child settings.',
+                        'الأتوبيس هيتخطى محطة الطفل ده النهاردة. تقدر تلغي ده '
+                            'من إعدادات الطفل.',
+                        fr:
+                            "Le bus sautera l'arrêt de cet enfant "
+                            "aujourd'hui. Vous pouvez annuler cela dans les "
+                            "paramètres de l'enfant.",
+                        es:
+                            'El autobús se saltará la parada de este niño '
+                            'hoy. Puede deshacerlo en los ajustes del niño.',
+                      ).of(context),
               ),
               if (expanded) ...[
                 const SizedBox(height: AppSpacing.md),

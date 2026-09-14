@@ -30,6 +30,7 @@ const kServerNotificationTypes = <String>{
   'trip_cancelled',
   'emergency',
   'student_boarded',
+  'student_not_at_stop',
   'student_dropped_off',
   'bus_changed',
   'trip_bus_changed',
@@ -60,6 +61,7 @@ IconData notificationTypeIcon(String type) => switch (type) {
   'trip_cancelled' => Icons.cancel_outlined,
   'emergency' => Icons.warning_amber_rounded,
   'student_boarded' => Icons.how_to_reg_rounded,
+  'student_not_at_stop' => Icons.person_search_rounded,
   'student_dropped_off' => Icons.waving_hand_outlined,
   'bus_changed' ||
   'trip_bus_changed' ||
@@ -86,6 +88,7 @@ StatusTone notificationTypeTone(String type) => switch (type) {
   'bus_arriving' ||
   'bus_minutes_away' => StatusTone.info,
   'emergency' => StatusTone.emergency,
+  'student_not_at_stop' => StatusTone.error,
   'student_boarded' ||
   'student_dropped_off' ||
   'trip_completed' ||
@@ -138,6 +141,12 @@ S notificationTypeLabel(String type) => switch (type) {
     'طوارئ',
     fr: 'Urgence',
     es: 'Emergencia',
+  ),
+  'student_not_at_stop' => const S(
+    'Not at stop',
+    'مكانش في المحطة',
+    fr: "Absent à l'arrêt",
+    es: 'No estaba',
   ),
   'student_boarded' => const S(
     'Boarded',

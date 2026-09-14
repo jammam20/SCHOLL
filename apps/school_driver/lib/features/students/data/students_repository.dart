@@ -105,6 +105,9 @@ class StudentsRepository {
         isAbsent: true,
         updatedBy: uid,
         studentName: studentName,
+        // Marks this as an observation at the stop rather than a declared
+        // absence, so the parent app can say which one happened.
+        source: AttendanceSource.driver,
       ).toMap(),
       SetOptions(merge: true),
     );

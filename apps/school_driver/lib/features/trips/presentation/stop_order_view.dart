@@ -120,33 +120,33 @@ class _StopOrderViewState extends State<StopOrderView> {
     final confirmed = await showAppConfirmDialog(
       context,
       title: const S(
-        'Mark absent today',
-        'تسجيل غياب اليوم',
-        fr: "Signaler l'absence aujourd'hui",
-        es: 'Reportar ausencia hoy',
+        'Report not at stop',
+        'إبلاغ إنه مكانش في المحطة',
+        fr: "Signaler une absence à l'arrêt",
+        es: 'Reportar que no estaba en la parada',
       ).of(context),
       message: S(
-        'Report to the school that ${student.name} was not at their stop '
-            'today? This is sent as an absence report — it does not change '
-            "the student's own record, which only a parent or the school "
-            'can set.',
-        'تبلغ المدرسة إن ${student.name} مكانش في محطته النهاردة؟ ده بيتبعت '
-            'كبلاغ غياب — مش بيغيّر سجل الطالب نفسه، ده ولي الأمر أو '
+        'Report that ${student.name} was not at their stop today? The '
+            "school and the student's parents are both told straight away. "
+            "It does not mark the student absent — only a parent or the "
+            'school can do that.',
+        'تبلّغ إن ${student.name} مكانش في محطته النهاردة؟ المدرسة وولي '
+            'الأمر هيتبلغوا على طول. ده مش بيسجّله غايب — ده ولي الأمر أو '
             'المدرسة بس اللي بيقدروا يعملوه.',
-        fr: "Signaler à l'école que ${student.name} n'était pas à son "
-            "arrêt aujourd'hui ? Ceci est envoyé comme signalement "
-            "d'absence — cela ne modifie pas le dossier de l'élève "
-            "lui-même, que seuls un parent ou l'école peuvent définir.",
-        es: '¿Reportar a la escuela que ${student.name} no estuvo en su '
-            'parada hoy? Esto se envía como un reporte de ausencia — no '
-            'cambia el registro del propio alumno, que solo un padre o '
-            'la escuela pueden establecer.',
+        fr: "Signaler que ${student.name} n'était pas à son arrêt "
+            "aujourd'hui ? L'école et les parents sont prévenus "
+            "immédiatement. Cela ne marque pas l'élève comme absent — "
+            "seuls un parent ou l'école peuvent le faire.",
+        es: '¿Reportar que ${student.name} no estuvo en su parada hoy? Se '
+            'avisa de inmediato a la escuela y a los padres. Esto no lo '
+            'marca como ausente — solo un padre o la escuela pueden '
+            'hacerlo.',
       ).of(context),
       confirmLabel: const S(
-        'Report absence',
-        'إبلاغ بالغياب',
-        fr: "Signaler l'absence",
-        es: 'Reportar ausencia',
+        'Send report',
+        'إبعت البلاغ',
+        fr: 'Envoyer le signalement',
+        es: 'Enviar reporte',
       ).of(context),
     );
     if (confirmed != true || !mounted) return;
@@ -168,10 +168,10 @@ class _StopOrderViewState extends State<StopOrderView> {
     AppSnackbar.success(
       context,
       const S(
-        'Absence reported to your school.',
-        'تم إبلاغ مدرستك بالغياب.',
-        fr: 'Absence signalée à votre école.',
-        es: 'Ausencia reportada a tu escuela.',
+        'Reported to the school and the parents.',
+        'تم إبلاغ المدرسة وولي الأمر.',
+        fr: "Signalé à l'école et aux parents.",
+        es: 'Reportado a la escuela y a los padres.',
       ).of(context),
     );
   }
@@ -1317,10 +1317,10 @@ class _TimelineRow extends StatelessWidget {
                               ? const S('Absent', 'غائب', fr: 'Absent', es: 'Ausente').of(context)
                               : absenceReported
                               ? const S(
-                                  'Absence reported',
-                                  'تم الإبلاغ بالغياب',
-                                  fr: 'Absence signalée',
-                                  es: 'Ausencia reportada',
+                                  'Not at stop',
+                                  'مكانش في المحطة',
+                                  fr: "Absent à l'arrêt",
+                                  es: 'No estaba',
                                 ).of(context)
                               : const S('Pending', 'قيد الانتظار', fr: 'En attente', es: 'Pendiente').of(context),
                           tone: isAbsentToday || absenceReported
@@ -1422,7 +1422,7 @@ class _RowMenu extends StatelessWidget {
                 const Icon(Icons.person_off_outlined, size: 18),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  const S('Mark absent today', 'تسجيل غياب اليوم', fr: "Signaler absent aujourd'hui", es: 'Marcar ausente hoy').of(context),
+                  const S('Report not at stop', 'مكانش في المحطة', fr: "Signaler absent à l'arrêt", es: 'No estaba en la parada').of(context),
                 ),
               ],
             ),

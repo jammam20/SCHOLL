@@ -3,6 +3,7 @@ import { getDatabase } from "firebase-admin/database";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import {
+  onDocumentCreated,
   onDocumentUpdated,
   onDocumentWritten,
 } from "firebase-functions/v2/firestore";
@@ -664,6 +665,72 @@ async function schoolAdminUids(schoolId: string): Promise<string[]> {
     .get();
   return membersSnap.docs.map((doc) => doc.id);
 }
+
+/// Tells a student's parents, immediately, that the bus reached their stop
+/// and the child wasn't there.
+///
+/// This is the most time-critical message the system sends. A parent who
+/// dropped their child at the stop and left for work has no other way to
+/// learn that the child never got on: firestore.rules deliberately forbid a
+/// driver from writing `students/{id}.absentOn` (only a parent or an admin
+/// may decide a student is absent), so the driver's report lands in
+/// `absenceLog` — which no parent can read — and in `attendanceRecords`.
+/// Without this function the fact simply never reaches them.
+///
+/// Triggered on `absenceLog` rather than `attendanceRecords` because that
+/// collection is append-only and create-only: a parent later toggling the
+/// same student's absence re-writes the attendance record but cannot
+/// re-fire this, so the alarm is raised exactly once per driver report.
+export const onDriverAbsenceReported = onDocumentCreated(
+  "schools/{schoolId}/absenceLog/{entryId}",
+  async (event) => {
+    const entry = event.data?.data();
+    if (!entry) return;
+
+    // A parent's or admin's own entry is a decision they already know
+    // about; only a driver's observation is news to them.
+    if (entry.source !== "driver") return;
+
+    const { schoolId } = event.params;
+    const studentId = String(entry.studentId ?? "");
+    if (!studentId) return;
+
+    const studentSnap = await db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("students")
+      .doc(studentId)
+      .get();
+    const student = studentSnap.data();
+    if (!student) return;
+
+    const parentIds: string[] = Array.isArray(student.parentIds)
+      ? student.parentIds.filter((id: unknown): id is string => typeof id === "string")
+      : [];
+    if (parentIds.length === 0) return;
+
+    const studentName = String(entry.studentName ?? student.name ?? "");
+    const routeId = String(student.routeId ?? "");
+    let routeName = "";
+    if (routeId) {
+      const routeSnap = await db
+        .collection("schools")
+        .doc(schoolId)
+        .collection("routes")
+        .doc(routeId)
+        .get();
+      routeName = String(routeSnap.data()?.name ?? "");
+    }
+
+    await notify(await recipientsForUids(parentIds), {
+      schoolId,
+      type: "student_not_at_stop",
+      params: { studentName, routeName },
+      data: { type: "student_not_at_stop", schoolId },
+      extra: { studentId },
+    });
+  },
+);
 
 /// Notifies the specific student's own parents (not the whole route) the
 /// moment they're marked boarded or dropped off — Feature: Smart

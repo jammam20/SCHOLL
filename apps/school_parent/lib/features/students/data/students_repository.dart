@@ -20,6 +20,35 @@ class StudentsRepository {
         .collection('students');
   }
 
+  /// Today's attendance record for one child, or null when nothing has
+  /// been recorded yet.
+  ///
+  /// A parent may read this for their own child (firestore.rules'
+  /// `attendanceRecords` read rule checks `parentIds`), which is what
+  /// makes a driver's no-show report visible on the parent's side at all:
+  /// the driver is not allowed to write `students/{id}.absentOn`, so the
+  /// attendance record is the only place that fact lands where a parent
+  /// can see it.
+  Stream<AttendanceRecord?> watchTodayAttendance({
+    required String schoolId,
+    required String studentId,
+  }) {
+    return _firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('attendanceRecords')
+        .doc(AttendanceRecord.idFor(studentId: studentId, date: todayIsoDate()))
+        .snapshots()
+        .map((snapshot) {
+          final data = snapshot.data();
+          if (!snapshot.exists || data == null) return null;
+          return AttendanceRecord.fromMap(data);
+        })
+        // A parent whose child has no record for today gets a normal empty
+        // result, not an error surfaced on the home screen.
+        .handleError((Object _) => null);
+  }
+
   /// Adds a child directly from the parent app — always pending admin
   /// approval (firestore.rules enforces `approved: false` and that the
   /// caller is the sole listed parent; a route/pickup point can't be set
@@ -89,6 +118,7 @@ class StudentsRepository {
           AttendanceRecord.idFor(studentId: studentId, date: date),
         ),
         AttendanceRecord(
+          source: AttendanceSource.parent,
           studentId: studentId,
           schoolId: schoolId,
           date: date,
