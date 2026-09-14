@@ -13,6 +13,7 @@ import '../data/stop_order_repository.dart';
 import '../data/trip_location_repository.dart';
 import '../domain/live_trip_position.dart';
 import '../domain/stop_progress.dart';
+import '../domain/trip_completion_guard.dart';
 import 'bloc/trips_bloc.dart';
 import 'bus_marker_icons.dart';
 import 'stop_marker_icons.dart';
@@ -633,6 +634,27 @@ class _StopOrderViewState extends State<StopOrderView> {
             ),
           ),
         const SizedBox(height: AppSpacing.md),
+        _DropOffAllButton(
+          onBoard: studentsStillOnBoard(
+            stopOrder: order.where((id) => id != schoolStopId).toList(),
+            boardedStudents: boarded,
+            droppedOffStudents: droppedOff,
+          ),
+          students: students,
+          tripStatus: widget.tripStatus,
+          onConfirmed: (ids) {
+            final bloc = context.read<TripsBloc>();
+            for (final id in ids) {
+              bloc.add(
+                TripStudentDroppedOff(
+                  schoolId: widget.schoolId,
+                  tripId: widget.tripId,
+                  studentId: id,
+                ),
+              );
+            }
+          },
+        ),
         NextStopEtaCard(
           schoolId: widget.schoolId,
           tripId: widget.tripId,
@@ -1514,6 +1536,93 @@ class _FullScreenMapPage extends StatelessWidget {
           routePolyline: routePolyline,
           mapHeightFraction: 0.65,
           showExpandButton: false,
+        ),
+      ),
+    );
+  }
+}
+
+/// "Drop off all", shown only while there is actually someone aboard.
+///
+/// Dropping off is the one action a driver repeats once per child at the
+/// same moment — everyone gets off at the school gate together — so doing
+/// it one row at a time is both slow and the easiest place to miss
+/// somebody. Missing somebody matters: a student left marked on board is
+/// recorded as collected and never handed over, and
+/// [checkTripCompletion] will (correctly) refuse to close the trip until
+/// that is resolved. This is the fix for the common case, not a shortcut
+/// past the check.
+class _DropOffAllButton extends StatelessWidget {
+  const _DropOffAllButton({
+    required this.onBoard,
+    required this.students,
+    required this.tripStatus,
+    required this.onConfirmed,
+  });
+
+  final Set<String> onBoard;
+  final Map<String, Student> students;
+  final TripStatus tripStatus;
+  final void Function(Set<String> studentIds) onConfirmed;
+
+  @override
+  Widget build(BuildContext context) {
+    // Boarding and drop-off are only writable while the trip is active —
+    // the same condition firestore.rules enforces — so the button simply
+    // isn't there otherwise.
+    if (onBoard.isEmpty || tripStatus != TripStatus.active) {
+      return const SizedBox.shrink();
+    }
+
+    final names = onBoard
+        .map((id) => students[id]?.name)
+        .whereType<String>()
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: SizedBox(
+        width: double.infinity,
+        child: AppButton.secondary(
+          icon: Icons.done_all_rounded,
+          label: S(
+            'Drop off all (${onBoard.length})',
+            'إنزال الكل (${onBoard.length})',
+            fr: 'Faire descendre tout le monde (${onBoard.length})',
+            es: 'Bajar a todos (${onBoard.length})',
+          ).of(context),
+          onPressed: () async {
+            final confirmed = await showAppConfirmDialog(
+              context,
+              title: const S(
+                'Drop off everyone on board',
+                'إنزال كل اللي في الأتوبيس',
+                fr: 'Faire descendre tous les passagers',
+                es: 'Bajar a todos los pasajeros',
+              ).of(context),
+              message: S(
+                'Record ${onBoard.length} student(s) as handed over now?'
+                    '${names.isEmpty ? '' : '\n\n${names.join('\n')}'}',
+                'تسجّل نزول ${onBoard.length} طالب دلوقتي؟'
+                    '${names.isEmpty ? '' : '\n\n${names.join('\n')}'}',
+                fr:
+                    'Enregistrer ${onBoard.length} élève(s) comme remis '
+                    'maintenant ?'
+                    '${names.isEmpty ? '' : '\n\n${names.join('\n')}'}',
+                es:
+                    '¿Registrar ahora la entrega de ${onBoard.length} '
+                    'alumno(s)?'
+                    '${names.isEmpty ? '' : '\n\n${names.join('\n')}'}',
+              ).of(context),
+              confirmLabel: const S(
+                'Drop off all',
+                'إنزال الكل',
+                fr: 'Tout valider',
+                es: 'Bajar a todos',
+              ).of(context),
+            );
+            if (confirmed == true) onConfirmed(onBoard);
+          },
         ),
       ),
     );

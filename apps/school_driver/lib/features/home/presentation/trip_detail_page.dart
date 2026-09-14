@@ -14,7 +14,11 @@ import '../../inspections/data/inspections_repository.dart';
 import '../../inspections/domain/inspection_checklist.dart';
 import '../../inspections/presentation/inspection_checklist_page.dart';
 import '../../schools/data/schools_repository.dart';
+import '../../students/data/students_repository.dart';
+import '../../trips/data/stop_order_repository.dart';
+import '../../trips/data/trip_location_repository.dart';
 import '../../trips/data/trips_repository.dart';
+import '../../trips/domain/trip_completion_guard.dart';
 import '../../trips/presentation/bloc/trips_bloc.dart';
 import '../../trips/presentation/stop_order_view.dart';
 import '../../../tracking/domain/driver_tracking_status.dart';
@@ -580,7 +584,170 @@ class _TripActions {
 
   /// Completing the trip is dispatched immediately — the post-trip check is
   /// offered afterwards and never gates it.
+  /// Reads the live roster and position, runs [checkTripCompletion], and
+  /// explains the first blocker to the driver. Returns true only when the
+  /// trip is genuinely finishable.
+  Future<bool> _passesCompletionGuard(BuildContext context) async {
+    final stopOrderRepository = StopOrderRepository();
+
+    final order = await stopOrderRepository
+        .watchStopOrder(schoolId: schoolId, tripId: trip.id)
+        .first;
+    final boarded = await stopOrderRepository
+        .watchBoardedStudents(schoolId: schoolId, tripId: trip.id)
+        .first;
+    final droppedOff = await stopOrderRepository
+        .watchDroppedOffStudents(schoolId: schoolId, tripId: trip.id)
+        .first;
+    final school = await SchoolsRepository()
+        .watchSchool(schoolId: schoolId)
+        .first;
+    final position = await TripLocationRepository()
+        .watchTripPosition(schoolId: schoolId, tripId: trip.id)
+        .first;
+
+    // A student a parent or the school has already marked absent is
+    // accounted for — the record will say why they never boarded.
+    final students = await StudentsRepository()
+        .watchStudentsForRoute(schoolId: schoolId, routeId: trip.routeId)
+        .first;
+    final excused = students
+        .where((student) => student.isAbsentToday)
+        .map((student) => student.id)
+        .toSet();
+
+    double? metresFromSchool;
+    if (school != null &&
+        school.hasLocation &&
+        position != null) {
+      metresFromSchool = haversineMeters(
+        position.latitude,
+        position.longitude,
+        school.latitude!,
+        school.longitude!,
+      );
+    }
+
+    final blocker = checkTripCompletion(
+      TripCompletionInputs(
+        direction: trip.direction,
+        stopOrder: order.where((id) => id != schoolStopId).toList(),
+        boardedStudents: boarded,
+        droppedOffStudents: droppedOff,
+        excusedStudents: excused,
+        metresFromSchool: metresFromSchool,
+        schoolHasLocation: school?.hasLocation ?? false,
+        hasPositionFix: position != null,
+      ),
+    );
+    if (blocker == null) return true;
+    if (!context.mounted) return false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          const S(
+            "This trip isn't finished yet",
+            'الرحلة لسه مخلصتش',
+            fr: "Ce trajet n'est pas encore terminé",
+            es: 'Este viaje aún no ha terminado',
+          ).of(dialogContext),
+        ),
+        content: Text(_completionBlockerMessage(dialogContext, blocker)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              const S('OK', 'تمام', fr: "D'accord", es: 'Entendido')
+                  .of(dialogContext),
+            ),
+          ),
+        ],
+      ),
+    );
+    return false;
+  }
+
+  String _completionBlockerMessage(
+    BuildContext context,
+    TripCompletionBlocker blocker,
+  ) {
+    return switch (blocker) {
+      TripCompletionBlocker.studentsUnaccountedFor => const S(
+        'Some students on this run are still waiting. Board each of them, '
+            "or report the ones who weren't at their stop, before you "
+            'finish.',
+        'لسه في طلبة في الرحلة دي مستنيين. ركّب كل واحد فيهم، أو بلّغ عن '
+            'اللي مكانوش في محطاتهم، قبل ما تنهي.',
+        fr:
+            "Certains élèves de cette tournée attendent encore. Faites-les "
+            "monter, ou signalez ceux qui n'étaient pas à leur arrêt, avant "
+            "de terminer.",
+        es:
+            'Todavía hay alumnos esperando en esta ruta. Súbalos a todos, o '
+            'reporte a los que no estaban en su parada, antes de terminar.',
+      ).of(context),
+      TripCompletionBlocker.studentsStillOnBoard => const S(
+        'Some students are still recorded as on the bus. Use "Drop off all" '
+            'once everyone is off.',
+        'لسه في طلبة مسجّلين إنهم في الأتوبيس. استخدم «إنزال الكل» بعد ما '
+            'ينزلوا كلهم.',
+        fr:
+            'Des élèves sont encore enregistrés à bord. Utilisez « Faire '
+            'descendre tout le monde » une fois que tous sont descendus.',
+        es:
+            'Aún hay alumnos registrados dentro del autobús. Use "Bajar a '
+            'todos" cuando ya se hayan bajado.',
+      ).of(context),
+      TripCompletionBlocker.notAtSchool => const S(
+        "The bus isn't at the school yet. A trip to school can only be "
+            'finished once you have arrived.',
+        'الأتوبيس لسه مش عند المدرسة. رحلة الذهاب ماتنتهيش غير لما توصل.',
+        fr:
+            "Le bus n'est pas encore à l'école. Un trajet vers l'école ne "
+            "peut être terminé qu'une fois arrivé.",
+        es:
+            'El autobús aún no está en la escuela. Un viaje de ida solo '
+            'puede finalizarse una vez que haya llegado.',
+      ).of(context),
+      TripCompletionBlocker.schoolLocationUnknown => const S(
+        "Your school hasn't set its location, so arrival can't be "
+            'confirmed. Ask your school administrator to set it.',
+        'مدرستك مححدتش موقعها، فمش ممكن نتأكد إنك وصلت. كلّم أدمن مدرستك '
+            'يحدده.',
+        fr:
+            "Votre école n'a pas défini sa position, l'arrivée ne peut donc "
+            "pas être confirmée. Demandez à votre administrateur de la "
+            "définir.",
+        es:
+            'Su escuela no ha definido su ubicación, así que no se puede '
+            'confirmar la llegada. Pida al administrador que la defina.',
+      ).of(context),
+      TripCompletionBlocker.positionUnknown => const S(
+        "Your location isn't available yet, so arrival can't be confirmed. "
+            'Check that location is on and try again.',
+        'موقعك لسه مش متاح، فمش ممكن نتأكد إنك وصلت. اتأكد إن الموقع شغال '
+            'وجرب تاني.',
+        fr:
+            "Votre position n'est pas encore disponible, l'arrivée ne peut "
+            "donc pas être confirmée. Vérifiez que la localisation est "
+            "activée et réessayez.",
+        es:
+            'Su ubicación aún no está disponible, así que no se puede '
+            'confirmar la llegada. Compruebe que la ubicación está activada '
+            'e inténtelo de nuevo.',
+      ).of(context),
+    };
+  }
+
   Future<void> _completeTrip(BuildContext context) async {
+    // Completion freezes this trip's record as the permanent answer to
+    // "where did every child end up today", so it is checked before it is
+    // sent, not after — see checkTripCompletion for what each blocker means.
+    if (!await _passesCompletionGuard(context)) return;
+    if (!context.mounted) return;
+
     context.read<TripsBloc>().add(
       TripCompleteRequested(schoolId: schoolId, tripId: trip.id),
     );
